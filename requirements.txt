@@ -1,0 +1,36 @@
+# --- Web / API ---
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-multipart
+
+# --- DB ---
+sqlalchemy
+psycopg[binary]
+alembic
+
+# --- Queue ---
+celery
+redis
+
+# --- Vector store / retrieval ---
+qdrant-client
+rank-bm25
+
+# --- AI ---
+sentence-transformers
+FlagEmbedding
+anthropic
+openai
+langgraph
+langchain-core
+
+# --- Parsing ---
+pymupdf
+
+# --- Dev / test ---
+pytest
+pytest-asyncio
+httpx
+ruff

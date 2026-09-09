@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: paperai
+      POSTGRES_PASSWORD: paperai
+      POSTGRES_DB: paperai
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrantdata:/qdrant/storage
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build: .
+    env_file: .env
+    depends_on: [postgres, qdrant, redis]
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    build: .
+    env_file: .env
+    depends_on: [postgres, qdrant, redis]
+    volumes:
+      - .:/app
+    command: celery -A app.workers.celery_app worker -Q upload_queue,research_queue -l info
+
+volumes:
+  pgdata:
+  qdrantdata:
