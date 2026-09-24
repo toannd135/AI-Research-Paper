@@ -1,1 +1,39 @@
 """Đọc .env: DATABASE_URL, QDRANT_URL, LLM keys..."""
+
+from functools import lru_cache
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    app_name: str = "paperai"
+    env: str = "local"
+    log_level: str = "INFO"
+
+    database_url: str
+
+    qdrant_url: str
+    qdrant_collection: str = "paper_chunks"
+
+    redis_url: str
+    celery_broker_url: str
+    celery_result_backend: str
+
+    gemini_api_key: str = ""
+
+    embedding_model: str = "BAAI/bge-m3"
+    reranker_model: str = "BAAI/bge-reranker-v2-m3"
+
+    hybrid_alpha: float = 0.7
+    hybrid_beta: float = 0.3
+    context_token_limit: int = 8000
+
+    open_alex_api_url: str = "https://api.openalex.org"
+    open_alex_api_key: str = ""
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
