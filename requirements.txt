@@ -29,8 +29,10 @@ langchain-core
 # --- Parsing ---
 pymupdf
 
+# --- HTTP client (OpenAlex) ---
+httpx
+
 # --- Dev / test ---
 pytest
 pytest-asyncio
-httpx
 ruff
