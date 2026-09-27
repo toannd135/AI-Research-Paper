@@ -25,6 +25,7 @@ anthropic
 openai
 langgraph
 langchain-core
+google-genai
 
 # --- Parsing ---
 pymupdf

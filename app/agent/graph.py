@@ -1,90 +1,77 @@
-"""LangGraph StateGraph định nghĩa flow research deterministically."""
+"""LangGraph StateGraph định nghĩa flow research: plan -> search -> analyze -> critique -> (loop | synthesize)."""
 
 from __future__ import annotations
 
-from typing import Literal
+from langgraph.graph import END, StateGraph
 
-from langgraph.graph import END, START, StateGraph
+from app.agent.nodes.analyze_node import analyze_node
+from app.agent.nodes.critique_node import critique_node
+from app.agent.nodes.fallback import FALLBACK_MESSAGE
+from app.agent.nodes.plan_node import plan_node
+from app.agent.nodes.search_node import search_node
+from app.agent.nodes.synthesize_node import synthesize_node
+from app.agent.state import ResearchState
+from app.ai.llm_gateway.base import LLMGateway
+from app.core.schemas import PaperRef
 
-from app.agent.generators.base import AnswerGenerator
-from app.agent.generators.mock import MockAnswerGenerator
-from app.agent.nodes import (
-    create_synthesize_node,
-    fallback_node,
-    retrieve_node,
-    search_node,
-)
-from app.core.schemas import ResearchState
-
-
-def should_synthesize(state: ResearchState) -> Literal["synthesize", "fallback"]:
-    """Conditional edge: kiểm tra xem có thu thập được bằng chứng không."""
-    evidence = state.get("evidence", [])
-    if evidence and len(evidence) > 0:
-        return "synthesize"
-    return "fallback"
+MAX_ITERATIONS = 2
 
 
-def build_research_graph(generator: AnswerGenerator | None = None):
-    """Xây dựng và biên dịch đồ thị LangGraph v0 cho PaperAI Research Agent.
+def _route_after_critique(state: ResearchState) -> str:
+    if state.get("critique_feedback") and state.get("iterations", 0) < MAX_ITERATIONS:
+        return "analyze"
+    return "synthesize"
 
-    Args:
-        generator: Tùy chọn truyền AnswerGenerator. Mặc định là MockAnswerGenerator.
 
-    Returns:
-        CompiledStateGraph có thể invoke.
-    """
-    if generator is None:
-        generator = MockAnswerGenerator()
+def build_graph(llm: LLMGateway | None = None):
+    """Build + compile graph. `llm` cho phép inject fake gateway khi test."""
+    graph = StateGraph(ResearchState)
+    graph.add_node("plan", lambda state: plan_node(state, llm=llm))
+    graph.add_node("search", search_node)
+    graph.add_node("analyze", lambda state: analyze_node(state, llm=llm))
+    graph.add_node("critique", lambda state: critique_node(state, llm=llm))
+    graph.add_node("synthesize", lambda state: synthesize_node(state, llm=llm))
 
-    workflow = StateGraph(ResearchState)
-
-    # Thêm các nodes
-    workflow.add_node("search", search_node)
-    workflow.add_node("retrieve", retrieve_node)
-    workflow.add_node("synthesize", create_synthesize_node(generator))
-    workflow.add_node("fallback", fallback_node)
-
-    # Thiết lập các cạnh chuyển tiếp (Edges)
-    workflow.add_edge(START, "search")
-    workflow.add_edge("search", "retrieve")
-
-    # Conditional edge sau khi retrieve
-    workflow.add_conditional_edges(
-        "retrieve",
-        should_synthesize,
-        {
-            "synthesize": "synthesize",
-            "fallback": "fallback",
-        },
+    graph.set_entry_point("plan")
+    graph.add_edge("plan", "search")
+    graph.add_edge("search", "analyze")
+    graph.add_edge("analyze", "critique")
+    graph.add_conditional_edges(
+        "critique", _route_after_critique, {"analyze": "analyze", "synthesize": "synthesize"}
     )
+    graph.add_edge("synthesize", END)
 
-    workflow.add_edge("synthesize", END)
-    workflow.add_edge("fallback", END)
-
-    return workflow.compile()
+    return graph.compile()
 
 
-def run_research_agent(
-    question: str,
-    generator: AnswerGenerator | None = None,
-) -> dict:
-    """Entrypoint chạy Research Agent với câu hỏi nghiên cứu.
+def run_graph(question: str, llm: LLMGateway | None = None) -> ResearchState:
+    """Entrypoint chạy Research Agent graph theo workflow đầy đủ."""
+    app = build_graph(llm=llm)
+    initial_state: ResearchState = {"question": question, "iterations": 0}
+    return app.invoke(initial_state)
 
-    Args:
-        question: Câu hỏi từ người dùng.
-        generator: Tùy chọn Generator. Nếu None sẽ dùng MockAnswerGenerator.
+# Aliases hỗ trợ backward compatibility
+def build_research_graph(llm: LLMGateway | None = None, generator=None):
+    return build_graph(llm=llm or generator)
 
-    Returns:
-        Dictionary kết quả chứa question, papers, evidence, answer, citations, steps.
-    """
-    graph = build_research_graph(generator=generator)
-    initial_state: ResearchState = {
-        "question": question,
-        "papers": [],
-        "evidence": [],
-        "answer": "",
-        "citations": [],
-        "steps": [],
-    }
-    return graph.invoke(initial_state)
+
+def run_research_agent(question: str, llm: LLMGateway | None = None) -> dict:
+    state = run_graph(question=question, llm=llm)
+    if not state.get("evidence"):
+        state["answer"] = FALLBACK_MESSAGE
+        state["citations"] = []
+        state["papers"] = []
+        state["steps"] = ["search", "retrieve", "fallback"]
+    else:
+        if "report" in state and "answer" not in state:
+            state["answer"] = state["report"]
+        seen_pids = set()
+        papers = []
+        for sc in state.get("evidence", []):
+            pid = sc.chunk.paper_id
+            if pid not in seen_pids:
+                seen_pids.add(pid)
+                papers.append(PaperRef(paper_id=pid, title=pid))
+        state["papers"] = papers
+        state["steps"] = ["search", "retrieve", "synthesize"]
+    return state
