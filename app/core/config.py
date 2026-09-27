@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     app_name: str = "paperai"
     env: str = "local"
@@ -21,7 +21,9 @@ class Settings(BaseSettings):
     celery_broker_url: str
     celery_result_backend: str
 
-    gemini_api_key: str = ""
+    gemini_api_key: str
+    anthropic_api_key: str | None = None
+    openai_api_key: str | None = None
 
     embedding_model: str = "BAAI/bge-m3"
     reranker_model: str = "BAAI/bge-reranker-v2-m3"
@@ -31,7 +33,7 @@ class Settings(BaseSettings):
     context_token_limit: int = 8000
 
     open_alex_api_url: str = "https://api.openalex.org"
-    open_alex_api_key: str = ""
+    open_alex_api_key: str | None = None
 
 
 @lru_cache

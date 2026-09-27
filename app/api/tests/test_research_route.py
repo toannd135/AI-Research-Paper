@@ -8,6 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.ai.llm_gateway.base import LLMGatewayError
 from app.core.database import Base, get_db
 from app.main import app
 
@@ -39,14 +40,17 @@ def client():
 def test_create_research_returns_clarification_questions_without_creating_task(
     mock_clarify, mock_run_research, client
 ):
-    mock_clarify.return_value = {"status": "needs_clarification", "questions": ["Phạm vi là gì?"]}
+    mock_clarify.return_value = {
+        "status": "needs_clarification",
+        "questions": [{"text": "Phạm vi là gì?", "suggestions": ["Rộng", "Hẹp"]}],
+    }
 
     response = client.post("/research/", json={"question": "So sánh các phương pháp"})
 
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "needs_clarification"
-    assert body["questions"] == ["Phạm vi là gì?"]
+    assert body["questions"] == [{"text": "Phạm vi là gì?", "suggestions": ["Rộng", "Hẹp"]}]
     mock_run_research.delay.assert_not_called()
 
 
@@ -64,6 +68,21 @@ def test_create_research_creates_task_and_triggers_celery_when_ready(
     assert body["status"] == "pending"
     assert body["id"]
     mock_run_research.delay.assert_called_once_with(body["id"])
+
+
+@patch("app.api.routes.research.run_research")
+@patch("app.api.routes.research.clarify")
+def test_create_research_returns_503_instead_of_500_when_llm_gateway_fails(
+    mock_clarify, mock_run_research, client
+):
+    """Trước đây LLMGatewayError (vd: Gemini quota exceeded) không được catch, làm /research/ trả 500 trần trụi."""
+    mock_clarify.side_effect = LLMGatewayError("Gemini API lỗi: 429 quota exceeded")
+
+    response = client.post("/research/", json={"question": "So sánh các phương pháp"})
+
+    assert response.status_code == 503
+    assert "quota" in response.json()["detail"].lower()
+    mock_run_research.delay.assert_not_called()
 
 
 @patch("app.api.routes.research.run_research")

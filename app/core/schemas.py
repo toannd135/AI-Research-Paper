@@ -67,12 +67,14 @@ class ChatRequest(BaseModel):
     question: str
     paper_id: str | None = None
     conversation_id: str | None = None
+    model: str | None = None
 
 
 class ChatResponse(BaseModel):
     conversation_id: str
     answer: str
     citations: list[Citation] = Field(default_factory=list)
+    model: str
 
 
 class ResearchRequest(BaseModel):
@@ -80,9 +82,14 @@ class ResearchRequest(BaseModel):
     clarification_answers: dict[str, str] | None = None
 
 
+class ClarificationQuestion(BaseModel):
+    text: str
+    suggestions: list[str] = Field(default_factory=list)
+
+
 class ResearchClarificationResponse(BaseModel):
     status: str = "needs_clarification"
-    questions: list[str]
+    questions: list[ClarificationQuestion]
 
 
 class ResearchTaskResponse(BaseModel):

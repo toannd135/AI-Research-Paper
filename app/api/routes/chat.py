@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.ai.context_builder import build_context
+from app.ai.llm_gateway.base import LLMGatewayError
 from app.ai.llm_gateway.base import Message as LLMMessage
-from app.ai.llm_gateway.gemini_adapter import DEFAULT_MODEL, GeminiAdapter
+from app.ai.llm_gateway.registry import AVAILABLE_MODELS, build_gateway, is_configured, resolve_model
 from app.ai.retrieval.hybrid import search_hybrid
 from app.ai.retrieval.reranker import rerank
 from app.api.models.conversation import Conversation
@@ -31,20 +32,34 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db)) -> ChatResponse:
     context_text, citations = build_context(top_chunks)
     conversation = _get_or_create_conversation(db, payload.conversation_id, payload.paper_id)
 
-    llm = GeminiAdapter()
-    response = llm.generate(
-        messages=[
-            LLMMessage(role="system", content=_SYSTEM_PROMPT),
-            LLMMessage(role="user", content=f"Context:\n{context_text}\n\nCâu hỏi: {payload.question}"),
-        ],
-        model_name=DEFAULT_MODEL,
-    )
+    model_option = resolve_model(payload.model)
+    try:
+        llm = build_gateway(model_option)
+        response = llm.generate(
+            messages=[
+                LLMMessage(role="system", content=_SYSTEM_PROMPT),
+                LLMMessage(role="user", content=f"Context:\n{context_text}\n\nCâu hỏi: {payload.question}"),
+            ],
+            model_name=model_option.model_name,
+        )
+    except LLMGatewayError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     db.add(MessageModel(conversation_id=conversation.id, role="user", content=payload.question))
     db.add(MessageModel(conversation_id=conversation.id, role="assistant", content=response.text))
     db.commit()
 
-    return ChatResponse(conversation_id=conversation.id, answer=response.text, citations=citations)
+    return ChatResponse(
+        conversation_id=conversation.id, answer=response.text, citations=citations, model=model_option.id
+    )
+
+
+@router.get("/chat/models")
+def list_chat_models():
+    return [
+        {"id": option.id, "label": option.label, "available": is_configured(option)}
+        for option in AVAILABLE_MODELS
+    ]
 
 
 @router.get("/conversations")

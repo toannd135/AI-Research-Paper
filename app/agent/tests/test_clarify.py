@@ -10,13 +10,25 @@ def _fake_llm(text: str) -> MagicMock:
     return llm
 
 
-def test_clarify_returns_needs_clarification_when_llm_asks():
-    llm = _fake_llm('{"status": "needs_clarification", "questions": ["Phạm vi là gì?"]}')
+def test_clarify_returns_needs_clarification_with_suggestions_when_llm_asks():
+    llm = _fake_llm(
+        '{"status": "needs_clarification", '
+        '"questions": [{"text": "Phạm vi là gì?", "suggestions": ["Rộng", "Hẹp"]}]}'
+    )
 
     result = clarify("So sánh các phương pháp", llm=llm)
 
     assert result["status"] == "needs_clarification"
-    assert result["questions"] == ["Phạm vi là gì?"]
+    assert result["questions"] == [{"text": "Phạm vi là gì?", "suggestions": ["Rộng", "Hẹp"]}]
+
+
+def test_clarify_tolerates_legacy_plain_string_questions():
+    """Format cũ (chuỗi thuần, không có suggestions) vẫn phải parse được, không lỗi."""
+    llm = _fake_llm('{"status": "needs_clarification", "questions": ["Phạm vi là gì?"]}')
+
+    result = clarify("So sánh các phương pháp", llm=llm)
+
+    assert result["questions"] == [{"text": "Phạm vi là gì?", "suggestions": []}]
 
 
 def test_clarify_returns_ready_when_llm_has_enough_info():
@@ -29,7 +41,9 @@ def test_clarify_returns_ready_when_llm_has_enough_info():
 
 
 def test_clarify_does_not_ask_again_when_answers_already_provided():
-    llm = _fake_llm('{"status": "needs_clarification", "questions": ["vẫn thiếu"]}')
+    llm = _fake_llm(
+        '{"status": "needs_clarification", "questions": [{"text": "vẫn thiếu", "suggestions": []}]}'
+    )
 
     result = clarify("câu hỏi mơ hồ", clarification_answers={"phạm vi": "RAG"}, llm=llm)
 

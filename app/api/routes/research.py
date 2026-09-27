@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.agent.clarify import clarify
+from app.ai.llm_gateway.base import LLMGatewayError
 from app.api.models.research_task import ResearchTask
 from app.core.database import get_db
 from app.core.schemas import (
@@ -22,7 +23,10 @@ router = APIRouter(prefix="/research", tags=["research"])
 
 @router.post("/", response_model=ResearchTaskResponse | ResearchClarificationResponse)
 def create_research(payload: ResearchRequest, db: Session = Depends(get_db)):
-    result = clarify(payload.question, payload.clarification_answers)
+    try:
+        result = clarify(payload.question, payload.clarification_answers)
+    except LLMGatewayError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     if result["status"] == "needs_clarification":
         return ResearchClarificationResponse(questions=result["questions"])

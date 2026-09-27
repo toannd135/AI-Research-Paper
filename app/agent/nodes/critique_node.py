@@ -10,10 +10,17 @@ from app.ai.llm_gateway.base import LLMGateway
 def critique_node(state: ResearchState, llm: LLMGateway | None = None) -> ResearchState:
     draft = state.get("draft", "")
     citations = state.get("citations", [])
-    evidence_text, _ = build_context(state.get("evidence", []))
 
     invalid_citations = find_invalid_citations(draft, citations)
-    unsupported = find_unsupported_sentences(draft, evidence_text, llm=llm)
+
+    if invalid_citations:
+        # Trích dẫn sai định dạng thì vòng này chắc chắn phải viết lại — không cần tốn thêm 1 lời
+        # gọi LLM (hallucination_detector) để kiểm tra, sẽ được kiểm tra lại ở vòng sau khi
+        # citation đã đúng.
+        unsupported: list[str] = []
+    else:
+        evidence_text, _ = build_context(state.get("evidence", []))
+        unsupported = find_unsupported_sentences(draft, evidence_text, llm=llm)
 
     iterations = state.get("iterations", 0) + 1
 

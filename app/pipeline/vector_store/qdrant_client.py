@@ -24,6 +24,13 @@ def ensure_collection(vector_size: int, collection: str | None = None) -> None:
             collection_name=name,
             vectors_config=qmodels.VectorParams(size=vector_size, distance=qmodels.Distance.COSINE),
         )
+    # Idempotent: cần thiết để filter theo paper_id (search, bm25 scroll) không bị chậm dần khi
+    # collection lớn lên tới hàng trăm nghìn/triệu point (10k+ paper).
+    client.create_payload_index(
+        collection_name=name,
+        field_name="paper_id",
+        field_schema=qmodels.PayloadSchemaType.KEYWORD,
+    )
 
 
 def upsert_chunks(chunks: list[Chunk], vectors: list[list[float]], collection: str | None = None) -> None:
@@ -47,6 +54,11 @@ def upsert_chunks(chunks: list[Chunk], vectors: list[list[float]], collection: s
     ]
     client.upsert(collection_name=name, points=points)
 
+    from app.ai.retrieval.bm25_index_cache import invalidate
+
+    for paper_id in {chunk.paper_id for chunk in chunks}:
+        invalidate(paper_id)
+
 
 def delete_paper(paper_id: str, collection: str | None = None) -> None:
     client = get_client()
@@ -59,6 +71,10 @@ def delete_paper(paper_id: str, collection: str | None = None) -> None:
             )
         ),
     )
+
+    from app.ai.retrieval.bm25_index_cache import invalidate
+
+    invalidate(paper_id)
 
 
 def search(

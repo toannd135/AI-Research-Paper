@@ -5,6 +5,7 @@ from google.genai import errors as genai_errors
 from google.genai import types
 
 from app.ai.llm_gateway.base import LLMGateway, LLMGatewayError, LLMResponse, Message
+from app.ai.llm_gateway.retry import call_with_retry
 from app.core.config import get_settings
 
 DEFAULT_MODEL = "gemini-3.6-flash"
@@ -20,6 +21,9 @@ class GeminiAdapter(LLMGateway):
         self._client = genai.Client(api_key=key)
 
     def generate(self, messages: list[Message], model_name: str = DEFAULT_MODEL) -> LLMResponse:
+        return call_with_retry(lambda: self._call_once(messages, model_name))
+
+    def _call_once(self, messages: list[Message], model_name: str) -> LLMResponse:
         system_instruction = "\n".join(m.content for m in messages if m.role == "system") or None
         contents = [
             types.Content(role=_ROLE_MAP.get(m.role, "user"), parts=[types.Part.from_text(text=m.content)])
