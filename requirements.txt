@@ -19,6 +19,8 @@ qdrant-client
 rank-bm25
 
 # --- AI ---
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
 sentence-transformers
 FlagEmbedding
 anthropic
@@ -30,8 +32,4 @@ google-genai
 # --- Parsing ---
 pymupdf
 
-# --- Dev / test ---
-pytest
-pytest-asyncio
-httpx
-ruff
+

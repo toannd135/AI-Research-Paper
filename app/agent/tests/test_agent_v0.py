@@ -166,10 +166,11 @@ def test_citations_reference_existing_chunks(mock_hybrid, mock_rerank):
         assert cit.page_number == chunk.page_number, f"page_number không khớp: {cit.page_number} != {chunk.page_number}"
 
 
+@patch("app.agent.nodes.search_node.retrieve_external_evidence", return_value=[])
 @patch("app.agent.tools.search_papers.rerank")
 @patch("app.agent.tools.search_papers.search_hybrid")
-def test_unknown_question_uses_fallback(mock_hybrid, mock_rerank):
-    """Test 6: Câu hỏi không có bài báo nào sẽ chuyển hướng vào fallback."""
+def test_unknown_question_uses_fallback(mock_hybrid, mock_rerank, mock_ext):
+    """Test 6: Câu hỏi không có bài báo nào (nội bộ lẫn internet) sẽ chuyển hướng vào fallback."""
     mock_hybrid.return_value = []
     mock_rerank.return_value = []
 

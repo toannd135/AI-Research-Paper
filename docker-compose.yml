@@ -39,7 +39,7 @@ services:
     depends_on: [postgres, qdrant, redis]
     volumes:
       - .:/app
-    command: celery -A app.workers.celery_app worker -Q upload_queue,research_queue -l info
+    command: celery -A app.workers.celery_app worker -Q upload_queue,research_queue -c 4 -l info
 
 volumes:
   pgdata:
