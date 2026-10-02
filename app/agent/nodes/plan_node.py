@@ -3,7 +3,7 @@
 from app.agent.json_utils import parse_llm_json
 from app.agent.state import ResearchState
 from app.ai.llm_gateway.base import LLMGateway, Message
-from app.ai.llm_gateway.gemini_adapter import DEFAULT_MODEL, GeminiAdapter
+from app.ai.llm_gateway.default import get_default_agent_gateway
 
 _SYSTEM_PROMPT = (
     "Bạn lập kế hoạch tìm kiếm tài liệu cho 1 câu hỏi nghiên cứu. "
@@ -15,14 +15,14 @@ _SYSTEM_PROMPT = (
 
 def plan_node(state: ResearchState, llm: LLMGateway | None = None) -> ResearchState:
     question = state["question"]
-    gateway = llm or GeminiAdapter()
+    gateway, model_name = get_default_agent_gateway(llm)
 
     response = gateway.generate(
         messages=[
             Message(role="system", content=_SYSTEM_PROMPT),
             Message(role="user", content=f"Câu hỏi nghiên cứu: {question}"),
         ],
-        model_name=DEFAULT_MODEL,
+        model_name=model_name,
     )
 
     parsed = parse_llm_json(response.text)

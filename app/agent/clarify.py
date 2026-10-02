@@ -2,7 +2,7 @@
 
 from app.agent.json_utils import parse_llm_json
 from app.ai.llm_gateway.base import LLMGateway, Message
-from app.ai.llm_gateway.gemini_adapter import DEFAULT_MODEL, GeminiAdapter
+from app.ai.llm_gateway.default import get_default_agent_gateway
 
 _SYSTEM_PROMPT = (
     "Bạn giúp làm rõ một câu hỏi nghiên cứu trước khi hệ thống đi tìm tài liệu và viết báo cáo. "
@@ -57,13 +57,13 @@ def clarify(
     else:
         user_content = f"Câu hỏi gốc: {question}"
 
-    gateway = llm or GeminiAdapter()
+    gateway, model_name = get_default_agent_gateway(llm)
     response = gateway.generate(
         messages=[
             Message(role="system", content=_SYSTEM_PROMPT),
             Message(role="user", content=user_content),
         ],
-        model_name=DEFAULT_MODEL,
+        model_name=model_name,
     )
 
     parsed = parse_llm_json(response.text)

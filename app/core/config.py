@@ -24,6 +24,15 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     anthropic_api_key: str | None = None
     openai_api_key: str | None = None
+    groq_api_key: str | None = None
+    groq_model: str = "openai/gpt-oss-120b"
+    openrouter_api_key: str | None = None
+    openrouter_model: str = "nvidia/nemotron-3-ultra-550b-a55b:free"
+    openrouter_fallback_models: list[str] = [
+        "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "google/gemma-4-31b-it:free",
+        "qwen/qwen3.8-27b:free",
+    ]
 
     embedding_model: str = "BAAI/bge-m3"
     reranker_model: str = "BAAI/bge-reranker-v2-m3"

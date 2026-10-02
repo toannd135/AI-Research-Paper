@@ -3,7 +3,7 @@
 from app.agent.state import ResearchState
 from app.ai.context_builder import build_context
 from app.ai.llm_gateway.base import LLMGateway, Message
-from app.ai.llm_gateway.gemini_adapter import DEFAULT_MODEL, GeminiAdapter
+from app.ai.llm_gateway.default import get_default_agent_gateway
 
 _SYSTEM_PROMPT = (
     "Bạn là trợ lý nghiên cứu khoa học. Dựa trên các tài liệu và evidence trong context, "
@@ -24,13 +24,13 @@ def analyze_node(state: ResearchState, llm: LLMGateway | None = None) -> Researc
     if feedback:
         user_content += f"\n\nPhản biện từ lần viết trước, hãy sửa lại: {feedback}"
 
-    gateway = llm or GeminiAdapter()
+    gateway, model_name = get_default_agent_gateway(llm)
     response = gateway.generate(
         messages=[
             Message(role="system", content=_SYSTEM_PROMPT),
             Message(role="user", content=user_content),
         ],
-        model_name=DEFAULT_MODEL,
+        model_name=model_name,
     )
 
     return {**state, "draft": response.text, "citations": citations}

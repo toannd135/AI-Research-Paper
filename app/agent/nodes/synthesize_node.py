@@ -2,7 +2,7 @@
 
 from app.agent.state import ResearchState
 from app.ai.llm_gateway.base import LLMGateway, Message
-from app.ai.llm_gateway.gemini_adapter import DEFAULT_MODEL, GeminiAdapter
+from app.ai.llm_gateway.default import get_default_agent_gateway
 
 _SYSTEM_PROMPT = (
     "Bạn tổng hợp draft nghiên cứu đã được kiểm chứng thành 1 báo cáo khoa học hoàn chỉnh theo chuẩn cấu trúc IMRaD.\n"
@@ -88,7 +88,7 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
         references_lines.append(ref_line)
     references = "\n".join(references_lines)
 
-    gateway = llm or GeminiAdapter()
+    gateway, model_name = get_default_agent_gateway(llm)
     response = gateway.generate(
         messages=[
             Message(role="system", content=_SYSTEM_PROMPT),
@@ -101,7 +101,7 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
                 ),
             ),
         ],
-        model_name=DEFAULT_MODEL,
+        model_name=model_name,
     )
 
     return {**state, "report": response.text}

@@ -9,6 +9,8 @@ from app.ai.llm_gateway.anthropic_adapter import AnthropicAdapter
 from app.ai.llm_gateway.base import LLMGateway
 from app.ai.llm_gateway.gemini_adapter import DEFAULT_MODEL as GEMINI_DEFAULT_MODEL
 from app.ai.llm_gateway.gemini_adapter import GeminiAdapter
+from app.ai.llm_gateway.groq_adapter import DEFAULT_MODEL as GROQ_DEFAULT_MODEL
+from app.ai.llm_gateway.groq_adapter import GroqAdapter
 from app.ai.llm_gateway.openai_adapter import DEFAULT_MODEL as OPENAI_DEFAULT_MODEL
 from app.ai.llm_gateway.openai_adapter import OpenAIAdapter
 from app.core.config import get_settings
@@ -24,6 +26,13 @@ class ModelOption:
 
 
 AVAILABLE_MODELS: list[ModelOption] = [
+    ModelOption(
+        id="groq-llama-3.3-70b",
+        label="Groq Llama 3.3 70B",
+        model_name=GROQ_DEFAULT_MODEL,
+        gateway_factory=GroqAdapter,
+        required_setting="groq_api_key",
+    ),
     ModelOption(
         id="gemini-3.6-flash",
         label="Gemini 3.6 Flash",
