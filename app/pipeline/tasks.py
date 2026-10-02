@@ -69,7 +69,9 @@ def run_research(task_id: str) -> dict:
             question = task.refined_question or task.question
             state = run_graph(question)
 
-            task.report = state.get("report", "")
+            from app.agent.format_sanitizer import sanitize_academic_markdown
+
+            task.report = sanitize_academic_markdown(state.get("report", ""))
             task.citations = json.dumps([c.model_dump() for c in state.get("citations", [])])
             task.status = ResearchStatus.DONE.value
             db.commit()

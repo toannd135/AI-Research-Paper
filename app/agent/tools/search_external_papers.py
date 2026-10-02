@@ -57,7 +57,7 @@ def external_source_to_scored_chunk(source: ExternalSource, index: int = 0) -> S
     return ScoredChunk(chunk=chunk, score=score)
 
 
-def retrieve_external_evidence(queries: list[str], count_per_query: int = 5, max_total: int = 10) -> list[ScoredChunk]:
+def retrieve_external_evidence(queries: list[str], count_per_query: int = 8, max_total: int = 30) -> list[ScoredChunk]:
     """Tìm kiếm tài liệu học thuật từ OpenAlex cho danh sách sub-queries và chuyển đổi thành ScoredChunk."""
     if not queries:
         return []

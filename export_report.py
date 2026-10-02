@@ -1,10 +1,12 @@
 import json
+from app.agent.format_sanitizer import sanitize_academic_markdown
 
 # Đọc trực tiếp từ file JSON bằng json.load (không dùng json.loads trên chuỗi)
 with open("result.json", "r", encoding="utf-8") as f:
     data = json.load(f)
 
-report_content = data["report"]
+# Tự động chuẩn hóa toàn diện cú pháp Mermaid, LaTeX math, code blocks trước khi xuất
+report_content = sanitize_academic_markdown(data["report"])
 
 # Xuất ra file markdown
 output_path = "literature_review.md"

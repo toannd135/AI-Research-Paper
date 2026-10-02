@@ -69,3 +69,23 @@ def test_graph_stops_at_max_iterations_even_if_still_failing(mock_hybrid, mock_r
 
     assert state["iterations"] == MAX_ITERATIONS
     assert "report" in state
+
+
+@patch("app.agent.tools.search_papers.rerank")
+@patch("app.agent.tools.search_papers.search_hybrid")
+def test_graph_dual_research_modes(mock_hybrid, mock_rerank):
+    mock_hybrid.return_value = []
+    mock_rerank.return_value = [_scored("a")]
+
+    gateway = _FakeGateway(hallucination_results=['{"unsupported_sentences": []}'])
+
+    # Test novel_research mode
+    novel_state = run_graph("Đề xuất mô hình mới cải tiến Graph-RAG", llm=gateway)
+    assert novel_state["research_mode"] == "novel_research"
+    assert "report" in novel_state
+
+    # Test survey mode
+    survey_gateway = _FakeGateway(hallucination_results=['{"unsupported_sentences": []}'])
+    survey_state = run_graph("Tổng quan các nghiên cứu về RAG", llm=survey_gateway)
+    assert survey_state["research_mode"] == "survey"
+    assert "report" in survey_state

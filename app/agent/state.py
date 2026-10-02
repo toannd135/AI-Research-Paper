@@ -13,4 +13,6 @@ class ResearchState(TypedDict, total=False):
     citations: list[Citation]
     critique_feedback: str | None
     iterations: int
+    research_mode: str
+    baseline_analysis: str | None
     report: str
