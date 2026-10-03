@@ -19,12 +19,15 @@ qdrant-client
 rank-bm25
 
 # --- AI ---
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
 sentence-transformers
 FlagEmbedding
 anthropic
 openai
 langgraph
 langchain-core
+google-genai
 
 # --- Parsing ---
 pymupdf

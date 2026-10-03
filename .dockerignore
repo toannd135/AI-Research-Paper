@@ -1,0 +1,43 @@
+# Virtualenvs (không copy vào image)
+venv/
+.venv/
+env/
+**/venv/
+**/.venv/
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Git & CI
+.git/
+.gitignore
+.github/
+
+# Env & secrets
+.env
+.env.local
+
+# Data / uploads / models
+data/
+uploads/
+models/
+
+# Editor & OS
+.idea/
+.vscode/
+.DS_Store
+
+# Docs
+docs/
+README.md

@@ -14,7 +14,8 @@ build/
 *.egg-info/
 data/
 uploads/
-models/
+/models/
 .DS_Store
 .idea/
 .vscode/
+frontend

@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: paperai
       POSTGRES_DB: paperai
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -21,7 +21,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "6380:6379"
 
   api:
     build: .
@@ -39,7 +39,7 @@ services:
     depends_on: [postgres, qdrant, redis]
     volumes:
       - .:/app
-    command: celery -A app.workers.celery_app worker -Q upload_queue,research_queue -l info
+    command: celery -A app.workers.celery_app worker -Q upload_queue,research_queue -c 4 -l info
 
 volumes:
   pgdata:
