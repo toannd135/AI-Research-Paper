@@ -85,6 +85,9 @@ def search(
 ) -> list[qmodels.ScoredPoint]:
     client = get_client()
     name = collection or get_settings().qdrant_collection
+    # Chưa upload paper nào thì collection chưa được tạo → coi như không có kết quả.
+    if not client.collection_exists(name):
+        return []
     query_filter = None
     if paper_id:
         query_filter = qmodels.Filter(

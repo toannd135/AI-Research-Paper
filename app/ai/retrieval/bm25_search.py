@@ -21,6 +21,8 @@ def _load_corpus(paper_id: str | None) -> list[Chunk]:
     """Scroll toàn bộ chunk (theo paper_id nếu có) từ Qdrant để build BM25 index tạm thời cho mỗi query."""
     client = get_client()
     collection = get_settings().qdrant_collection
+    if not client.collection_exists(collection):
+        return []
     query_filter = None
     if paper_id:
         query_filter = qmodels.Filter(

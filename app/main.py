@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import sources
+from app.api.routes import chat, papers, research, sources
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -18,6 +18,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(papers.router)
+app.include_router(chat.router)
+app.include_router(research.router)
 app.include_router(sources.router)
 
 

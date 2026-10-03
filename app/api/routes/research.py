@@ -1,8 +1,9 @@
-"""POST /research, GET /research/{id}."""
+"""POST /research, GET /research/{id}, GET /research/{id}/pdf."""
 
 import json
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.agent.clarify import clarify
@@ -60,4 +61,22 @@ def get_research(task_id: str, db: Session = Depends(get_db)) -> ResearchTaskRes
         citations=citations,
         error=task.error,
         created_at=task.created_at,
+    )
+
+
+@router.get("/{task_id}/pdf")
+def export_research_pdf(task_id: str, db: Session = Depends(get_db)) -> Response:
+    from app.pipeline.export.pdf_renderer import report_to_pdf
+
+    task = db.get(ResearchTask, task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Research task không tồn tại")
+    if not task.report:
+        raise HTTPException(status_code=409, detail="Research task chưa có báo cáo")
+
+    pdf = report_to_pdf(task.report)
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="paperai-{task_id[:8]}.pdf"'},
     )

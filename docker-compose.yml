@@ -39,8 +39,10 @@ services:
     depends_on: [postgres, qdrant, redis]
     volumes:
       - .:/app
+      - hfcache:/root/.cache/huggingface
     command: celery -A app.workers.celery_app worker -Q upload_queue,research_queue -c 4 -l info
 
 volumes:
   pgdata:
   qdrantdata:
+  hfcache:

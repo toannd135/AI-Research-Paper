@@ -32,6 +32,11 @@ google-genai
 # --- Parsing ---
 pymupdf
 
+# --- Export PDF (Markdown → HTML → Chromium) ---
+markdown
+matplotlib
+playwright
+
 # --- HTTP client (OpenAlex) ---
 httpx
 

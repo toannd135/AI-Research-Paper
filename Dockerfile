@@ -17,6 +17,9 @@ COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements.txt
 
+# Chromium cho xuất PDF (render Mermaid/KaTeX)
+RUN playwright install --with-deps chromium
+
 COPY . .
 
 EXPOSE 8000
