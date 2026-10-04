@@ -32,7 +32,8 @@ google-genai
 # --- Parsing ---
 pymupdf
 
-# --- Export PDF (Markdown → HTML → Chromium) ---
+# --- Export PDF (Typst Academic Engine & HTML/Chromium) ---
+typst
 markdown
 matplotlib
 playwright

@@ -1,10 +1,13 @@
 """POST /research, GET /research/{id}, GET /research/{id}/pdf."""
 
 import json
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from app.agent.clarify import clarify
 from app.ai.llm_gateway.base import LLMGatewayError
@@ -65,18 +68,54 @@ def get_research(task_id: str, db: Session = Depends(get_db)) -> ResearchTaskRes
 
 
 @router.get("/{task_id}/pdf")
-def export_research_pdf(task_id: str, db: Session = Depends(get_db)) -> Response:
-    from app.pipeline.export.pdf_renderer import report_to_pdf
-
+def export_research_pdf(
+    task_id: str,
+    engine: str = "typst",
+    db: Session = Depends(get_db),
+) -> Response:
     task = db.get(ResearchTask, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Research task không tồn tại")
     if not task.report:
         raise HTTPException(status_code=409, detail="Research task chưa có báo cáo")
 
-    pdf = report_to_pdf(task.report)
+    from app.agent.format_sanitizer import sanitize_academic_markdown
+
+    clean_report = sanitize_academic_markdown(task.report)
+    citations_data = json.loads(task.citations) if task.citations else []
+
+    if engine == "typst":
+        try:
+            from app.pipeline.export.typst_renderer import render_report_to_pdf
+
+            pdf = render_report_to_pdf(clean_report, citations=citations_data)
+        except Exception as e:
+            logger.exception("Typst rendering failed for task %s: %s", task_id, e)
+            try:
+                from app.pipeline.export.pdf_renderer import report_to_pdf
+
+                pdf = report_to_pdf(clean_report)
+            except Exception as fallback_err:
+                logger.exception("Fallback PDF rendering also failed: %s", fallback_err)
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Lỗi khi biên dịch PDF Typst: {e}",
+                )
+    else:
+        try:
+            from app.pipeline.export.pdf_renderer import report_to_pdf
+
+            pdf = report_to_pdf(clean_report)
+        except Exception as e:
+            logger.exception("PDF rendering failed for task %s: %s", task_id, e)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Lỗi khi xuất PDF (Playwright/HTML): {e}. Vui lòng thử ?engine=typst.",
+            )
+
     return Response(
         content=pdf,
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="paperai-{task_id[:8]}.pdf"'},
     )
+

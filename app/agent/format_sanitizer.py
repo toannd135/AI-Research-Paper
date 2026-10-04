@@ -184,6 +184,11 @@ def sanitize_author_placeholders(text: str) -> str:
     return text
 
 
+def sanitize_currency_symbols(text: str) -> str:
+    """Chuẩn hóa ký hiệu tiền tệ USD ($) không đóng thành \\$ để tránh xung đột với LaTeX inline math delimiters."""
+    return re.sub(r"(?<=\s|[~(=])(?<!\\)\$(\d+(?:\.\d+)?)(?=\s+[a-zA-Z])", r"\\$\1", text)
+
+
 def sanitize_academic_markdown(text: str) -> str:
     """Hàm tổng hợp duy nhất: chuẩn hóa toàn bộ markdown học thuật trước khi xuất/lưu trữ."""
     if not text:
@@ -192,7 +197,10 @@ def sanitize_academic_markdown(text: str) -> str:
     # 1. Khử placeholder tác giả
     result = sanitize_author_placeholders(text)
 
-    # 2. Chuẩn hóa tất cả các khối Mermaid
+    # 2. Chuẩn hóa ký hiệu tiền tệ tránh xung đột inline math
+    result = sanitize_currency_symbols(result)
+
+    # 3. Chuẩn hóa tất cả các khối Mermaid
     def _mermaid_replacer(match: re.Match) -> str:
         body = match.group(1)
         sanitized_body = sanitize_mermaid_block(body)
@@ -200,10 +208,11 @@ def sanitize_academic_markdown(text: str) -> str:
 
     result = _MERMAID_BLOCK_RE.sub(_mermaid_replacer, result)
 
-    # 3. Chuẩn hóa LaTeX math display blocks
+    # 4. Chuẩn hóa LaTeX math display blocks
     result = sanitize_latex_math(result)
 
-    # 4. Chuẩn hóa Algorithm blocks
+    # 5. Chuẩn hóa Algorithm blocks
     result = sanitize_code_and_algorithm_blocks(result)
 
     return result.strip() + "\n"
+
