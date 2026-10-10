@@ -1,21 +1,15 @@
 """Hierarchical Section-by-Section Synthesis Pipeline for Top-Tier Academic Papers.
 
+Pipeline 6 chặng (blueprint → 1 Intro → 2 Related/Taxonomy → 3 Methodology → 4 Experiments → 5-6 Discussion/Conclusion),
+độc lập với chủ đề: nội dung chỉ được lấy từ draft đã kiểm chứng + danh sách trích dẫn của từng câu hỏi nghiên cứu.
+
 Enforces:
 1. Strict Single-Language Lock: 100% formal Academic English across all sections.
 2. Zero Pipeline Leakage: Strips meta-commentary, stage labels, and internal scaffolding.
-3. Mathematical & Statistical Rigor:
-   - Explicit slot-to-candidate unmapping: s in {A, B} -> d in {1, 2}.
-   - Paired inference: consistent pairs contribute zero variance to FPR; Var(FPR_hat) <= SR / (4N).
-   - Exact algebraic bound: |FPR - 0.5| <= SR / 2; equivalence bound delta_FPR = delta_SR / 2 = 0.01.
-   - Equivalence testing via Two One-Sided Tests (TOST) with pair-level bootstrap CI.
-   - Deterministic hashing via hashlib.md5.
-4. Exact Arithmetic Budget Consistency:
-   - Total passes: 2 * N * R * J = 90,000 across 3 models.
-   - Per-model passes: 2 * N * R = 30,000 calls each.
-   - Judge-API: 30,000 calls * 800 tok/call = 24M tokens -> $3.60.
-   - Local 7B: 30,000 * 0.5s / 3600 = 4.17 GPU-hours.
-   - Local 70B: 30,000 * 3s / 3600 = 25 hours on 2xA100 (50 GPU-hours).
+3. Evidence Discipline: every claim/number traces to the draft or a cited [n]; nothing invented.
+4. Cross-section Consistency: notation, numbers and terminology fixed by the blueprint.
 5. Canonical Citations: Deduplicates papers, removes raw search dumps, formats clean IEEE references.
+6. Two modes: 'survey' (taxonomy + benchmark matrix) and 'novel_research' (proposed method + experimental protocol).
 """
 
 from __future__ import annotations
@@ -33,43 +27,184 @@ from app.ai.llm_gateway.default import get_default_agent_gateway
 
 logger = logging.getLogger(__name__)
 
-_GLOBAL_ACADEMIC_STANDARDS = f"""
+# Catalog dataset chỉ có giá trị cho đề tài LLM-as-a-judge → chỉ chèn khi câu hỏi thật sự liên quan.
+_JUDGE_TOPIC_RE = re.compile(r"llm[- ]as[- ]a[- ]judge|pairwise|position bias|swap rate|llmbar|chatbot arena|mt-bench", re.I)
+
+_TABLE_BLOCK_RULE = """   - QUANTITATIVE COMPARISON TABLES (results with numbers) MUST be written as a ```table fenced block containing JSON instead of a Markdown table, e.g.
+     ```table
+     {"caption": "Main results on dataset X [n]", "header_groups": [{"label": "", "span": 2}, {"label": "Dataset A", "span": 2}], "columns": ["Category", "Method", "F1", "AUC"], "rows": [["Supervised", "TabNet [2]", "97.4", "95.1"], ["", "CNN [2]", "93.0", "90.2"], ["Hybrid", "**Best**", "**98.1**", "**96.0**"]], "bold_rows": []}
+     ```
+     header_groups is optional (sum of spans = number of columns); an empty first-column cell merges with the cell above (method families); put **bold** inside a cell for the best result. Every cell is a string. Only use numbers that appear in the draft/references with their [n]; use "–" if unavailable. Descriptive tables (taxonomy, configuration, qualitative cases) stay as Markdown tables.
+"""
+
+_CHART_BLOCK_RULE = """   - FIGURES: visualize quantitative values that already appear in the draft/references with a ```chart fenced block containing JSON:
+     {"type": "bar", "caption": "What is shown (source [n])", "labels": ["A", "B"], "series": [{"name": "F1 (%)", "values": [90.0, 84.1]}], "y_label": "%"}
+     type is one of bar | barh | line; each series has exactly one value per label. Never invent values; if there is not enough real data, omit the chart.
+"""
+
+
+def _global_standards(state: ResearchState, mode: str) -> str:
+    """Tiêu chuẩn học thuật chung cho mọi chặng (độc lập chủ đề)."""
+    rules = f"""
 STRICT PEER-REVIEW PUBLICATION STANDARDS (MANDATORY ACROSS ALL SECTIONS):
 1. STRICT SINGLE-LANGUAGE CONSTRAINT:
-   - The ENTIRE manuscript must be written exclusively in formal Academic English from title to conclusion.
+   - The ENTIRE manuscript must be written exclusively in formal Academic English from title to conclusion, even if the research question or the draft is in another language.
    - NEVER output Vietnamese or any other language in any section under any circumstance.
 2. ZERO META-PIPELINE LEAKAGE:
-   - NEVER output internal pipeline terminology such as 'Blueprint', 'Global Notation Lock', 'Stage Summary', 'Chặng', or meta-instructions.
-   - Refer to previous parts naturally using standard academic conventions (e.g., 'as formalized in Section 3', 'the pre-registered protocol').
-3. MATHEMATICAL RIGOR & CANDIDATE UNMAPPING:
-   - In pairwise LLM-as-a-judge evaluation, distinguish between presentation slot s in {{A, B}} and candidate answer identity d in {{1, 2}}.
-   - Under Order (1,2) [a1 first, a2 second]: slot A corresponds to a1 (d=1), slot B corresponds to a2 (d=2).
-   - Under Order (2,1) [a2 first, a1 second]: slot A corresponds to a2 (d=2), slot B corresponds to a1 (d=1).
-   - Inconsistency / Swap Rate (SR) occurs ONLY when candidate decisions differ: d^(1,2) != d^(2,1).
-   - Paired Structure for FPR: S_i = I[s_i^(1,2) = A] + I[s_i^(2,1) = A]. For any consistent pair, S_i = 1 deterministically. Variance Var(FPR_hat) <= SR / (4N).
-   - Structural algebraic bound: |FPR - 0.5| <= SR / 2. Therefore, equivalence bound delta_FPR = delta_SR / 2 = 0.01.
-   - Hypotheses: H1 (Existence of swap bias) tested via paired binomial/McNemar test; H2 (Equivalence to 0.5) tested via Two One-Sided Tests (TOST) within [-delta_FPR, +delta_FPR].
-   - Uncertainty quantification must use pair-level bootstrap (resampling N pairs with replacement).
-4. COMPUTATIONAL BUDGET & ARITHMETIC CONSISTENCY:
-   - All computational numbers must strictly match across all sections:
-     * N = 5,000 pairs, R = 3 runs, J = 3 models (Judge-7B, Judge-70B, Judge-API).
-     * Total forward passes = 2 * N * R * J = 90,000 passes.
-     * Passes per judge = 2 * N * R = 30,000 passes each.
-     * Judge-API: 30,000 calls * 800 tokens/call = 24M tokens -> $3.60 total at $0.15/1M tokens.
-     * Judge-7B (local): 30,000 calls * 0.5s / 3600 = 4.17 GPU-hours on 1x A100.
-     * Judge-70B (local): 30,000 calls * 3s / 3600 = 25 wallclock-hours on 2x A100 (= 50 GPU-hours).
-5. BENCHMARK DATASET GROUNDING:
-{get_dataset_grounding_context()}
-   - Acknowledge exact dataset sizes: LLMBar has 419 total pairs (Natural: 100, Adversarial: 319). For N >= 5,000, use LMSYS Chatbot Arena as the primary dataset.
-6. CITATION & NOVELTY OBJECTIVITY:
-   - Acknowledge foundational prior works: Zheng et al. (2023) [MT-Bench/LMSYS] for first position bias measurement in LLMs, Wang et al. (2023) for swap consistency, Chiang et al. (2023) for Chatbot Arena, Bai et al. (2022) for HH-RLHF, Zeng et al. (2023) for LLMBar.
-   - Do NOT make hyperbolic claims like 'no prior work defined swap rate'. State precise incremental contributions: pre-registered equivalence bounds, paired inferential derivations, and standardized reporting.
-7. FORMATTING RULES:
-   - Use hyphen '- ' for unordered lists.
+   - NEVER output internal pipeline terminology such as 'Blueprint', 'Stage Summary', 'Chặng', or meta-instructions.
+   - Refer to previous parts naturally using standard academic conventions (e.g., 'as formalized in Section 3').
+3. EVIDENCE DISCIPLINE (NO FABRICATION):
+   - Every factual claim, number, dataset, metric value and method name must come from the Draft Basis or the Available Citations, with the supporting [n]. Do not add outside facts or new citations.
+   - NEVER invent statistics, dataset sizes, benchmark scores, author names, institutions, costs, or experimental results. If a value is not in the evidence, describe it qualitatively or write '–'.
+   - Do not force-map a method to a citation that is not its original or a direct survey of it. State only what the cited source actually supports.
+4. CROSS-SECTION CONSISTENCY:
+   - Use exactly the title, acronym, notation, terminology and numbers fixed in the ESTABLISHED DESIGN PLAN. A number or symbol appearing in two sections must be identical.
+   - Every mathematical symbol must be defined where it first appears. Only introduce formulas that are necessary and correct.
+5. ACADEMIC MODESTY & HONESTY:
+   - Avoid hype ('first', 'novel breakthrough', 'proves') unless supported by the evidence. Prefer 'we propose', 'we hypothesize', 'the evidence suggests'.
+   - Acknowledge limitations, heterogeneity of the evidence and threats to validity candidly.
+6. FORMATTING RULES:
+   - Use hyphen '- ' for unordered lists. Never put two list items on one line.
    - Display math $$...$$ MUST be on its own line with empty lines before and after.
    - Every table MUST have a clear caption above it: '**Table N: Caption**'.
-   - If registered report (experiments pending), table cells for proposed models must be marked '*Not Exp.*'.
-"""
+   - Mermaid diagrams: every node label in double quotes (NodeId["Label"]), '<br/>' for line breaks, edge labels as -->|"label"|.
+{_TABLE_BLOCK_RULE}{_CHART_BLOCK_RULE}"""
+    if mode == "novel_research":
+        rules += (
+            "7. REGISTERED-REPORT RULE (novel research):\n"
+            "   - Results of the proposed method that have not been run must be marked '*Not Exp.*'; never fill in assumed numbers for it.\n"
+            "   - Baseline numbers may be reported only if they are published in the cited source [n].\n"
+        )
+    if _JUDGE_TOPIC_RE.search(f"{state.get('question', '')} {state.get('draft', '')}"):
+        rules += f"8. BENCHMARK DATASET GROUNDING:\n{get_dataset_grounding_context()}\n"
+    return rules
+
+
+# Cấu trúc từng chặng theo chế độ. Tiêu đề viết HOA là marker ổn định cho từng chặng.
+_STAGE_STRUCTURES: dict[str, dict[str, str]] = {
+    "survey": {
+        "stage2": (
+            "Section 2 (RELATED WORK AND TAXONOMY)",
+            "## 2. Taxonomy & Conceptual Framework\n"
+            "### 2.1 Multi-Dimensional Classification\n"
+            "- Classify the surveyed approaches along 3-4 orthogonal dimensions. Include a Markdown taxonomy table with caption '**Table 1: Taxonomy of ...**'.\n"
+            "### 2.2 Architectural Pipeline\n"
+            "- Include one ```mermaid flowchart (graph TD or LR) showing the typical end-to-end pipeline or the taxonomy tree, with citations [n] in labels where relevant.\n"
+            "### 2.3 Gaps in Existing Surveys & Literature\n"
+            "- State precisely which gaps this survey addresses.",
+        ),
+        "stage3": (
+            "Section 3 (IN-DEPTH TECHNICAL METHODOLOGIES)",
+            "## 3. In-Depth Technical Methodologies\n"
+            "- Use 3 subsections (### 3.1 - 3.3), one per major paradigm / mechanism family of the taxonomy.\n"
+            "- For each: core mechanism, representative works [n], what problem it solves, assumptions, strengths and weaknesses. Compare families against each other.\n"
+            "- Include formulas or short pseudocode only when the cited sources give them.",
+        ),
+        "stage4": (
+            "Section 4 (EMPIRICAL BENCHMARK MATRIX AND COMPARATIVE ANALYSIS)",
+            "## 4. Empirical Benchmark Matrix & Comparative Analysis\n"
+            "### 4.1 Standard Benchmark Datasets & Metrics\n"
+            "- Only datasets and metrics that appear in the evidence; explain why each metric is (in)appropriate.\n"
+            "### 4.2 Comprehensive Benchmark Comparison Table\n"
+            "- One quantitative comparison table as a ```table JSON block (method [n], paradigm, dataset, metrics) using results reported in the cited sources; group methods by paradigm with header_groups/merged first column when helpful.\n"
+            "### 4.3 Quantitative Findings & Trade-off Analysis\n"
+            "- Interpret the table; include 1-2 ```chart blocks built only from reported numbers; discuss trade-offs (accuracy vs. latency/cost/interpretability, etc.) and the heterogeneity of the reported evidence.",
+        ),
+        "stage5": (
+            "Sections 5 and 6 (DISCUSSION AND CONCLUSION)",
+            "## 5. Discussion & Open Research Challenges\n"
+            "### 5.1 Technical Barriers & Trade-offs\n"
+            "### 5.2 Scalability, Robustness & Deployment Concerns\n"
+            "### 5.3 Open Research Directions\n"
+            "- At least 4 concrete, distinct directions grounded in the evidence.\n\n"
+            "## 6. Conclusion\n"
+            "- Synthesize the overall picture and the outlook; no new claims.",
+        ),
+    },
+    "novel_research": {
+        "stage2": (
+            "Section 2 (RELATED WORK)",
+            "## 2. Related Work\n"
+            "### 2.1 Multi-Dimensional Taxonomy of Paradigms\n"
+            "- Include a Markdown table comparing prior approaches with caption '**Table 1: Taxonomy and Comparative Overview of Existing Paradigms**'.\n"
+            "### 2.2 Deep Comparative Analysis of Existing Mechanisms\n"
+            "- Mechanistic critique of prior studies [n]; cite each work only for what it actually shows.\n"
+            "### 2.3 Theoretical & Practical Gaps in Current Literature\n"
+            "- State the specific gaps that the proposed work addresses.",
+        ),
+        "stage3": (
+            "Section 3 (PROPOSED METHODOLOGY)",
+            "## 3. Proposed Methodology\n"
+            "### 3.1 Problem Formulation & Foundations\n"
+            "- Define inputs, outputs, objective and all notation from the design plan.\n"
+            "### 3.2 System Architecture\n"
+            "- Describe the end-to-end flow and include one ```mermaid flowchart.\n"
+            "### 3.3 Core Components\n"
+            "- Each component: purpose, mechanism, how it addresses a gap from Section 2; formulas only where they are well-defined. State clearly which parts are hypotheses.\n"
+            "### 3.4 Algorithmic Execution\n"
+            "- '**Algorithm 1: ...**' as numbered pseudocode in a ```text block (Input / Output / steps).\n"
+            "### 3.5 Complexity & Resource Analysis\n"
+            "- Qualitative or analytical complexity; numeric costs only if derivable from stated parameters.",
+        ),
+        "stage4": (
+            "Section 4 (EXPERIMENTS AND RESULTS)",
+            "## 4. Experiments and Results\n"
+            "### 4.1 Benchmark Datasets, Metrics & Evaluation Protocol\n"
+            "- Only datasets and metrics present in the evidence.\n"
+            "### 4.2 Baselines & Experimental Setup\n"
+            "- Baselines [n] and the configuration as a Markdown table.\n"
+            "### 4.3 Quantitative Benchmark Comparison\n"
+            "- A ```table JSON block comparing published baseline results [n] with the proposed method (marked '*Not Exp.*' unless supported); optionally one ```chart of real baseline numbers.\n"
+            "### 4.4 Ablation Study Design\n"
+            "- Ablation variants and what each tests (a ```table block with '*Not Exp.*' for unrun results).\n"
+            "### 4.5 Qualitative Analysis\n"
+            "- Expected failure modes and case-study protocol, labelled as planned if not executed.",
+        ),
+        "stage5": (
+            "Sections 5 and 6 (DISCUSSION AND CONCLUSION)",
+            "## 5. Discussion\n"
+            "### 5.1 In-Depth Analysis & Trade-Offs\n"
+            "### 5.2 Limitations & Threats to Validity\n"
+            "- Construct, internal, external and statistical validity; what has not been tested.\n"
+            "### 5.3 Future Directions\n"
+            "- 4 distinct, concrete directions.\n\n"
+            "## 6. Conclusion and Future Work\n"
+            "- Summarize the contributions and final remarks; no new claims.",
+        ),
+    },
+}
+
+
+def _structure(mode: str, stage: str) -> tuple[str, str]:
+    return _STAGE_STRUCTURES["novel_research" if mode == "novel_research" else "survey"][stage]
+
+
+def _mode_label(mode: str) -> str:
+    return "Novel Research Paper" if mode == "novel_research" else "Literature Survey"
+
+
+def _generate(
+    system_prompt: str,
+    user_prompt: str,
+    gateway: LLMGateway,
+    model_name: str | None,
+) -> str:
+    response = gateway.generate(
+        messages=[
+            Message(role="system", content=system_prompt),
+            Message(role="user", content=user_prompt),
+        ],
+        model_name=model_name,
+    )
+    return response.text.strip()
+
+
+def _user_prompt(state: ResearchState, instruction: str) -> str:
+    return (
+        f"Research Question: {state['question']}\n\n"
+        f"Draft Basis:\n{state.get('draft', '')}\n\n"
+        f"{instruction}"
+    )
 
 
 def _extract_last_paragraphs(text: str, num_paras: int = 2) -> str:
@@ -113,34 +248,35 @@ def _generate_stage_0_blueprint(
     gateway: LLMGateway,
     model_name: str | None,
 ) -> str:
-    """Stage 0: Global Architecture, Formal Mathematical Notation & Experimental Design Plan."""
+    """Stage 0: Global architecture, fixed terminology/notation and plan (Bản Thiết Kế Nghiên Cứu Toàn Bài)."""
     system_prompt = (
-        "You are a Principal Scientist designing a comprehensive, publication-grade Research Blueprint (Bản Thiết Kế Nghiên Cứu Toàn Bài).\n"
-        "Your goal is to establish a rigorous mathematical notation system, exact experimental parameters, and an inferential plan.\n\n"
-        f"{_GLOBAL_ACADEMIC_STANDARDS}\n\n"
-        "Generate a complete Research Blueprint with the following sections in formal Academic English:\n"
-        "1. TITLE & ACRONYM: Academic title and concise acronym.\n"
-        "2. FORMAL MATHEMATICAL NOTATION: Exact symbols for inputs, presentation orders, candidate answers, decisions, metrics, and equivalence bounds.\n"
-        "3. EXPERIMENTAL PROTOCOL & PARAMETERS: Dataset choices with exact scales, judge model scale breakdown (7B, 70B, API), deterministic decoding (T=0), paired execution.\n"
-        "4. DERIVABLE COMPUTATIONAL BUDGET: Exact formulas and values (passes, tokens, API cost, GPU-hours).\n"
-        "5. CORE CONTRIBUTIONS: 4 distinct, verifiable contributions."
+        "You are a Principal Scientist designing a concise, publication-grade Research Blueprint (Bản Thiết Kế Nghiên Cứu Toàn Bài) "
+        f"for a {_mode_label(mode)}.\n"
+        "Its purpose is to fix the title, terminology, notation and scope ONCE so that every later section stays consistent. "
+        "Use only what is supported by the draft and the citations.\n\n"
+        f"{_global_standards(state, mode)}\n\n"
+        "Generate the Blueprint in formal Academic English with these parts:\n"
+        "1. TITLE & ACRONYM: an academic title specific to the research question"
+        + (" (survey form: '[Topic]: A Comprehensive Survey and Taxonomy on ...')" if mode != "novel_research" else " and a concise acronym for the proposed method")
+        + ".\n"
+        "2. SCOPE & KEY TERMS: definitions of the 5-8 central terms and the boundaries (time span, domains) of the work.\n"
+        "3. NOTATION: only symbols that will really be needed (leave empty for a purely descriptive survey).\n"
+        + (
+            "4. TAXONOMY DIMENSIONS: the 3-4 orthogonal dimensions and their categories used to classify the literature.\n"
+            "5. EVIDENCE MAP: which citation numbers [n] support which topic, and which quantitative results are available for the benchmark table.\n"
+            if mode != "novel_research"
+            else "4. PROPOSED METHOD OUTLINE: components, the gap each one addresses, and the evaluation protocol (datasets, metrics, baselines available in the evidence).\n"
+            "5. EVIDENCE MAP: which citation numbers [n] support which baseline or claim.\n"
+        )
+        + "6. CORE CONTRIBUTIONS: 3-4 distinct, verifiable contributions."
     )
-
     user_prompt = (
-        f"Research Mode: {'Novel Research' if mode == 'novel_research' else 'Literature Survey'}\n"
+        f"Research Mode: {_mode_label(mode)}\n"
         f"Research Question: {state['question']}\n\n"
         f"Baseline Draft:\n{state.get('draft', '')}\n\n"
         f"Available Citations:\n{references}"
     )
-
-    response = gateway.generate(
-        messages=[
-            Message(role="system", content=system_prompt),
-            Message(role="user", content=user_prompt),
-        ],
-        model_name=model_name,
-    )
-    return response.text.strip()
+    return _generate(system_prompt, user_prompt, gateway, model_name)
 
 
 def _generate_stage_1_front_matter_and_intro(
@@ -152,46 +288,34 @@ def _generate_stage_1_front_matter_and_intro(
     model_name: str | None,
 ) -> str:
     """Stage 1: Front Matter + Section 1 (Title, Abstract, Introduction & Contributions)."""
+    contributions = (
+        "(Exactly 3-4 itemized contributions using hyphen '- ', each one concrete: e.g. a unified taxonomy, a quantitative comparison, an analysis of trade-offs, a roadmap of open problems.)"
+        if mode != "novel_research"
+        else "(Exactly 3-4 itemized contributions using hyphen '- ': the proposed architecture/method, its formulation, and the evaluation protocol; no overclaiming.)"
+    )
     system_prompt = (
         "You are writing Front Matter and Section 1 (INTRODUCTION) for a top-tier peer-reviewed academic paper.\n"
         "Write in rigorous, fluent Academic English (~1,200 - 1,500 words).\n\n"
-        f"{_GLOBAL_ACADEMIC_STANDARDS}\n\n"
+        f"{_global_standards(state, mode)}\n\n"
         f"ESTABLISHED DESIGN PLAN:\n{blueprint}\n\n"
         "REQUIRED STRUCTURE FOR SECTION 1:\n"
-        "# [Acronym]: [Full Descriptive Title]\n\n"
+        "# [Title from the design plan]\n\n"
         "**Authors:** PaperAI Automated Research Protocol | **Affiliations:** Open-Source Automated Science Initiative\n\n"
         "## Abstract\n"
-        "(Self-contained 250-300 word abstract: Context & Motivation, Baseline Limitations, Proposed Measurement Framework, Theoretical & Empirical Highlights, Implications. No citations [n] in abstract).\n\n"
+        "(Self-contained 200-280 word abstract: context & motivation, gap in existing work, approach/scope, key findings or highlights supported by the evidence, implications. No citations [n] in the abstract.)\n\n"
         "**Keywords:** k1, k2, k3, k4, k5\n\n"
         "## 1. Introduction\n"
         "### 1.1 Motivation & Background\n"
-        "(Comprehensive background on LLM-as-a-Judge pairwise evaluation and vulnerability to presentation order, 3-4 full paragraphs).\n"
-        "### 1.2 Limitations of Existing Baselines\n"
-        "(Detailed analysis of existing measurement deficiencies: metric ambiguity, absence of paired inferential statistics, lack of equivalence bounds, and ungrounded sample sizes [n], 3-4 paragraphs).\n"
+        "(3-4 full paragraphs on the problem's importance and context, using the evidence [n].)\n"
+        "### 1.2 Limitations of Existing Work\n"
+        "(3-4 paragraphs on concrete deficiencies of prior work, with [n].)\n"
         "### 1.3 Core Contributions\n"
-        "(Exactly 4 itemized contributions using hyphen '- '):\n"
-        "- C1. Precise Metric Definitions ...\n"
-        "- C2. Falsifiable Hypotheses with Equivalence Bounds ...\n"
-        "- C3. Paired Statistical Analysis Plan ...\n"
-        "- C4. Standardized Experimental Protocol & Variance Accounting ...\n\n"
+        f"{contributions}\n"
         "### 1.4 Paper Organization\n"
-        "(Outline strictly Sections 2 through 6. Do NOT reference unwritten sections or phantom appendices)."
+        "(Outline strictly Sections 2 through 6. Do NOT reference unwritten sections or phantom appendices.)"
     )
-
-    user_prompt = (
-        f"Research Question: {state['question']}\n\n"
-        f"Draft Basis:\n{state.get('draft', '')}\n\n"
-        "Write Section 1 in formal Academic English with the highest academic depth."
-    )
-
-    response = gateway.generate(
-        messages=[
-            Message(role="system", content=system_prompt),
-            Message(role="user", content=user_prompt),
-        ],
-        model_name=model_name,
-    )
-    return response.text.strip()
+    user_prompt = _user_prompt(state, "Write the front matter and Section 1 in formal Academic English with high academic depth.")
+    return _generate(system_prompt, user_prompt, gateway, model_name)
 
 
 def _generate_stage_2_related_work(
@@ -203,37 +327,19 @@ def _generate_stage_2_related_work(
     gateway: LLMGateway,
     model_name: str | None,
 ) -> str:
-    """Stage 2: Section 2 (Related Work & Conceptual Taxonomy Framework)."""
+    """Stage 2: Section 2 (Related Work / Taxonomy & Conceptual Framework)."""
+    title, structure = _structure(mode, "stage2")
     system_prompt = (
-        "You are writing Section 2 (RELATED WORK) for a top-tier peer-reviewed academic paper.\n"
+        f"You are writing {title} for a top-tier peer-reviewed academic paper.\n"
         "Write in rigorous, fluent Academic English (~1,400 - 1,600 words).\n\n"
-        f"{_GLOBAL_ACADEMIC_STANDARDS}\n\n"
+        f"{_global_standards(state, mode)}\n\n"
         f"ESTABLISHED DESIGN PLAN:\n{blueprint}\n\n"
         f"TRANSITION CONTEXT FROM SECTION 1:\n{sec1_transition}\n\n"
-        "REQUIRED STRUCTURE FOR SECTION 2:\n"
-        "## 2. Related Work\n"
-        "### 2.1 Multi-Dimensional Taxonomy of Paradigms\n"
-        "(Include Markdown table comparing prior operationalizations with caption '**Table 1: Taxonomy and Comparative Overview of Existing Paradigms**').\n"
-        "### 2.2 Deep Comparative Analysis of Existing Mechanisms\n"
-        "(Detailed mechanistic critique of prior studies [n], highlighting seminal works by Zheng et al. (2023) and Wang et al. (2023)).\n"
-        "### 2.3 Theoretical & Practical Gaps in Current Literature\n"
-        "(Clarify specific gaps addressed by this work: paired uncertainty quantification, TOST equivalence bounds, candidate unmapping)."
+        f"AVAILABLE CITATIONS:\n{references}\n\n"
+        f"REQUIRED STRUCTURE:\n{structure}"
     )
-
-    user_prompt = (
-        f"Research Question: {state['question']}\n\n"
-        f"Draft Basis:\n{state.get('draft', '')}\n\n"
-        "Write Section 2 with comprehensive scholarly literature mapping in formal Academic English."
-    )
-
-    response = gateway.generate(
-        messages=[
-            Message(role="system", content=system_prompt),
-            Message(role="user", content=user_prompt),
-        ],
-        model_name=model_name,
-    )
-    return response.text.strip()
+    user_prompt = _user_prompt(state, "Write this section with comprehensive scholarly literature mapping in formal Academic English.")
+    return _generate(system_prompt, user_prompt, gateway, model_name)
 
 
 def _generate_stage_3_methodology(
@@ -245,48 +351,20 @@ def _generate_stage_3_methodology(
     gateway: LLMGateway,
     model_name: str | None,
 ) -> str:
-    """Stage 3: Section 3 (Proposed Methodology, Mathematical Foundations & Algorithmic Protocol)."""
+    """Stage 3: Section 3 (Proposed Methodology / In-Depth Technical Methodologies)."""
+    title, structure = _structure(mode, "stage3")
     system_prompt = (
-        "You are writing Section 3 (PROPOSED METHODOLOGY) for a top-tier peer-reviewed academic paper.\n"
-        "Write in rigorous, fluent Academic English (~2,200 - 2,500 words).\n"
+        f"You are writing {title} for a top-tier peer-reviewed academic paper.\n"
+        "Write in rigorous, fluent Academic English (~2,000 - 2,500 words).\n"
         "DO NOT output any stage summary or meta-commentary at the end.\n\n"
-        f"{_GLOBAL_ACADEMIC_STANDARDS}\n\n"
+        f"{_global_standards(state, mode)}\n\n"
         f"ESTABLISHED DESIGN PLAN:\n{blueprint}\n\n"
         f"TRANSITION CONTEXT FROM SECTION 2:\n{sec2_transition}\n\n"
-        "REQUIRED STRUCTURE FOR SECTION 3:\n"
-        "## 3. Proposed Methodology\n"
-        "### 3.1 Formal Problem Formulation & Mathematical Foundations\n"
-        "- Input space: (q, a1, a2, y). Presentation orders: pi in {(1,2), (2,1)}.\n"
-        "- Slot-to-Candidate Unmapping: Model outputs slot s in {A, B}. Under Order (1,2), A->1, B->2. Under Order (2,1), A->2, B->1. Decision d_i^(pi) in {1, 2} is candidate identity.\n"
-        "### 3.2 High-Level Architectural Pipeline\n"
-        "- Describe overall end-to-end evaluation flow. Include a standard ```mermaid flowchart diagram.\n"
-        "### 3.3 Detailed Component Formulations & Hypotheses\n"
-        "- Swap Rate Estimator: SR = (1/N) * sum(I[d_i^(1,2) != d_i^(2,1)]).\n"
-        "- First-Position Preference Rate Estimator: FPR = (1/(2N)) * sum(I[s_i^(1,2) = A] + I[s_i^(2,1) = A]).\n"
-        "- Mathematical Coupling: S_i = I[s_i^(1,2) = A] + I[s_i^(2,1) = A]. For consistent pairs, S_i = 1. Variance Var(FPR_hat) <= SR / (4N). Structural bound |FPR - 0.5| <= SR / 2.\n"
-        "- Hypotheses: H1 (SR > delta_SR) with delta_SR = 0.02. H2 (|FPR - 0.5| < delta_FPR) tested via Two One-Sided Tests (TOST) with delta_FPR = delta_SR / 2 = 0.01.\n"
-        "### 3.4 Algorithmic Execution Protocol\n"
-        "- Include '**Algorithm 1: POS-BIAS-MEASURE Evaluation Protocol**' in Python pseudocode featuring candidate unmapping, pair-level bootstrap CI, and TOST test.\n"
-        "### 3.5 Theoretical Analysis & Computational Complexity\n"
-        "- Time complexity, space complexity, and analytical sample size derivation.\n"
-        "- Include '**Table 2: Derivable Computational Budget**' with exact consistent values:\n"
-        "  Total Passes = 90,000; API Tokens = 24M ($3.60); Local 7B = 4.17 GPU-hours; Local 70B = 50 GPU-hours (25h on 2xA100)."
+        f"AVAILABLE CITATIONS:\n{references}\n\n"
+        f"REQUIRED STRUCTURE:\n{structure}"
     )
-
-    user_prompt = (
-        f"Research Question: {state['question']}\n\n"
-        f"Draft Basis:\n{state.get('draft', '')}\n\n"
-        "Write Section 3 with mathematical completeness and exact arithmetic consistency in formal Academic English."
-    )
-
-    response = gateway.generate(
-        messages=[
-            Message(role="system", content=system_prompt),
-            Message(role="user", content=user_prompt),
-        ],
-        model_name=model_name,
-    )
-    return response.text.strip()
+    user_prompt = _user_prompt(state, "Write this section with technical completeness and consistent terminology/notation in formal Academic English.")
+    return _generate(system_prompt, user_prompt, gateway, model_name)
 
 
 def _generate_stage_4_experiments(
@@ -298,45 +376,20 @@ def _generate_stage_4_experiments(
     gateway: LLMGateway,
     model_name: str | None,
 ) -> str:
-    """Stage 4: Section 4 (Experiments and Results, Matrix, Ablations & Case Studies)."""
+    """Stage 4: Section 4 (Experiments & Results / Empirical Benchmark Matrix)."""
+    title, structure = _structure(mode, "stage4")
     system_prompt = (
-        "You are writing Section 4 (EXPERIMENTS) for a top-tier peer-reviewed academic paper.\n"
-        "Write in rigorous, fluent Academic English (~2,200 - 2,500 words).\n"
+        f"You are writing {title} for a top-tier peer-reviewed academic paper.\n"
+        "Write in rigorous, fluent Academic English (~1,800 - 2,300 words).\n"
         "DO NOT output any stage summary or meta-commentary at the end.\n\n"
-        f"{_GLOBAL_ACADEMIC_STANDARDS}\n\n"
+        f"{_global_standards(state, mode)}\n\n"
         f"ESTABLISHED DESIGN PLAN:\n{blueprint}\n\n"
         f"TRANSITION CONTEXT FROM SECTION 3:\n{sec3_transition}\n\n"
-        "REQUIRED STRUCTURE FOR SECTION 4:\n"
-        "## 4. Experiments and Results\n"
-        "### 4.1 Benchmark Datasets, Metrics & Evaluation Protocol\n"
-        "- Datasets: LMSYS Chatbot Arena (N=5,000 primary subset), MT-Bench Human Judgments (3.3k), LLMBar (419 instances as specialized sanity check). Follow real dataset scales.\n"
-        "- Metrics: SR, FPR, per-stratum estimates, pair-level bootstrap CIs.\n"
-        "- Computational Budget Breakdown in text: MUST strictly match Section 3 (30k calls/model, API: 24M tokens, $3.60, 7B: 4.17h, 70B: 50 GPU-hours).\n"
-        "### 4.2 Baselines, Hyperparameters & Implementation Details\n"
-        "- Table of locked hyperparameters and configuration.\n"
-        "### 4.3 Quantitative Benchmark Comparison\n"
-        "- Include '**Table 3: Main Empirical Benchmark Evaluation**' comparing baselines [n] with proposed models marked '*Not Exp.*'.\n"
-        "- Include a ```chart block with sensitivity curve or sample size precision.\n"
-        "### 4.4 In-Depth Ablation Studies\n"
-        "- Ablation on Quality-gap stratification ('**Table 4: Ablation Analysis — Position Bias by Quality-Gap Stratum**'), prompt templates, and temperature sensitivity.\n"
-        "### 4.5 Qualitative Case Studies & Error Analysis\n"
-        "- Error taxonomy (Type A to D) and '**Table 5: Qualitative Comparison and Failure Case Analysis**'. Ensure IL-03 correctly illustrates position bias (Order 1,2 selects Slot A -> a1, Order 2,1 selects Slot A -> a2)."
+        f"AVAILABLE CITATIONS:\n{references}\n\n"
+        f"REQUIRED STRUCTURE:\n{structure}"
     )
-
-    user_prompt = (
-        f"Research Question: {state['question']}\n\n"
-        f"Draft Basis:\n{state.get('draft', '')}\n\n"
-        "Write Section 4 with rigorous empirical structure and consistent numbers in formal Academic English."
-    )
-
-    response = gateway.generate(
-        messages=[
-            Message(role="system", content=system_prompt),
-            Message(role="user", content=user_prompt),
-        ],
-        model_name=model_name,
-    )
-    return response.text.strip()
+    user_prompt = _user_prompt(state, "Write this section with a rigorous empirical structure; every number must come from the evidence with its [n].")
+    return _generate(system_prompt, user_prompt, gateway, model_name)
 
 
 def _generate_stage_5_discussion_and_conclusion(
@@ -348,42 +401,19 @@ def _generate_stage_5_discussion_and_conclusion(
     gateway: LLMGateway,
     model_name: str | None,
 ) -> str:
-    """Stage 5: Section 5 (Discussion, Limitations & Threats) and Section 6 (Conclusion)."""
+    """Stage 5: Section 5 (Discussion, Limitations) and Section 6 (Conclusion)."""
+    title, structure = _structure(mode, "stage5")
     system_prompt = (
-        "You are writing Section 5 (Discussion) and Section 6 (Conclusion) for a top-tier peer-reviewed academic paper.\n"
+        f"You are writing {title} for a top-tier peer-reviewed academic paper.\n"
         "Write in rigorous, fluent Academic English (~1,200 - 1,500 words).\n\n"
-        f"{_GLOBAL_ACADEMIC_STANDARDS}\n\n"
+        f"{_global_standards(state, mode)}\n\n"
         f"ESTABLISHED DESIGN PLAN:\n{blueprint}\n\n"
         f"TRANSITION CONTEXT FROM SECTION 4:\n{sec4_transition}\n\n"
-        "REQUIRED STRUCTURE FOR SECTIONS 5 & 6:\n"
-        "## 5. Discussion\n"
-        "### 5.1 In-Depth Technical Analysis & Trade-Offs\n"
-        "- Trade-offs: Metric granularity vs. statistical power, determinism (T=0) vs. ecological validity, quality stratification.\n"
-        "- Mathematical accuracy: emphasize that large directional bias (|FPR - 0.5| > 0) strictly requires non-trivial swap rate (SR >= 2 * |FPR - 0.5|).\n"
-        "- Monetary cost alignment: verify API cost matches $3.60 for 30,000 calls / 24M tokens.\n"
-        "### 5.2 Threats to Validity & Honest Limitations\n"
-        "- Construct, internal, external, and statistical validity.\n"
-        "- Judge model scope: restrict to evaluated models (Judge-7B, Judge-70B, Judge-API); do not mention hallucinated models not tested.\n"
-        "### 5.3 Emerging Frontiers & Open Research Directions\n"
-        "- 4 distinct future directions (e.g., adaptive sequential testing, causal mediation, multimodal judging).\n\n"
-        "## 6. Conclusion\n"
-        "- Summary of the 4 verifiable contributions and final remarks."
+        f"AVAILABLE CITATIONS:\n{references}\n\n"
+        f"REQUIRED STRUCTURE:\n{structure}"
     )
-
-    user_prompt = (
-        f"Research Question: {state['question']}\n\n"
-        f"Draft Basis:\n{state.get('draft', '')}\n\n"
-        "Write Section 5 and Section 6 in formal Academic English with candid academic honesty."
-    )
-
-    response = gateway.generate(
-        messages=[
-            Message(role="system", content=system_prompt),
-            Message(role="user", content=user_prompt),
-        ],
-        model_name=model_name,
-    )
-    return response.text.strip()
+    user_prompt = _user_prompt(state, "Write Sections 5 and 6 in formal Academic English with candid academic honesty.")
+    return _generate(system_prompt, user_prompt, gateway, model_name)
 
 
 def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> ResearchState:
