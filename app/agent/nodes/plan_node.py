@@ -11,7 +11,7 @@ _SYSTEM_PROMPT = (
     "   - 'novel_research': nếu câu hỏi yêu cầu cải tiến một mô hình/đề tài cụ thể, đề xuất kiến trúc/thuật toán mới, khắc phục nhược điểm của baseline.\n"
     "   - 'survey': nếu câu hỏi yêu cầu tổng quan, phân tích tổng hợp các nghiên cứu hiện có, khảo sát hiện trạng.\n"
     "2. Sinh 4-5 truy vấn tìm kiếm (search queries) chuyên sâu bao quát 5 khía cạnh cốt lõi:\n"
-    "   - [Khía cạnh 1]: Các công trình nền tảng và cơ chế hoạt động cốt lõi (Foundational Baselines & Mechanisms). Hãy đưa thẳng tên các bài báo nền tảng và tác giả chính (ví dụ: 'IRCoT Trivedi', 'Self-RAG Asai', 'Chain of Verification Dhuliawala', 'Lewis Retrieval-Augmented Generation') để kéo chính xác bài báo gốc.\n"
+    "   - [Khía cạnh 1]: Các công trình cội nguồn và cơ chế hoạt động cốt lõi (Seminal & Foundational Baselines). Hãy đưa thẳng tên các bài báo cội nguồn đầu tiên định nghĩa hiện tượng hoặc mô hình gốc (ví dụ: với Position Bias/LLM-as-a-Judge: 'Zheng Judging LLM-as-a-Judge MT-Bench', 'Wang Large Language Models are not Fair Evaluators', 'Zeng LLMBar', 'Bai HH-RLHF Anthropic'; với RAG: 'IRCoT Trivedi', 'Self-RAG Asai', 'CoVe Dhuliawala') để kéo chính xác bài báo gốc trước khi so sánh.\n"
     "   - [Khía cạnh 2]: Bộ dữ liệu chuẩn (Benchmark Datasets), phương pháp đánh giá (Metrics/Evaluation Protocols).\n"
     "   - [Khía cạnh 3]: Các điểm nghẽn, nhược điểm và failure modes của các phương pháp hiện tại (Bottlenecks & Limitations).\n"
     "   - [Khía cạnh 4]: Các hướng tiếp cận tiên tiến, công thức toán học hoặc kỹ thuật kết hợp (Advanced/Cross-domain Techniques).\n"

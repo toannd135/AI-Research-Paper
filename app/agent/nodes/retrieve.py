@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from app.agent.tools.retrieve_evidence import retrieve_evidence
 from app.core.schemas import Chunk, ResearchState
 
 
@@ -11,6 +10,7 @@ def retrieve_node(state: ResearchState) -> dict:
 
     Bắt buộc validate kết quả thô từ tool bằng Chunk.model_validate().
     """
+    from app.agent.tools.retrieve_evidence import retrieve_evidence
     question = state.get("question", "")
     papers = state.get("papers", [])
 

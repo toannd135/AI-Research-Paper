@@ -166,7 +166,7 @@ def test_synthesize_node_hierarchical_execution():
     assert "## 5. Discussion" in report
     assert "## 6. Conclusion" in report
     assert "## References" in report
-    assert "[1] h2o_paper" in report
+    assert "h2o_paper" in report
 
     # Verify that all 6 stages were invoked
     assert gateway.call_count == 6

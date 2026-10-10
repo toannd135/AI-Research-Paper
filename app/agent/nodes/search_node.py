@@ -1,8 +1,4 @@
-"""Node tìm kiếm evidence trên toàn kho paper (nội bộ Qdrant + mở rộng OpenAlex trên Internet)."""
-
 from app.agent.state import ResearchState
-from app.agent.tools.retrieve_evidence import retrieve_evidence
-from app.agent.tools.search_external_papers import retrieve_external_evidence
 
 
 def is_reference_list_chunk(chunk) -> bool:
@@ -37,6 +33,9 @@ def is_domain_relevant(chunk, question: str) -> bool:
 
 
 def search_node(state: ResearchState) -> ResearchState:
+    from app.agent.tools.retrieve_evidence import retrieve_evidence
+    from app.agent.tools.search_external_papers import retrieve_external_evidence
+
     queries = state.get("search_queries") or [state["question"]]
 
     # 1. Tìm kiếm evidence trên CSDL nội bộ (Qdrant)

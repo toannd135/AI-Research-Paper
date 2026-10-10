@@ -81,3 +81,27 @@ def test_rejects_encoder_generative_conflict():
 
     assert result["critique_feedback"] is not None
     assert "deberta là mô hình encoder-only" in result["critique_feedback"].lower()
+
+
+def test_rejects_pipeline_leakage():
+    fake_llm = MagicMock()
+    fake_llm.generate.return_value = MagicMock(text='{"unsupported_sentences": []}')
+    citations = [Citation(paper_id="Paper 1", chunk_id="a", text_snippet="paper 1")]
+    state = _state(draft="As detailed in Blueprint §3.5 and Global Notation Lock [1].", citations=citations)
+
+    result = critique_node(state, llm=fake_llm)
+
+    assert result["critique_feedback"] is not None
+    assert "rò rỉ siêu dữ liệu pipeline" in result["critique_feedback"].lower()
+
+
+def test_rejects_budget_arithmetic_conflict():
+    fake_llm = MagicMock()
+    fake_llm.generate.return_value = MagicMock(text='{"unsupported_sentences": []}')
+    citations = [Citation(paper_id="Paper 1", chunk_id="a", text_snippet="paper 1")]
+    state = _state(draft="The total cost was $2.70 in Table 4, but Section 5 reported $0.90 [1].", citations=citations)
+
+    result = critique_node(state, llm=fake_llm)
+
+    assert result["critique_feedback"] is not None
+    assert "mâu thuẫn số học ngân sách" in result["critique_feedback"].lower()

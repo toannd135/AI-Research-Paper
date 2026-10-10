@@ -384,19 +384,83 @@ def render_chart_spec_to_svg(spec: dict, out_path: Path) -> Path:
     return out_path
 
 
+def _render_offline_flowchart(code: str, out_path: Path) -> Path:
+    """Render a clean offline vector flowchart using matplotlib when network rendering is unavailable."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import FancyBboxPatch
+
+    subgraphs = re.findall(r'subgraph\s+[A-Za-z0-9_]+\s*\["([^"]+)"\]', code)
+    nodes = re.findall(r'[A-Za-z0-9_]+\["([^"]+)"\]', code)
+
+    stages = [sg.replace("<br/>", "\n") for sg in subgraphs]
+    if not stages:
+        node_labels = [n.replace("<br/>", "\n") for n in nodes][:4]
+        stages = node_labels or ["Experimental Setup", "Execution & Inference", "Statistical Analysis", "Reporting & Verification"]
+
+    n_stages = max(len(stages), 1)
+    fig, ax = plt.subplots(figsize=(6.5, 2.2), dpi=200)
+    ax.axis("off")
+    ax.set_xlim(0, 10)
+    ax.set_ylim(0, 3)
+
+    box_w = min(2.0, 7.5 / n_stages)
+    box_h = 1.4
+    spacing = (8.5 - (n_stages * box_w)) / max(n_stages - 1, 1)
+
+    for i, stage_name in enumerate(stages):
+        x = 0.5 + i * (box_w + spacing)
+        y = 0.8
+        p = FancyBboxPatch(
+            (x, y), box_w, box_h,
+            boxstyle="round,pad=0.08,rounding_size=0.12",
+            facecolor="#f8fafc",
+            edgecolor=_PALETTE[i % len(_PALETTE)],
+            linewidth=1.4,
+        )
+        ax.add_patch(p)
+        clean_text = stage_name.replace("  ", " ").strip()
+        ax.text(
+            x + box_w / 2, y + box_h / 2,
+            clean_text,
+            ha="center", va="center",
+            fontsize=7, fontweight="bold",
+            color="#1e293b",
+        )
+
+        if i < n_stages - 1:
+            ax.annotate(
+                "",
+                xy=(x + box_w + spacing, y + box_h / 2),
+                xytext=(x + box_w, y + box_h / 2),
+                arrowprops=dict(arrowstyle="->", color="#64748b", lw=1.4),
+            )
+
+    fig.tight_layout()
+    fig.savefig(str(out_path), format="svg", bbox_inches="tight")
+    plt.close(fig)
+    return out_path
+
+
 def render_mermaid_to_svg(code: str, out_path: Path) -> Path | None:
-    """Render Mermaid syntax to SVG via mermaid.ink with graceful fallback."""
+    """Render Mermaid syntax to SVG via mermaid.ink with graceful offline fallback."""
     import httpx
     try:
         enc = base64.b64encode(code.encode("utf-8")).decode("ascii")
         url = f"https://mermaid.ink/svg/{enc}"
-        r = httpx.get(url, timeout=10)
+        r = httpx.get(url, timeout=5)
         if r.status_code == 200 and "<svg" in r.text:
             out_path.write_text(r.text, encoding="utf-8")
             return out_path
     except Exception as e:
-        logger.warning(f"Mermaid rendering via network failed: {e}. Falling back to styled code block.")
-    return None
+        logger.info(f"Online Mermaid rendering unavailable ({e}). Using offline vector flowchart generator.")
+
+    try:
+        return _render_offline_flowchart(code, out_path)
+    except Exception as e:
+        logger.warning(f"Offline flowchart rendering failed: {e}")
+        return None
 
 
 def markdown_to_typst(
@@ -477,8 +541,9 @@ def markdown_to_typst(
             svg_name = f"chart_{fig_counter[0]}.svg"
             svg_path = work_dir / svg_name
             render_chart_spec_to_svg(spec, svg_path)
-            caption = spec.get("caption") or spec.get("title") or f"Figure {fig_counter[0]}"
-            return save_block(f'#figure(\n  image("{svg_name}", width: 100%),\n  caption: [{caption}]\n)')
+            raw_caption = spec.get("caption") or spec.get("title") or f"Evaluation Metric Plot"
+            clean_caption = re.sub(r"^(?:Figure|Fig\.|Biểu đồ)\s*\d+[:\.]?\s*", "", str(raw_caption).strip(), flags=re.IGNORECASE)
+            return save_block(f'#figure(\n  image("{svg_name}", width: 100%),\n  caption: [{clean_caption}]\n)')
         except Exception as e:
             logger.warning(f"Failed to render chart spec: {e}")
             return ""
@@ -492,9 +557,8 @@ def markdown_to_typst(
         svg_path = work_dir / svg_name
         res = render_mermaid_to_svg(code, svg_path)
         if res:
-            return save_block(f'#figure(\n  image("{svg_name}", width: 100%),\n  caption: [Workflow Architecture Overview.]\n)')
-        # Fallback to styled code block
-        return save_block(f"#block(stroke: 0.5pt + luma(180), inset: 8pt, radius: 2pt, fill: luma(250))[```\n{code}\n```]")
+            return save_block(f'#figure(\n  image("{svg_name}", width: 100%),\n  caption: [System Architectural and Evaluation Pipeline Overview.]\n)')
+        return ""
     body_md = re.sub(r"```mermaid[ \t]*\n(.*?)```", repl_mermaid, body_md, flags=re.DOTALL)
 
     # 2c. Other Code / Algorithm blocks
@@ -516,8 +580,10 @@ def markdown_to_typst(
     tbl_counter = [0]
     def repl_table(m):
         tbl_counter[0] += 1
-        raw_cap = m.group(1) or f"Benchmark and Quantitative Evaluation {tbl_counter[0]}"
-        clean_cap = raw_cap.strip()
+        raw_cap = m.group(1) or "Empirical Benchmark and Comparative Evaluation"
+        clean_cap = re.sub(r"^(?:Table|Bảng)\s*\d+[:\.]?\s*", "", raw_cap.strip(), flags=re.IGNORECASE).strip()
+        if not clean_cap:
+            clean_cap = "Empirical Benchmark and Comparative Evaluation"
         tbl_str = m.group(2).strip()
         typ_tbl = parse_markdown_table_to_typst(tbl_str, clean_cap)
         return save_block(typ_tbl)

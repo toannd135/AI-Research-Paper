@@ -189,18 +189,50 @@ def sanitize_currency_symbols(text: str) -> str:
     return re.sub(r"(?<=\s|[~(=])(?<!\\)\$(\d+(?:\.\d+)?)(?=\s+[a-zA-Z])", r"\\$\1", text)
 
 
+def sanitize_pipeline_leakages(text: str) -> str:
+    """Khử sạch toàn bộ siêu dữ liệu rò rỉ từ pipeline nội bộ (Blueprint, Chặng, Notation Lock)."""
+    # 1. Khử các đoạn tổng kết chặng / tóm tắt chặng do LLM tự sinh ở cuối section
+    text = re.sub(
+        r"(?:\n|^)[ \t]*[-—*]*[ \t]*(?:Tóm tắt (?:Chặng|Giai đoạn|Stage)\s*\d+[\.:]?|Stage\s*\d+\s*Summary[\.:]?|Tóm tắt Blueprint[\.:]?)[^\n]*(?:\n[^\n#|]+)*",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    # 2. Thay thế các tham chiếu Blueprint / Chặng bằng ngôn ngữ học thuật tự nhiên
+    text = re.sub(r"\b(?:theo\s+)?Blueprint\s*§?[\d\.]*(?:\s*,\s*§?[\d\.]*)*\b", "the pre-registered protocol", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b(?:trong\s+)?Blueprint\b", "the pre-registered protocol", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b(?:Global Notation Lock(?:\s*Table)?|Bảng Ký Hiệu Toàn Cục)\b", "formal notation system", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bChặng\s*(\d+)\b", r"Section \1", text, flags=re.IGNORECASE)
+
+    # 3. Sửa lỗi công thức toán LaTeX bị rò rỉ trong ô bảng: e.g., |text{Tokens} times 0.15 / 10^6 |
+    text = re.sub(
+        r"\|[ \t]*\\?text\{([^{}]+)\}\s*times\s*([0-9\.\^/]+)[ \t]*\|",
+        r"| $\\text{\1} \\times \2$ |",
+        text,
+    )
+
+    # 4. Sửa lỗi nhãn Figure lặp lại: e.g., Figure 1: Figure 1: ...
+    text = re.sub(r"(Figure\s+\d+[:\.]?)\s+Figure\s+\d+[:\.]?", r"\1", text, flags=re.IGNORECASE)
+
+    return text
+
+
 def sanitize_academic_markdown(text: str) -> str:
     """Hàm tổng hợp duy nhất: chuẩn hóa toàn bộ markdown học thuật trước khi xuất/lưu trữ."""
     if not text:
         return ""
 
-    # 1. Khử placeholder tác giả
-    result = sanitize_author_placeholders(text)
+    # 1. Khử rò rỉ pipeline nội bộ
+    result = sanitize_pipeline_leakages(text)
 
-    # 2. Chuẩn hóa ký hiệu tiền tệ tránh xung đột inline math
+    # 2. Khử placeholder tác giả
+    result = sanitize_author_placeholders(result)
+
+    # 3. Chuẩn hóa ký hiệu tiền tệ tránh xung đột inline math
     result = sanitize_currency_symbols(result)
 
-    # 3. Chuẩn hóa tất cả các khối Mermaid
+    # 4. Chuẩn hóa tất cả các khối Mermaid
     def _mermaid_replacer(match: re.Match) -> str:
         body = match.group(1)
         sanitized_body = sanitize_mermaid_block(body)
@@ -208,10 +240,10 @@ def sanitize_academic_markdown(text: str) -> str:
 
     result = _MERMAID_BLOCK_RE.sub(_mermaid_replacer, result)
 
-    # 4. Chuẩn hóa LaTeX math display blocks
+    # 5. Chuẩn hóa LaTeX math display blocks
     result = sanitize_latex_math(result)
 
-    # 5. Chuẩn hóa Algorithm blocks
+    # 6. Chuẩn hóa Algorithm blocks
     result = sanitize_code_and_algorithm_blocks(result)
 
     return result.strip() + "\n"
