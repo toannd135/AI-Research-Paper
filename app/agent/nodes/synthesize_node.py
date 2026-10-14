@@ -34,12 +34,12 @@ _TABLE_BLOCK_RULE = """   - QUANTITATIVE COMPARISON TABLES (results with numbers
      ```table
      {"caption": "Main results on dataset X [n]", "header_groups": [{"label": "", "span": 2}, {"label": "Dataset A", "span": 2}], "columns": ["Category", "Method", "F1", "AUC"], "rows": [["Supervised", "TabNet [2]", "97.4", "95.1"], ["", "CNN [2]", "93.0", "90.2"], ["Hybrid", "**Best**", "**98.1**", "**96.0**"]], "bold_rows": []}
      ```
-     header_groups is optional (sum of spans = number of columns); an empty first-column cell merges with the cell above (method families); put **bold** inside a cell for the best result. Every cell is a string. Only use numbers that appear in the draft/references with their [n]; use "–" if unavailable. Descriptive tables (taxonomy, configuration, qualitative cases) stay as Markdown tables.
+     header_groups is optional (sum of spans = number of columns); an empty first-column cell merges with the cell above (method families); add "highlight_best": "max" (or "min", or {"Latency (ms)": "min", "F1": "max"}) to shade the best value of each numeric column. Every cell is a string. Only use numbers that appear in the draft/references with their [n]; use "–" if unavailable. Descriptive tables (taxonomy, configuration, qualitative cases) stay as Markdown tables.
 """
 
 _CHART_BLOCK_RULE = """   - FIGURES: visualize quantitative values that already appear in the draft/references with a ```chart fenced block containing JSON:
      {"type": "bar", "caption": "What is shown (source [n])", "labels": ["A", "B"], "series": [{"name": "F1 (%)", "values": [90.0, 84.1]}], "y_label": "%"}
-     type is one of bar | barh | line; each series has exactly one value per label. Never invent values; if there is not enough real data, omit the chart.
+     type is one of bar | barh | line | stacked_barh (parts of a whole per row, e.g. win / tie / loss %). Each series has exactly one value per label; use null (never 0) for a missing value. Never invent values; if there is not enough real data, omit the chart.
 """
 
 
@@ -53,17 +53,22 @@ STRICT PEER-REVIEW PUBLICATION STANDARDS (MANDATORY ACROSS ALL SECTIONS):
 2. ZERO META-PIPELINE LEAKAGE:
    - NEVER output internal pipeline terminology such as 'Blueprint', 'Stage Summary', 'Chặng', or meta-instructions.
    - Refer to previous parts naturally using standard academic conventions (e.g., 'as formalized in Section 3').
-3. EVIDENCE DISCIPLINE (NO FABRICATION):
+3. QUANTITATIVE DENSITY (EVIDENCE-BACKED NUMBERS):
+   - The Draft Basis ends with a 'Quantitative Evidence Ledger'. Build tables, charts and claims from it: every relevant value in the ledger should appear somewhere in the paper with its [n].
+   - Prefer ONE dense comparison table (rows = methods/models/studies, columns = datasets/metrics, '–' for missing cells, add an 'Average' column only if all its inputs exist) over several sparse ones; set "highlight_best" so the best value of each column is highlighted.
+   - Support key claims in the text with the specific numbers (e.g. 'F1 of 0.884 on Banking77 [3]') rather than vague words like 'significantly better'.
+   - Do NOT copy the ledger itself into the paper as a raw list.
+4. EVIDENCE DISCIPLINE (NO FABRICATION):
    - Every factual claim, number, dataset, metric value and method name must come from the Draft Basis or the Available Citations, with the supporting [n]. Do not add outside facts or new citations.
    - NEVER invent statistics, dataset sizes, benchmark scores, author names, institutions, costs, or experimental results. If a value is not in the evidence, describe it qualitatively or write '–'.
    - Do not force-map a method to a citation that is not its original or a direct survey of it. State only what the cited source actually supports.
-4. CROSS-SECTION CONSISTENCY:
+5. CROSS-SECTION CONSISTENCY:
    - Use exactly the title, acronym, notation, terminology and numbers fixed in the ESTABLISHED DESIGN PLAN. A number or symbol appearing in two sections must be identical.
    - Every mathematical symbol must be defined where it first appears. Only introduce formulas that are necessary and correct.
-5. ACADEMIC MODESTY & HONESTY:
+6. ACADEMIC MODESTY & HONESTY:
    - Avoid hype ('first', 'novel breakthrough', 'proves') unless supported by the evidence. Prefer 'we propose', 'we hypothesize', 'the evidence suggests'.
    - Acknowledge limitations, heterogeneity of the evidence and threats to validity candidly.
-6. FORMATTING RULES:
+7. FORMATTING RULES:
    - Use hyphen '- ' for unordered lists. Never put two list items on one line.
    - Display math $$...$$ MUST be on its own line with empty lines before and after.
    - Every table MUST have a clear caption above it: '**Table N: Caption**'.
@@ -71,12 +76,12 @@ STRICT PEER-REVIEW PUBLICATION STANDARDS (MANDATORY ACROSS ALL SECTIONS):
 {_TABLE_BLOCK_RULE}{_CHART_BLOCK_RULE}"""
     if mode == "novel_research":
         rules += (
-            "7. REGISTERED-REPORT RULE (novel research):\n"
+            "8. REGISTERED-REPORT RULE (novel research):\n"
             "   - Results of the proposed method that have not been run must be marked '*Not Exp.*'; never fill in assumed numbers for it.\n"
             "   - Baseline numbers may be reported only if they are published in the cited source [n].\n"
         )
     if _JUDGE_TOPIC_RE.search(f"{state.get('question', '')} {state.get('draft', '')}"):
-        rules += f"8. BENCHMARK DATASET GROUNDING:\n{get_dataset_grounding_context()}\n"
+        rules += f"9. BENCHMARK DATASET GROUNDING:\n{get_dataset_grounding_context()}\n"
     return rules
 
 
