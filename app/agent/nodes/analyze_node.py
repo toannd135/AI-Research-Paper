@@ -6,6 +6,14 @@ from app.ai.context_builder import build_context
 from app.ai.llm_gateway.base import LLMGateway, Message
 from app.ai.llm_gateway.default import get_default_agent_gateway
 
+_QUANT_LEDGER_RULE = (
+    "- SỔ SỐ LIỆU ĐỊNH LƯỢNG (BẮT BUỘC): cuối bản phân tích thêm mục '## Quantitative Evidence Ledger' là MỘT bảng Markdown "
+    "| Source [n] | Method / Model / Study | Dataset / Population | Metric | Value | Notes |, liệt kê TẤT CẢ con số có trong context "
+    "(accuracy, F1, AUC, precision/recall, effect size r/β/OR, p-value, cỡ mẫu N, %, chi phí, latency, số tham số, kích thước dataset...). "
+    "Chép NGUYÊN VĂN con số và đơn vị từ context, mỗi giá trị một dòng, càng đầy đủ càng tốt; KHÔNG tự tính, ước lượng hay làm tròn. "
+    "Không có con số nào thì ghi một dòng 'No quantitative results reported in the retrieved evidence'.\n"
+)
+
 _SURVEY_ANALYZE_PROMPT = (
     "Bạn là chuyên gia nghiên cứu khoa học cao cấp. Dựa trên các tài liệu và evidence trong context, "
     "hãy phân tích học thuật chuyên sâu để chuẩn bị cho một bài báo tổng quan (Literature Survey) xuất sắc theo chuẩn IMRaD:\n"
@@ -16,7 +24,8 @@ _SURVEY_ANALYZE_PROMPT = (
     "5. Thảo luận & Hướng mở (Discussion & Open Challenges): các bài toán chưa được giải quyết, giới hạn của hiện trạng.\n\n"
     "QUY TẮC BẮT BUỘC:\n"
     "- Trích dẫn mỗi luận điểm kế thừa bằng ký hiệu [n] khớp đúng với context.\n"
-    "- TUYỆT ĐỐI KHÔNG dùng các nhãn giữ chỗ như [CẦN THÊM NGUỒN], [TODO], [TBD], [Trống]. Mọi nhận định chưa đủ dữ liệu định lượng phải được diễn đạt học thuật dưới dạng thảo luận định tính hoặc đặt ra như câu hỏi nghiên cứu mở."
+    "- TUYỆT ĐỐI KHÔNG dùng các nhãn giữ chỗ như [CẦN THÊM NGUỒN], [TODO], [TBD], [Trống]. Mọi nhận định chưa đủ dữ liệu định lượng phải được diễn đạt học thuật dưới dạng thảo luận định tính hoặc đặt ra như câu hỏi nghiên cứu mở.\n"
+    + _QUANT_LEDGER_RULE
 )
 
 _NOVEL_ANALYZE_PROMPT = (
@@ -25,14 +34,15 @@ _NOVEL_ANALYZE_PROMPT = (
     "1. Phân tích Baseline & Điểm nghẽn (Baseline Analysis & Failure Modes): phân tích kỹ lưỡng điểm yếu, sự hạn chế và thất bại của các phương pháp hiện hành trong context [n].\n"
     "2. Đề xuất Phương pháp / Kiến trúc mới (Proposed Methodology): đặt tên cụ thể cho phương pháp/mô hình mới (Acronym), thiết lập bài toán và công thức toán học chính xác (Mathematical Formulation), mô tả nguyên lý hoạt động của từng thành phần.\n"
     "3. Thuật toán & Sơ đồ hệ thống: cung cấp giả mã thuật toán từng bước (Algorithm Pseudocode) và gợi ý cấu trúc sơ đồ Mermaid trực quan.\n"
-    "4. Phương án Thực nghiệm & Ma trận Benchmark (Experimental Benchmark Protocol): thiết kế quy trình kiểm thử với các dataset chuẩn, thang đo định lượng và ma trận kết quả thực nghiệm mô phỏng/kỳ vọng so sánh trực diện với baselines.\n"
+    "4. Phương án Thực nghiệm & Ma trận Benchmark (Experimental Benchmark Protocol): thiết kế quy trình kiểm thử với các dataset chuẩn, thang đo định lượng và ma trận benchmark gồm số liệu baseline ĐÃ CÔNG BỐ trong context [n]; kết quả của phương pháp đề xuất chưa chạy thì để '*Not Exp.*', không mô phỏng hay ước đoán số.\n"
     "5. Phân tích thực nghiệm bóc tách (Ablation Studies), độ phức tạp tính toán và thảo luận hạn chế.\n\n"
     "CÁC QUY TẮC BẮT BUỘC ĐỂ ĐẠT CHUẨN XUẤT BẢN QUỐC TẾ:\n"
     "- KHÔNG GÁN ÉP TRÍCH DẪN (Anti Force-Mapping): Chỉ được viết 'Tên_phương_pháp [n]' khi bài báo [n] trong context THỰC SỰ là bài báo gốc hoặc đề cập trực tiếp đến phương pháp đó. Không được cite bài HippoRAG cho IRCoT, không cite bài survey cho CoVe nếu bài survey đó không phải là bài đề xuất CoVe. Nếu context chưa có bài báo gốc, hãy ghi rõ 'Tên phương pháp (được khảo sát trong [n])' hoặc chỉ trích dẫn nội dung có thật trong context.\n"
     "- KHIÊM TỐN HỌC THUẬT (Anti-Hype Policy): Tuyệt đối KHÔNG tự xưng là 'first framework', 'mechanistic guarantee', 'proves that error is bounded' khi chưa có chứng minh định lý toán học hoàn chỉnh. Hãy dùng văn phong học thuật: 'we propose a conceptual framework', 'we hypothesize that...', 'our formulation aims to bound error'.\n"
     "- NHẤT QUÁN TOÁN HỌC & KIẾN TRÚC MÔ HÌNH: Mọi ký hiệu đưa vào công thức (như Faith, K_opt) BẮT BUỘC phải được định nghĩa rõ ràng ngay dưới công thức. Dùng ký hiệu phân biệt: R_ret cho Retriever, R cho Reward, Y cho Answer space, t cho hop index. Mô hình Encoder-only (như DeBERTa) chỉ dùng cho tác vụ chấm điểm/phân loại, KHÔNG dùng để sinh/sửa văn bản (REWRITE).\n"
     "- TÍNH TRUNG THỰC VỀ THỰC NGHIỆM: Nếu chưa chạy thực nghiệm (Registered Report), bảng kết quả để '*Not Exp.*', tuyệt đối không tự điền các ước lượng số liệu giả định (như ~2.5 hay ~8) vào cùng bảng gây mâu thuẫn.\n"
-    "- TUYỆT ĐỐI KHÔNG dùng các nhãn giữ chỗ như [CẦN THÊM NGUỒN], [TODO], [TBD], [Trống]."
+    "- TUYỆT ĐỐI KHÔNG dùng các nhãn giữ chỗ như [CẦN THÊM NGUỒN], [TODO], [TBD], [Trống].\n"
+    + _QUANT_LEDGER_RULE
 )
 
 
