@@ -1,4 +1,3 @@
-import pytest
 from app.agent.format_sanitizer import (
     sanitize_academic_markdown,
     sanitize_author_placeholders,
@@ -89,3 +88,34 @@ graph TD
     assert "```python\nx = 1" in cleaned
     assert 'A["Test<br/>Node"]' in cleaned
     assert 'B{"Decide (x)"}' in cleaned
+
+
+def test_sanitize_mermaid_drops_direction_lines_inside_subgraph():
+    """`direction TB` làm mermaid.ink trả 404 khi nhãn có ký tự Unicode -> sơ đồ bị mất khỏi báo cáo."""
+    raw = (
+        "flowchart TD\n"
+        '    subgraph Loop ["Per Run"]\n'
+        "        direction TB\n"
+        '        A["Start"] --> B["End"]\n'
+        "    end\n"
+    )
+    out = sanitize_mermaid_block(raw)
+    assert "direction TB" not in out
+    assert 'A["Start"]' in out and "end" in out
+
+
+def test_sanitize_mermaid_transliterates_unicode_in_labels():
+    """Chỉ số dưới/trên và ký hiệu toán Unicode khiến mermaid.ink render thất bại."""
+    raw = 'flowchart TD\n    D1["Decision d⁽¹ᐟ²⁾<br/>∈ (1,2)"] --> E["a₁ vs a₂"]\n'
+    out = sanitize_mermaid_block(raw)
+    # Chỉ số dưới/trên và ký hiệu tập hợp phải biến mất; ký hiệu toán hợp lệ như ‖ được giữ nguyên.
+    assert not any(c in out for c in "⁽¹ᐟ²⁾₁₂∈"), out
+    assert "d(1/2)" in out
+    assert "a1 vs a2" in out
+
+
+def test_sanitize_mermaid_transliterates_subgraph_title():
+    raw = 'flowchart TD\n    subgraph S ["Phase ₁ — ∀ runs"]\n        A["x"]\n    end\n'
+    out = sanitize_mermaid_block(raw)
+    assert "Phase 1" in out
+    assert "₁" not in out and "∀" not in out

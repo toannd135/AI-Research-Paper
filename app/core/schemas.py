@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import operator
 from datetime import datetime
-from enum import Enum
-from typing import Annotated, TypedDict
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -14,14 +12,14 @@ from pydantic import BaseModel, ConfigDict, Field
 # ---------------------------------------------------------------------------
 
 
-class PaperStatus(str, Enum):
+class PaperStatus(StrEnum):
     PENDING = "pending"
     PROCESSING = "processing"
     DONE = "done"
     FAILED = "failed"
 
 
-class ResearchStatus(str, Enum):
+class ResearchStatus(StrEnum):
     PENDING = "pending"
     PROCESSING = "processing"
     DONE = "done"
@@ -193,27 +191,6 @@ class RetrieveEvidenceInput(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Agent State Contract
-# ---------------------------------------------------------------------------
-
-
-class ResearchState(TypedDict, total=False):
-    """State quản lý luồng nghiên cứu trong LangGraph."""
-
-    question: str
-    search_queries: list[str]
-    papers: list[PaperRef]
-    evidence: list[ScoredChunk]
-    draft: str
-    answer: str
-    citations: list[Citation]
-    critique_feedback: str | None
-    iterations: int
-    report: str
-    steps: Annotated[list[str], operator.add]
-
-
-# ---------------------------------------------------------------------------
 # API / Celery Request & Response Schemas
 # ---------------------------------------------------------------------------
 
@@ -232,6 +209,13 @@ class PaperStatusResponse(BaseModel):
     created_at: datetime
 
 
+class PaperListResponse(BaseModel):
+    items: list[PaperStatusResponse]
+    total: int
+    limit: int
+    offset: int
+
+
 class ChatRequest(BaseModel):
     question: str
     paper_id: str | None = None
@@ -247,11 +231,8 @@ class ChatResponse(BaseModel):
 
 
 class ResearchRequest(BaseModel):
-    question: str = Field(..., min_length=3, description="Câu hỏi nghiên cứu")
+    question: str = Field(..., min_length=3, max_length=2000, description="Câu hỏi nghiên cứu")
     clarification_answers: dict[str, str] | None = None
-    paper_ids: list[str] | None = Field(
-        default=None, description="Danh sách paper_ids giới hạn tìm kiếm"
-    )
 
 
 class ClarificationQuestion(BaseModel):
@@ -266,11 +247,33 @@ class ResearchClarificationResponse(BaseModel):
 
 class ResearchTaskResponse(BaseModel):
     id: str
+    question: str = ""
+    refined_question: str | None = None
     status: ResearchStatus
     report: str | None = None
     citations: list[Citation] = Field(default_factory=list)
     error: str | None = None
     created_at: datetime
+
+
+class ResearchTaskSummary(BaseModel):
+    """Bản rút gọn cho danh sách lịch sử (không kèm report để payload nhẹ)."""
+
+    id: str
+    question: str
+    refined_question: str | None = None
+    status: ResearchStatus
+    has_report: bool = False
+    citation_count: int = 0
+    error: str | None = None
+    created_at: datetime
+
+
+class ResearchListResponse(BaseModel):
+    items: list[ResearchTaskSummary]
+    total: int
+    limit: int
+    offset: int
 
 
 class ResearchResponse(BaseModel):

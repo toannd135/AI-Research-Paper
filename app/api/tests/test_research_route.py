@@ -107,3 +107,42 @@ def test_get_research_returns_task_status(mock_clarify, mock_run_research, clien
     assert body["id"] == created["id"]
     assert body["status"] == "pending"
     assert body["citations"] == []
+
+
+@patch("app.api.routes.research.run_research")
+@patch("app.api.routes.research.clarify")
+def test_list_research_returns_summaries_newest_first(mock_clarify, mock_run_research, client):
+    mock_clarify.return_value = {"status": "ready", "refined_question": "q"}
+    first = client.post("/research/", json={"question": "câu hỏi 1"}).json()
+    second = client.post("/research/", json={"question": "câu hỏi 2"}).json()
+
+    response = client.get("/research", params={"limit": 10})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 2
+    assert [item["id"] for item in body["items"]] == [second["id"], first["id"]]
+    item = body["items"][0]
+    assert item["question"] == "câu hỏi 2"
+    assert item["has_report"] is False
+    assert "report" not in item  # summary không kèm report để payload nhẹ
+
+
+@patch("app.api.routes.research.run_research")
+@patch("app.api.routes.research.clarify")
+def test_delete_research_removes_task(mock_clarify, mock_run_research, client):
+    mock_clarify.return_value = {"status": "ready", "refined_question": "q"}
+    created = client.post("/research/", json={"question": "câu hỏi"}).json()
+
+    assert client.delete(f"/research/{created['id']}").status_code == 204
+    assert client.get(f"/research/{created['id']}").status_code == 404
+    assert client.delete("/research/missing").status_code == 404
+
+
+def test_export_pdf_returns_409_when_no_report(client):
+    with patch("app.api.routes.research.clarify") as mock_clarify, patch("app.api.routes.research.run_research"):
+        mock_clarify.return_value = {"status": "ready", "refined_question": "q"}
+        created = client.post("/research/", json={"question": "câu hỏi"}).json()
+
+    assert client.get(f"/research/{created['id']}/pdf").status_code == 409
+    assert client.get(f"/research/{created['id']}/pdf", params={"engine": "docx"}).status_code == 422

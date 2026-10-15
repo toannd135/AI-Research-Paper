@@ -15,7 +15,6 @@ nhờ 3 nguyên tắc bất biến:
 from __future__ import annotations
 
 import logging
-import re
 from typing import Any
 
 from app.agent.format_sanitizer import sanitize_academic_markdown
@@ -165,6 +164,7 @@ def _generate_stage_1_front_matter_and_intro(
     user_prompt = (
         f"Câu hỏi nghiên cứu: {state['question']}\n\n"
         f"Draft cơ sở:\n{state.get('draft', '')}\n\n"
+        f"Danh sách trích dẫn hợp lệ (CHỈ được dùng các số [n] này):\n{references}\n\n"
         "Hãy viết hoàn chỉnh Front Matter và Mục 1 (Introduction) với độ sâu học thuật cao nhất."
     )
 
@@ -207,6 +207,7 @@ def _generate_stage_2_related_work(
     user_prompt = (
         f"Câu hỏi nghiên cứu: {state['question']}\n\n"
         f"Draft cơ sở:\n{state.get('draft', '')}\n\n"
+        f"Danh sách trích dẫn hợp lệ (CHỈ được dùng các số [n] này):\n{references}\n\n"
         "Hãy viết Section 2 với phân loại học thuật đa chiều và phân tích so sánh sâu sắc."
     )
 
@@ -253,6 +254,7 @@ def _generate_stage_3_methodology(
     user_prompt = (
         f"Câu hỏi nghiên cứu: {state['question']}\n\n"
         f"Draft cơ sở:\n{state.get('draft', '')}\n\n"
+        f"Danh sách trích dẫn hợp lệ (CHỈ được dùng các số [n] này):\n{references}\n\n"
         "Hãy viết Section 3 với độ hoàn thiện kỹ thuật cao nhất, chuẩn bị cho bài báo hội nghị đỉnh cao."
     )
 
@@ -299,6 +301,7 @@ def _generate_stage_4_experiments(
     user_prompt = (
         f"Câu hỏi nghiên cứu: {state['question']}\n\n"
         f"Draft cơ sở:\n{state.get('draft', '')}\n\n"
+        f"Danh sách trích dẫn hợp lệ (CHỈ được dùng các số [n] này):\n{references}\n\n"
         "Hãy viết Section 4 với dữ liệu thực nghiệm phong phú, bảng số liệu và biểu đồ khoa học."
     )
 
@@ -343,6 +346,7 @@ def _generate_stage_5_discussion_and_conclusion(
     user_prompt = (
         f"Câu hỏi nghiên cứu: {state['question']}\n\n"
         f"Draft cơ sở:\n{state.get('draft', '')}\n\n"
+        f"Danh sách trích dẫn hợp lệ (CHỈ được dùng các số [n] này):\n{references}\n\n"
         "Hãy viết Section 5 (Discussion) và Section 6 (Conclusion) hoàn chỉnh."
     )
 
@@ -358,7 +362,7 @@ def _generate_stage_5_discussion_and_conclusion(
 
 def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> ResearchState:
     """Entrypoint tổng hợp báo cáo bằng Hierarchical Section-by-Section Synthesis Pipeline.
-    
+
     Quy trình 6 chặng:
     - Chặng 0: Khóa ký hiệu và bản thiết kế nghiên cứu cốt lõi (Global Blueprint & Notation Lock).
     - Chặng 1: Front Matter + Section 1 (Title, Abstract, Introduction & Contributions).
@@ -377,11 +381,6 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
     # Chặng 0: Global Blueprint & Notation Lock
     logger.info("Executing Synthesis Stage 0: Global Blueprint & Notation Lock...")
     blueprint = _generate_stage_0_blueprint(state, references, mode, gateway, model_name)
-
-    # Kiểm tra nếu là mock fake gateway trong unit tests offline
-    if blueprint.startswith("# Báo cáo"):
-        clean_mock = sanitize_academic_markdown(blueprint)
-        return {**state, "report": clean_mock}
 
     # Chặng 1: Front Matter & Introduction
     logger.info("Executing Synthesis Stage 1: Front Matter & Section 1 (Introduction)...")
@@ -421,5 +420,5 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
     raw_stitched = "\n\n".join(full_markdown_parts)
 
     clean_report = sanitize_academic_markdown(raw_stitched)
-    logger.info(f"Synthesized comprehensive 10-page paper: {len(clean_report):,} chars")
+    logger.info("Synthesized report: %s chars", f"{len(clean_report):,}")
     return {**state, "report": clean_report}

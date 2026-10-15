@@ -50,12 +50,14 @@ def run_graph(question: str, llm: LLMGateway | None = None) -> ResearchState:
     initial_state: ResearchState = {"question": question, "iterations": 0}
     return app.invoke(initial_state)
 
-# Aliases hỗ trợ backward compatibility
-def build_research_graph(llm: LLMGateway | None = None, generator=None):
-    return build_graph(llm=llm or generator)
+
+def build_research_graph(llm: LLMGateway | None = None):
+    """Alias cũ của build_graph (giữ cho evaluation + test)."""
+    return build_graph(llm=llm)
 
 
 def run_research_agent(question: str, llm: LLMGateway | None = None) -> dict:
+    """Chạy graph và bổ sung các trường tổng hợp (answer/papers/steps) mà evaluator sử dụng."""
     state = run_graph(question=question, llm=llm)
     if not state.get("evidence"):
         state["answer"] = FALLBACK_MESSAGE

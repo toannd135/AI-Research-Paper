@@ -18,4 +18,6 @@ uploads/
 .DS_Store
 .idea/
 .vscode/
-frontend
+frontendout/
+*.pdf
+!docs/**/*.pdf

@@ -1,6 +1,6 @@
 """POST /chat, GET /conversations."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.ai.context_builder import build_context
@@ -10,7 +10,9 @@ from app.ai.llm_gateway.registry import (
     AVAILABLE_MODELS,
     build_gateway,
     is_configured,
+    label_for,
     resolve_model,
+    resolve_model_name,
 )
 from app.ai.retrieval.hybrid import search_hybrid
 from app.ai.retrieval.reranker import rerank
@@ -45,7 +47,7 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db)) -> ChatResponse:
                 LLMMessage(role="system", content=_SYSTEM_PROMPT),
                 LLMMessage(role="user", content=f"Context:\n{context_text}\n\nCâu hỏi: {payload.question}"),
             ],
-            model_name=model_option.model_name,
+            model_name=resolve_model_name(model_option),
         )
     except LLMGatewayError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -62,15 +64,34 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db)) -> ChatResponse:
 @router.get("/chat/models")
 def list_chat_models():
     return [
-        {"id": option.id, "label": option.label, "available": is_configured(option)}
+        {"id": option.id, "label": label_for(option), "available": is_configured(option)}
         for option in AVAILABLE_MODELS
     ]
 
 
 @router.get("/conversations")
-def list_conversations(db: Session = Depends(get_db)):
-    conversations = db.query(Conversation).order_by(Conversation.created_at.desc()).all()
-    return [{"id": c.id, "paper_id": c.paper_id, "created_at": c.created_at} for c in conversations]
+def list_conversations(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    paper_id: str | None = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(Conversation)
+    if paper_id:
+        query = query.filter(Conversation.paper_id == paper_id)
+    total = query.count()
+    conversations = query.order_by(Conversation.created_at.desc()).limit(limit).offset(offset).all()
+    items = [
+        {
+            "id": c.id,
+            "paper_id": c.paper_id,
+            "created_at": c.created_at,
+            "message_count": len(c.messages),
+            "last_message": c.messages[-1].content[:200] if c.messages else None,
+        }
+        for c in conversations
+    ]
+    return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
 @router.get("/conversations/{conversation_id}")

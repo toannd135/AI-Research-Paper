@@ -1,0 +1,29 @@
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["venv", ".venv", "migrations/versions", "frontend"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "PIE", "TRY"]
+ignore = [
+  "E501",   # line length handled by formatter
+  "TRY003", # long messages in exceptions are fine (user-facing Vietnamese text)
+  "TRY300", # return-in-try is idiomatic here
+  "TRY301", # raise inside try is fine for small pipelines
+  "SIM108", # ternary not always clearer
+  "RUF001", "RUF002", "RUF003", # Vietnamese text contains ambiguous unicode by design
+  "RUF012", # mutable class attrs (pydantic settings)
+  "B008",   # FastAPI Depends()/Query() in defaults is the framework idiom
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["BLE001", "SIM117"]
+"tests/**" = ["BLE001"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.pytest.ini_options]
+testpaths = ["app", "tests"]
+addopts = "-q -p no:cacheprovider"
+filterwarnings = ["ignore::DeprecationWarning"]

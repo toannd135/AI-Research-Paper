@@ -1,4 +1,6 @@
-"""Kết hợp vector + BM25 theo alpha/beta."""
+"""Kết hợp vector + BM25 theo alpha/beta. Hai nhánh chạy song song vì độc lập nhau."""
+
+from concurrent.futures import ThreadPoolExecutor
 
 from app.ai.retrieval.bm25_search import search_bm25
 from app.ai.retrieval.vector_search import search_vector
@@ -20,8 +22,11 @@ def _normalize(scored: list[ScoredChunk]) -> dict[str, float]:
 def search_hybrid(query: str, top_k: int = 10, paper_id: str | None = None) -> list[ScoredChunk]:
     """Kết hợp điểm vector + BM25 (min-max normalize) theo HYBRID_ALPHA/HYBRID_BETA."""
     settings = get_settings()
-    vector_results = search_vector(query, top_k=top_k * 2, paper_id=paper_id)
-    bm25_results = search_bm25(query, top_k=top_k * 2, paper_id=paper_id)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        vector_future = pool.submit(search_vector, query, top_k=top_k * 2, paper_id=paper_id)
+        bm25_future = pool.submit(search_bm25, query, top_k=top_k * 2, paper_id=paper_id)
+        vector_results = vector_future.result()
+        bm25_results = bm25_future.result()
 
     vector_norm = _normalize(vector_results)
     bm25_norm = _normalize(bm25_results)

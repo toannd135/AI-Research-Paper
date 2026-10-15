@@ -1,8 +1,5 @@
 """Adapter Groq Cloud (hỗ trợ gọi endpoint Groq qua HTTPX / OpenAI API tương thích)."""
 
-import json
-from typing import Any
-
 try:
     import openai
 except ImportError:
@@ -80,6 +77,8 @@ class GroqAdapter(LLMGateway):
                 if not text:
                     raise LLMGatewayError("Groq Cloud trả về response rỗng")
                 return LLMResponse(text=text, model=chosen_model)
+            except LLMGatewayError:
+                raise
             except Exception as exc:
                 err_str = str(exc)
                 if "401" in err_str or "Authentication" in err_str:
@@ -88,8 +87,10 @@ class GroqAdapter(LLMGateway):
                     fallback_model = self._find_fallback_model()
                     if fallback_model and fallback_model != chosen_model:
                         return self._call_via_httpx(conversation, fallback_model)
+                # Lỗi khác (rate limit, timeout, 5xx): để call_with_retry xử lý thay vì gọi đúp qua HTTPX.
+                raise LLMGatewayError(f"Groq Cloud API lỗi: {exc}") from exc
 
-        # Cách 2: Direct HTTPX call đến https://api.groq.com/openai/v1/chat/completions
+        # Cách 2 (không có OpenAI SDK): gọi thẳng HTTPS https://api.groq.com/openai/v1/chat/completions
         return self._call_via_httpx(conversation, chosen_model)
 
     def _call_via_httpx(self, conversation: list[dict[str, str]], chosen_model: str) -> LLMResponse:
@@ -141,7 +142,7 @@ class GroqAdapter(LLMGateway):
                             return candidate
                     if available:
                         return available[0]
-        except Exception:
+        except Exception:  # best effort, có default bên dưới
             pass
-        return "openai/gpt-oss-120b"
+        return DEFAULT_MODEL
 

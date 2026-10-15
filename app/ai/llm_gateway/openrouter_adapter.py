@@ -1,8 +1,5 @@
 """Adapter OpenRouter.ai (truy cập hơn 200+ models bao gồm Nemotron, Gemma, Qwen, Claude, GPT)."""
 
-import json
-from typing import Any
-
 import httpx
 
 from app.ai.llm_gateway.base import LLMGateway, LLMGatewayError, LLMResponse, Message

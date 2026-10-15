@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from app.ai.external.openalex_client import OpenAlexError, search_works
+from concurrent.futures import ThreadPoolExecutor
+
+from app.ai.external.openalex_client import search_works
 from app.ai.external.openalex_mapper import build_source_search_response
 from app.core.schemas import Chunk, ExternalSource, ScoredChunk, SourceSearchResponse
 
@@ -58,24 +60,28 @@ def external_source_to_scored_chunk(source: ExternalSource, index: int = 0) -> S
 
 
 def retrieve_external_evidence(queries: list[str], count_per_query: int = 8, max_total: int = 30) -> list[ScoredChunk]:
-    """Tìm kiếm tài liệu học thuật từ OpenAlex cho danh sách sub-queries và chuyển đổi thành ScoredChunk."""
-    if not queries:
+    """Tìm tài liệu học thuật từ OpenAlex cho danh sách sub-query (song song, vì mỗi query là 1 HTTP
+    request độc lập) và chuyển thành ScoredChunk; dedup theo source.id, giữ thứ tự query ưu tiên."""
+    clean_queries = [q.strip() for q in queries if q and q.strip()]
+    if not clean_queries:
         return []
 
-    collected: dict[str, ScoredChunk] = {}
-    for q in queries:
-        clean_q = q.strip()
-        if not clean_q:
-            continue
+    def _search(q: str) -> list[ExternalSource]:
         try:
-            resp = search_external_papers(clean_q, count=count_per_query)
-            for idx, src in enumerate(resp.sources):
-                if src.id not in collected:
-                    collected[src.id] = external_source_to_scored_chunk(src, index=idx)
-                if len(collected) >= max_total:
-                    break
-        except Exception:
-            continue
+            return search_external_papers(q, count=count_per_query).sources
+        except Exception:  # 1 query lỗi không được làm hỏng cả vòng tìm kiếm
+            return []
+
+    with ThreadPoolExecutor(max_workers=min(len(clean_queries), 5)) as pool:
+        results_per_query = list(pool.map(_search, clean_queries))
+
+    collected: dict[str, ScoredChunk] = {}
+    for sources in results_per_query:
+        for idx, src in enumerate(sources):
+            if src.id not in collected:
+                collected[src.id] = external_source_to_scored_chunk(src, index=idx)
+            if len(collected) >= max_total:
+                break
         if len(collected) >= max_total:
             break
 

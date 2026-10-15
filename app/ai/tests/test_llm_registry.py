@@ -31,3 +31,44 @@ def test_is_configured_reflects_required_setting(mock_get_settings):
     assert is_configured(by_id["gemini-3.6-flash"]) is True
     assert is_configured(by_id["claude-sonnet-5"]) is False
     assert is_configured(by_id["gpt-5.6"]) is False
+
+
+def test_openrouter_is_selectable_in_chat():
+    """Trước đây OpenRouter không có trong registry nên /chat không bao giờ gọi được, dù .env có key."""
+    by_id = {option.id: option for option in AVAILABLE_MODELS}
+    assert "openrouter" in by_id
+    assert by_id["openrouter"].required_setting == "openrouter_api_key"
+
+
+@patch("app.ai.llm_gateway.registry.get_settings")
+def test_model_name_follows_env_setting(mock_get_settings):
+    """OPENROUTER_MODEL / GROQ_MODEL trong .env phải được dùng thay cho hằng số mặc định."""
+    from app.ai.llm_gateway.registry import resolve_model_name
+
+    mock_get_settings.return_value = MagicMock(
+        openrouter_model="meta-llama/llama-4-maverick:free", groq_model="llama-3.3-70b-versatile"
+    )
+    by_id = {option.id: option for option in AVAILABLE_MODELS}
+    assert resolve_model_name(by_id["openrouter"]) == "meta-llama/llama-4-maverick:free"
+    assert resolve_model_name(by_id["groq-gpt-oss-120b"]) == "llama-3.3-70b-versatile"
+
+
+@patch("app.ai.llm_gateway.registry.get_settings")
+def test_model_name_falls_back_to_default_when_env_empty(mock_get_settings):
+    from app.ai.llm_gateway.openrouter_adapter import DEFAULT_MODEL as OPENROUTER_DEFAULT
+    from app.ai.llm_gateway.registry import resolve_model_name
+
+    mock_get_settings.return_value = MagicMock(openrouter_model="")
+    by_id = {option.id: option for option in AVAILABLE_MODELS}
+    assert resolve_model_name(by_id["openrouter"]) == OPENROUTER_DEFAULT
+
+
+@patch("app.ai.llm_gateway.registry.get_settings")
+def test_label_shows_actual_model_name(mock_get_settings):
+    from app.ai.llm_gateway.registry import label_for
+
+    mock_get_settings.return_value = MagicMock(openrouter_model="nvidia/nemotron:free")
+    by_id = {option.id: option for option in AVAILABLE_MODELS}
+    assert label_for(by_id["openrouter"]) == "OpenRouter · nvidia/nemotron:free"
+    # Provider có model cố định thì nhãn giữ nguyên, không nối thêm
+    assert label_for(by_id["claude-sonnet-5"]) == "Anthropic · Claude Sonnet 5"

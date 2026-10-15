@@ -1,6 +1,5 @@
 """Unit tests for the Hierarchical Section-by-Section Synthesis Pipeline."""
 
-import pytest
 from app.agent.nodes.synthesize_node import (
     _extract_last_paragraphs,
     _format_references_prompt,

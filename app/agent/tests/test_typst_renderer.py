@@ -2,12 +2,12 @@
 
 import tempfile
 from pathlib import Path
-import pytest
+
 from app.pipeline.export.typst_renderer import (
     latex_to_typst_math,
+    markdown_to_typst,
     parse_markdown_table_to_typst,
     render_chart_spec_to_svg,
-    markdown_to_typst,
     render_report_to_pdf,
 )
 
@@ -160,3 +160,53 @@ The proposed method consistently outperforms static baselines.
         assert len(pdf_bytes) > 1000
         assert pdf_bytes.startswith(b"%PDF-")
         assert pdf_out.exists()
+
+
+def test_typst_string_escapes_quotes_and_backslashes():
+    from app.pipeline.export.typst_renderer import typst_string
+
+    assert typst_string('A "quoted" title') == 'A \\"quoted\\" title'
+    assert typst_string("back\\slash") == "back\\\\slash"
+    assert typst_string("multi\nline") == "multi line"
+
+
+def test_markdown_to_typst_escapes_title_with_quotes(tmp_path):
+    md = '# The "Best" Method: A Study\n\n**Authors:** A "B" | **Affiliations:** Lab\n\n## Abstract\nText.\n\n## 1. Introduction\nBody.\n'
+    typ = markdown_to_typst(md, work_dir=tmp_path)
+    assert 'title: "The \\"Best\\" Method: A Study"' in typ
+    assert '"A \\"B\\""' in typ
+
+
+def test_render_mermaid_disabled_by_setting(tmp_path, monkeypatch):
+    from app.core.config import get_settings
+    from app.pipeline.export.typst_renderer import render_mermaid_to_svg
+
+    monkeypatch.setattr(get_settings(), "mermaid_ink_enabled", False)
+    assert render_mermaid_to_svg("graph TD\n A --> B", tmp_path / "x.svg") is None
+
+
+def test_latex_thousands_separator_is_not_printed_literally():
+    """`10{,}000` của LaTeX trước đây in ra thành '10{, }000' trong PDF."""
+    assert latex_to_typst_math(r"B = 10{,}000") == "B = 10,000"
+    assert "4,802" in latex_to_typst_math(r"N_{min} = 4{,}802")
+
+
+def test_wide_table_spans_both_columns():
+    """Bảng nhiều cột ép trong 1 cột của layout 2 cột làm chữ vỡ từng ký tự."""
+    header = "| " + " | ".join(f"C{i}" for i in range(9)) + " |"
+    sep = "|" + "---|" * 9
+    row = "| " + " | ".join(str(i) for i in range(9)) + " |"
+    out = parse_markdown_table_to_typst(f"{header}\n{sep}\n{row}", "Main results")
+    assert 'scope: "parent"' in out and "float: true" in out
+    assert "6.5pt" in out
+
+    narrow = parse_markdown_table_to_typst("| A | B |\n|---|---|\n| 1 | 2 |", "Nhỏ")
+    assert 'scope: "parent"' not in narrow
+
+
+def test_strip_caption_prefix_avoids_double_numbering():
+    from app.pipeline.export.typst_renderer import strip_caption_prefix
+
+    assert strip_caption_prefix("Figure 1: Wilson CI vs Sample Size") == "Wilson CI vs Sample Size"
+    assert strip_caption_prefix("Hình 2. Sơ đồ kiến trúc") == "Sơ đồ kiến trúc"
+    assert strip_caption_prefix("Recall by method") == "Recall by method"

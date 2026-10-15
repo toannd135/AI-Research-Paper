@@ -11,4 +11,4 @@ except ImportError:
     markdown_to_typst = None
     render_report_to_pdf = None
 
-__all__ = ["render_report_to_pdf", "markdown_to_typst"]
+__all__ = ["markdown_to_typst", "render_report_to_pdf"]

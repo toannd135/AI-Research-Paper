@@ -15,8 +15,6 @@ Key features:
 from __future__ import annotations
 
 import base64
-import html
-import io
 import json
 import logging
 import re
@@ -26,7 +24,30 @@ from typing import Any
 
 import typst
 
+from app.core.config import get_settings
+
 logger = logging.getLogger(__name__)
+
+
+def typst_string(value: str) -> str:
+    """Escape 1 chuỗi Python để nhúng an toàn vào string literal Typst "...".
+
+    Title/author do LLM sinh có thể chứa dấu ngoặc kép hoặc backslash — không escape sẽ làm
+    typst.compile() lỗi cú pháp cho cả báo cáo.
+    """
+    return value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
+
+# Bảng từ 5 cột trở lên được trải ngang toàn trang thay vì ép trong 1 cột.
+_WIDE_TABLE_MIN_COLS = 5
+
+# LLM thường tự đánh số sẵn trong caption ("Figure 1: ..."), trong khi Typst cũng tự đánh số
+# -> caption bị lặp "Figure 2: Figure 1: ...". Cắt bỏ tiền tố tự đánh số này.
+_CAPTION_PREFIX_RE = re.compile(r"^\s*(?:figure|fig\.?|hình|bảng|table)\s*\d*\s*[:.\-]\s*", re.IGNORECASE)
+
+
+def strip_caption_prefix(caption: str) -> str:
+    """Bỏ tiền tố 'Figure N:' / 'Bảng N.' do LLM tự thêm, tránh lặp với số của Typst."""
+    return _CAPTION_PREFIX_RE.sub("", caption or "", count=1).strip()
 
 # Color palette for publication plots
 _PALETTE = ["#1f4e79", "#c55a11", "#548235", "#7f6000", "#7030a0", "#2e75b6"]
@@ -58,6 +79,10 @@ def _replace_macro_braces(macro_name: str, target_name: str, s: str) -> str:
 def latex_to_typst_math(s: str) -> str:
     """Translate LaTeX math expressions into native Typst math syntax."""
     s = s.strip()
+
+    # 0a. Dấu phân cách hàng nghìn kiểu LaTeX: 10{,}000 -> 10,000 (nếu không sẽ in ra "10{, }000")
+    s = re.sub(r"\{\s*,\s*\}", ",", s)
+    s = re.sub(r"\{\s*\\,\s*\}", ",", s)
 
     # 0. Clean environments & alignment
     s = re.sub(r"\\begin\{(?:aligned|split|equation\*?)\}", "", s)
@@ -239,7 +264,7 @@ def latex_to_typst_math(s: str) -> str:
 
 def parse_markdown_table_to_typst(tbl_str: str, caption: str = "") -> str:
     """Convert a Markdown table into a Typst Booktabs #figure(table(...)) block."""
-    lines = [l.strip() for l in tbl_str.strip().splitlines() if l.strip()]
+    lines = [ln.strip() for ln in tbl_str.strip().splitlines() if ln.strip()]
     if len(lines) < 2:
         return ""
 
@@ -298,6 +323,11 @@ def parse_markdown_table_to_typst(tbl_str: str, caption: str = "") -> str:
     else:
         cols_spec = "(1fr,)"
 
+    # Bảng rộng không vừa 1 cột (~8cm) của layout 2 cột: chữ sẽ xuống dòng từng ký tự.
+    # Cho bảng tràn hết chiều ngang trang như `table*` của LaTeX, và thu nhỏ cỡ chữ theo số cột.
+    is_wide = num_cols >= _WIDE_TABLE_MIN_COLS
+    font_size = "6.5pt" if num_cols >= 8 else ("7.5pt" if is_wide else "8pt")
+
     typ_cells = []
     for h in headers:
         clean_h = re.sub(r"^\*\*(.+)\*\*$", r"\1", h.strip())
@@ -319,10 +349,13 @@ def parse_markdown_table_to_typst(tbl_str: str, caption: str = "") -> str:
         cap_clause = f",\n  caption: [{cap_inner}]"
     else:
         cap_clause = ""
-    return f"""#figure(
+
+    figure_code = f"""#figure(
   table(
     columns: {cols_spec},
     stroke: none,
+    inset: (x: 3pt, y: 2.5pt),
+    align: (left, ..({num_cols - 1} * (center,))),
     table.hline(stroke: 1.2pt),
     {header_block},
     table.hline(stroke: 0.6pt),
@@ -330,6 +363,14 @@ def parse_markdown_table_to_typst(tbl_str: str, caption: str = "") -> str:
     table.hline(stroke: 1.2pt),
   ){cap_clause}
 )"""
+
+    if is_wide:
+        # scope: "parent" đưa figure ra ngoài phạm vi cột, trải hết bề ngang trang (như table* LaTeX).
+        return (
+            f'#place(top, scope: "parent", float: true)[\n'
+            f"  #text(size: {font_size})[\n    {figure_code}\n  ]\n]"
+        )
+    return f"#text(size: {font_size})[\n{figure_code}\n]"
 
 
 def render_chart_spec_to_svg(spec: dict, out_path: Path) -> Path:
@@ -385,8 +426,14 @@ def render_chart_spec_to_svg(spec: dict, out_path: Path) -> Path:
 
 
 def render_mermaid_to_svg(code: str, out_path: Path) -> Path | None:
-    """Render Mermaid syntax to SVG via mermaid.ink with graceful fallback."""
+    """Render Mermaid syntax to SVG via mermaid.ink with graceful fallback.
+
+    Gửi nội dung sơ đồ tới dịch vụ công cộng — tắt bằng MERMAID_INK_ENABLED=false nếu báo cáo nhạy cảm.
+    """
     import httpx
+
+    if not get_settings().mermaid_ink_enabled:
+        return None
     try:
         enc = base64.b64encode(code.encode("utf-8")).decode("ascii")
         url = f"https://mermaid.ink/svg/{enc}"
@@ -395,7 +442,7 @@ def render_mermaid_to_svg(code: str, out_path: Path) -> Path | None:
             out_path.write_text(r.text, encoding="utf-8")
             return out_path
     except Exception as e:
-        logger.warning(f"Mermaid rendering via network failed: {e}. Falling back to styled code block.")
+        logger.warning("Mermaid rendering via network failed: %s. Falling back to styled code block.", e)
     return None
 
 
@@ -477,25 +524,40 @@ def markdown_to_typst(
             svg_name = f"chart_{fig_counter[0]}.svg"
             svg_path = work_dir / svg_name
             render_chart_spec_to_svg(spec, svg_path)
-            caption = spec.get("caption") or spec.get("title") or f"Figure {fig_counter[0]}"
+            caption = strip_caption_prefix(spec.get("caption") or spec.get("title") or "")
             return save_block(f'#figure(\n  image("{svg_name}", width: 100%),\n  caption: [{caption}]\n)')
         except Exception as e:
-            logger.warning(f"Failed to render chart spec: {e}")
+            logger.warning("Failed to render chart spec: %s", e)
             return ""
     body_md = re.sub(r"```chart[ \t]*\n(.*?)```", repl_chart, body_md, flags=re.DOTALL)
 
-    # 2b. Mermaid blocks
+    # 2b. Mermaid blocks — lấy caption "**Figure N: ...**" ngay trên/dưới khối nếu LLM có viết,
+    # nếu không mới dùng nhãn mặc định (trước đây luôn dùng nhãn cứng nên caption thật bị mồ côi
+    # thành một đoạn văn riêng, và hình bị đánh số trùng).
     def repl_mermaid(m):
         fig_counter[0] += 1
-        code = m.group(1).strip()
+        caption = strip_caption_prefix(m.group("capbefore") or m.group("capafter") or "")
+        code = m.group("code").strip()
         svg_name = f"flow_{fig_counter[0]}.svg"
         svg_path = work_dir / svg_name
         res = render_mermaid_to_svg(code, svg_path)
+        label = caption or "Workflow Architecture Overview."
         if res:
-            return save_block(f'#figure(\n  image("{svg_name}", width: 100%),\n  caption: [Workflow Architecture Overview.]\n)')
+            return save_block(f'#figure(\n  image("{svg_name}", width: 100%),\n  caption: [{label}]\n)')
         # Fallback to styled code block
-        return save_block(f"#block(stroke: 0.5pt + luma(180), inset: 8pt, radius: 2pt, fill: luma(250))[```\n{code}\n```]")
-    body_md = re.sub(r"```mermaid[ \t]*\n(.*?)```", repl_mermaid, body_md, flags=re.DOTALL)
+        return save_block(
+            f"#figure(\n  block(stroke: 0.5pt + luma(180), inset: 8pt, radius: 2pt, fill: luma(250))[```\n{code}\n```],\n"
+            f"  caption: [{label}]\n)"
+        )
+
+    body_md = re.sub(
+        r"(?:^[ \t]*\*\*(?:Figure|Fig\.?|Hình)\s*\d*\s*[:.]\s*(?P<capbefore>[^*\n]*?)\*\*[ \t]*\n+)?"
+        r"```mermaid[ \t]*\n(?P<code>.*?)```"
+        r"(?:\s*\n[ \t]*\*\*(?:Figure|Fig\.?|Hình)\s*\d*\s*[:.]\s*(?P<capafter>[^*\n]*?)\*\*[ \t]*$)?",
+        repl_mermaid,
+        body_md,
+        flags=re.DOTALL | re.MULTILINE,
+    )
 
     # 2c. Other Code / Algorithm blocks
     def repl_code(m):
@@ -516,8 +578,8 @@ def markdown_to_typst(
     tbl_counter = [0]
     def repl_table(m):
         tbl_counter[0] += 1
-        raw_cap = m.group(1) or f"Benchmark and Quantitative Evaluation {tbl_counter[0]}"
-        clean_cap = raw_cap.strip()
+        # Không có dòng "**Table N: ...**" phía trên -> để caption rỗng, Typst vẫn đánh số "Table n".
+        clean_cap = strip_caption_prefix(m.group(1) or "")
         tbl_str = m.group(2).strip()
         typ_tbl = parse_markdown_table_to_typst(tbl_str, clean_cap)
         return save_block(typ_tbl)
@@ -566,13 +628,13 @@ def markdown_to_typst(
         body_md = body_md.replace(f"TYPSTMATH{i}END", m_str)
 
     # 7. Format authors & affiliations tuples (ensure trailing comma for 1-element arrays)
-    auth_elements = [f'"{a}"' for a in authors]
+    auth_elements = [f'"{typst_string(a)}"' for a in authors]
     auth_str = ", ".join(auth_elements) + ("," if len(auth_elements) == 1 else "")
 
-    affil_elements = [f'"{a}"' for a in affiliations]
+    affil_elements = [f'"{typst_string(a)}"' for a in affiliations]
     affil_str = ", ".join(affil_elements) + ("," if len(affil_elements) == 1 else "")
 
-    kw_elements = [f'"{k}"' for k in keywords]
+    kw_elements = [f'"{typst_string(k)}"' for k in keywords]
     kw_str = ", ".join(kw_elements) + ("," if len(kw_elements) == 1 else "")
 
     # Load canonical CVPR/IEEE Typst template content
@@ -582,7 +644,7 @@ def markdown_to_typst(
     typst_doc = f"""{template_code}
 
 #show: cvpr_paper.with(
-  title: "{title}",
+  title: "{typst_string(title)}",
   authors: ({auth_str}),
   affiliations: ({affil_str}),
   abstract: [{abstract}],
@@ -613,11 +675,11 @@ def render_report_to_pdf(
             out.parent.mkdir(parents=True, exist_ok=True)
             try:
                 out.write_bytes(pdf_bytes)
-                logger.info(f"Generated publication PDF: {out} ({len(pdf_bytes)} bytes)")
+                logger.info("Generated publication PDF: %s (%d bytes)", out, len(pdf_bytes))
             except PermissionError:
                 import time
                 fallback = out.with_stem(f"{out.stem}_{int(time.time())}")
                 fallback.write_bytes(pdf_bytes)
-                logger.warning(f"File {out} is locked (e.g. open in PDF viewer). Saved to {fallback} instead.")
+                logger.warning("File %s is locked (e.g. open in PDF viewer). Saved to %s instead.", out, fallback)
 
         return pdf_bytes

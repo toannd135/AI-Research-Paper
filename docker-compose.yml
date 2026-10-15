@@ -1,6 +1,15 @@
+# Lưu ý: .env dùng localhost:5433/6380 cho dev chạy API/worker trực tiếp trên host.
+# Các service trong compose ghi đè URL bằng hostname nội bộ (postgres/qdrant/redis) bên dưới.
+x-app-env: &app-env
+  DATABASE_URL: postgresql+psycopg://paperai:paperai@postgres:5432/paperai
+  QDRANT_URL: http://qdrant:6333
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/0
+  CELERY_RESULT_BACKEND: redis://redis:6379/1
+
 services:
   postgres:
-    image: postgres:16
+    image: ${POSTGRES_IMAGE:-postgres:16}
     environment:
       POSTGRES_USER: paperai
       POSTGRES_PASSWORD: paperai
@@ -9,38 +18,71 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperai -d paperai"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   qdrant:
-    image: qdrant/qdrant:latest
+    # Pin phiên bản để build lặp lại được; override bằng QDRANT_IMAGE nếu registry không pull được.
+    image: ${QDRANT_IMAGE:-qdrant/qdrant:v1.13.2}
     ports:
       - "6333:6333"
       - "6334:6334"
     volumes:
       - qdrantdata:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   redis:
-    image: redis:7-alpine
+    image: ${REDIS_IMAGE:-redis:7-alpine}
     ports:
       - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   api:
     build: .
     env_file: .env
-    depends_on: [postgres, qdrant, redis]
+    environment:
+      <<: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "8000:8000"
     volumes:
       - .:/app
+      - hfcache:/root/.cache/huggingface
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   worker:
     build: .
     env_file: .env
-    depends_on: [postgres, qdrant, redis]
+    environment:
+      <<: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - .:/app
       - hfcache:/root/.cache/huggingface
-    command: celery -A app.workers.celery_app worker -Q upload_queue,research_queue -c 4 -l info
+    command: celery -A app.workers.celery_app worker -Q upload_queue,research_queue -c 2 -l info
 
 volumes:
   pgdata:

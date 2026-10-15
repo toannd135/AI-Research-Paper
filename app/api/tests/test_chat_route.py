@@ -9,6 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.ai.llm_gateway.base import LLMGatewayError, LLMResponse
+from app.ai.llm_gateway.registry import AVAILABLE_MODELS, DEFAULT_MODEL_ID
 from app.core.database import Base, get_db
 from app.core.schemas import Chunk, ScoredChunk
 from app.main import app
@@ -62,7 +63,7 @@ def test_chat_returns_answer_on_success(mock_hybrid, mock_rerank, mock_build_gat
     assert response.status_code == 200
     body = response.json()
     assert body["answer"] == "Câu trả lời."
-    assert body["model"] == "gemini-3.6-flash"  # model mặc định khi payload không chỉ định
+    assert body["model"] == DEFAULT_MODEL_ID  # model mặc định khi payload không chỉ định
 
 
 @patch("app.api.routes.chat.build_gateway")
@@ -115,5 +116,5 @@ def test_list_chat_models_reports_availability(client):
 
     assert response.status_code == 200
     models = {m["id"]: m for m in response.json()}
-    assert set(models) == {"gemini-3.6-flash", "claude-sonnet-5", "gpt-5.6"}
-    assert models["gemini-3.6-flash"]["available"] is True  # GEMINI_API_KEY luôn required, có trong .env test
+    assert set(models) == {option.id for option in AVAILABLE_MODELS}
+    assert all(isinstance(m["available"], bool) for m in models.values())

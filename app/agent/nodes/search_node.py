@@ -11,9 +11,7 @@ def is_reference_list_chunk(chunk) -> bool:
     if sec in ("references", "bibliography", "tài liệu tham khảo", "works cited", "reference list"):
         return True
     text_lower = chunk.text.strip().lower()
-    if text_lower.startswith("references\n") or text_lower.startswith("bibliography\n"):
-        return True
-    return False
+    return text_lower.startswith(("references\n", "bibliography\n"))
 
 
 def is_domain_relevant(chunk, question: str) -> bool:
@@ -30,10 +28,7 @@ def is_domain_relevant(chunk, question: str) -> bool:
         "solar cell", "photovoltaic", "power inverter", "traffic flow",
         "dermatology lesion", "bone fracture detection"
     ]
-    for indicator in off_domain_indicators:
-        if indicator in text_lower and indicator not in q_lower:
-            return False
-    return True
+    return not any(indicator in text_lower and indicator not in q_lower for indicator in off_domain_indicators)
 
 
 def search_node(state: ResearchState) -> ResearchState:

@@ -1,1 +1,0 @@
-"""Adapter vLLM (self-hosted)."""

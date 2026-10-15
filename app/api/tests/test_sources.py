@@ -1,4 +1,6 @@
-from app.api.routes.sources import build_response
+"""Test mapper OpenAlex -> SourceSearchResponse (không gọi mạng)."""
+
+from app.ai.external.openalex_mapper import build_source_search_response
 
 
 def _work(wid, score, refs=(), related=()):
@@ -19,9 +21,10 @@ def _work(wid, score, refs=(), related=()):
 
 
 def test_build_response_maps_fields_and_relations():
-    res = build_response([_work("W1", 100, refs=["W2", "W9"]), _work("W2", 50, related=["W1"])])
+    res = build_source_search_response([_work("W1", 100, refs=["W2", "W9"]), _work("W2", 50, related=["W1"])])
     s1, s2 = res.sources
-    assert s1.id == "W1" and s1.relevance == 99 and s2.relevance == 74
+    # Relevance quy đổi theo thứ hạng: top = 97, cuối = 60
+    assert s1.id == "W1" and s1.relevance == 97 and s2.relevance == 60
     assert s1.authors == "A, B, C et al."
     assert s1.abstract == "hello world" and s1.doi == "10.1/x" and s1.type == "Preprint"
     # W9 ngoài tập kết quả bị bỏ; cạnh W2->W1 trùng với W1->W2 nên chỉ giữ một
