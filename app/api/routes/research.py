@@ -123,8 +123,7 @@ def delete_research(task_id: str, db: Session = Depends(get_db)) -> None:
     task = db.get(ResearchTask, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Research task không tồn tại")
-    if task.status == ResearchStatus.PROCESSING.value:
-        raise HTTPException(status_code=409, detail="Research task đang chạy, không thể xoá")
+    # Cho phép xoá cả task đang chạy/kẹt (worker chết); worker tự bỏ qua khi thấy task đã bị xoá.
     db.delete(task)
     db.commit()
 

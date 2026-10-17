@@ -34,7 +34,7 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db)) -> ChatResponse:
     candidates = search_hybrid(payload.question, top_k=20, paper_id=payload.paper_id)
     top_chunks = rerank(payload.question, candidates, top_k=6)
     if not top_chunks:
-        raise HTTPException(status_code=404, detail="Không tìm thấy nội dung liên quan để trả lời")
+        raise HTTPException(status_code=404, detail="Không tìm thấy nội dung liên quan để trả lời (kho vector chưa có tài liệu nào được lập chỉ mục hoặc tài liệu đã chọn chưa được xử lý)")
 
     context_text, citations = build_context(top_chunks)
     conversation = _get_or_create_conversation(db, payload.conversation_id, payload.paper_id)
