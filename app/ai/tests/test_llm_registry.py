@@ -67,8 +67,34 @@ def test_model_name_falls_back_to_default_when_env_empty(mock_get_settings):
 def test_label_shows_actual_model_name(mock_get_settings):
     from app.ai.llm_gateway.registry import label_for
 
-    mock_get_settings.return_value = MagicMock(openrouter_model="nvidia/nemotron:free")
+    mock_get_settings.return_value = MagicMock(openrouter_model="nvidia/nemotron:free", anthropic_model="claude-x", openai_model="gpt-x")
     by_id = {option.id: option for option in AVAILABLE_MODELS}
     assert label_for(by_id["openrouter"]) == "OpenRouter · nvidia/nemotron:free"
-    # Provider có model cố định thì nhãn giữ nguyên, không nối thêm
-    assert label_for(by_id["claude-sonnet-5"]) == "Anthropic · Claude Sonnet 5"
+    assert label_for(by_id["claude-sonnet-5"]) == "Anthropic · claude-x"
+    assert label_for(by_id["gpt-5.6"]) == "OpenAI · gpt-x"
+    # Gemini chưa có biến model riêng nên nhãn giữ nguyên
+    assert label_for(by_id["gemini-3.6-flash"]) == "Google · Gemini 3.6 Flash"
+
+
+@patch("app.ai.llm_gateway.registry.get_settings")
+def test_gemma_models_registered_with_own_key_and_model_name(mock_get_settings):
+    from app.ai.llm_gateway.registry import is_configured, resolve_model_name
+
+    by_id = {option.id: option for option in AVAILABLE_MODELS}
+    mock_get_settings.return_value = MagicMock(
+        gemma_31b_api_key="k31",
+        gemma_26b_api_key=None,
+        model_gemma_4_31b_it_free="google/gemma-4-31b-it:free",
+        model_gemma_4_26b_a4b_free="google/gemma-4-26b-a4b:free",
+    )
+    assert is_configured(by_id["gemma-4-31b-it-free"])
+    assert not is_configured(by_id["gemma-4-26b-a4b-free"])
+    assert resolve_model_name(by_id["gemma-4-26b-a4b-free"]) == "google/gemma-4-26b-a4b:free"
+
+
+def test_gemma_26b_key_accepts_legacy_misnamed_variable():
+    from app.core.config import Settings
+
+    s = Settings(_env_file=None, model_gemma_4_2b_it_free_key="legacy", openrouter_api_key="shared")
+    assert s.gemma_26b_api_key == "legacy"
+    assert Settings(_env_file=None, openrouter_api_key="shared").gemma_31b_api_key == "shared"

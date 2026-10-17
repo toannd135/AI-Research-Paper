@@ -27,7 +27,9 @@ class Settings(BaseSettings):
     # --- LLM providers ---
     gemini_api_key: str = ""
     anthropic_api_key: str | None = None
+    anthropic_model: str = "claude-sonnet-5"
     openai_api_key: str | None = None
+    openai_model: str = "gpt-5.6"
     groq_api_key: str | None = None
     groq_model: str = "openai/gpt-oss-120b"
     openrouter_api_key: str | None = None
@@ -37,6 +39,14 @@ class Settings(BaseSettings):
         "google/gemma-4-31b-it:free",
         "qwen/qwen3.8-27b:free",
     ]
+    # Hai model Gemma miễn phí qua OpenRouter, mỗi model một key riêng (không có thì dùng OPENROUTER_API_KEY).
+    model_gemma_4_31b_it_free: str = "google/gemma-4-31b-it:free"
+    model_gemma_4_31b_it_free_key: str | None = None
+    model_gemma_4_26b_a4b_free: str = "google/gemma-4-26b-a4b:free"
+    model_gemma_4_26b_a4b_free_key: str | None = None
+    # Tên cũ bị gõ nhầm trong .env (2B thay vì 26B_A4B); vẫn nhận để không phải sửa tay.
+    model_gemma_4_2b_it_free_key: str | None = None
+
     # Ép research agent dùng 1 provider; None = tự chọn theo key có sẵn.
     agent_provider: AgentProvider | None = None
 
@@ -65,6 +75,14 @@ class Settings(BaseSettings):
 
     # Origin được phép gọi API trực tiếp (khi không đi qua Vite proxy), phân tách bằng dấu phẩy
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+
+    @property
+    def gemma_31b_api_key(self) -> str | None:
+        return self.model_gemma_4_31b_it_free_key or self.openrouter_api_key
+
+    @property
+    def gemma_26b_api_key(self) -> str | None:
+        return self.model_gemma_4_26b_a4b_free_key or self.model_gemma_4_2b_it_free_key or self.openrouter_api_key
 
     @property
     def cors_origin_list(self) -> list[str]:
