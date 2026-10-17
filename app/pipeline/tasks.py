@@ -6,7 +6,7 @@ from app.core.database import SessionLocal
 from app.core.schemas import PaperStatus
 from app.pipeline.chunking.semantic_chunker import chunk_pages
 from app.pipeline.parser.pdf_parser import parse_pdf
-from app.pipeline.vector_store.qdrant_client import ensure_collection, upsert_chunks
+from app.pipeline.vector_store.qdrant_client import delete_paper, ensure_collection, upsert_chunks
 from app.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
@@ -36,6 +36,7 @@ def process_paper(paper_id: str) -> dict:
 
             vectors = embed_batch([c.text for c in chunks])
             ensure_collection(vector_size=len(vectors[0]))
+            delete_paper(paper_id)  # idempotent: lập chỉ mục lại không tạo vector trùng
             upsert_chunks(chunks, vectors)
 
             paper.status = PaperStatus.DONE.value
@@ -77,6 +78,11 @@ def run_research(task_id: str) -> dict:
 
             from app.agent.format_sanitizer import sanitize_academic_markdown
 
+            db.expire_all()
+            task = db.get(ResearchTask, task_id)
+            if task is None:
+                logger.info("Research task %s đã bị xoá trong lúc chạy, bỏ qua kết quả", task_id)
+                return {"task_id": task_id, "status": "deleted"}
             task.report = sanitize_academic_markdown(state.get("report", ""))
             task.citations = json.dumps([c.model_dump() for c in state.get("citations", [])])
             task.status = ResearchStatus.DONE.value
@@ -85,6 +91,10 @@ def run_research(task_id: str) -> dict:
             return {"task_id": task_id, "status": task.status}
         except Exception as exc:
             logger.exception("Research task %s thất bại", task_id)
+            db.rollback()
+            task = db.get(ResearchTask, task_id)
+            if task is None:
+                return {"task_id": task_id, "status": "deleted"}
             task.status = ResearchStatus.FAILED.value
             task.error = str(exc)[:2000]
             db.commit()
