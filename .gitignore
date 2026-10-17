@@ -4,6 +4,9 @@ __pycache__/
 venv/
 .env
 .env.local
+# mọi biến thể .env (bản sao lưu, .env.bak-*, ...) đều có thể chứa key thật; chỉ .env.example được commit
+.env.*
+!.env.example
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
