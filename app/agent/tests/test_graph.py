@@ -27,18 +27,22 @@ class _FakeGateway:
         if "tổng hợp draft nghiên cứu" in system:
             return LLMResponse(text="# Báo cáo\n...\n[1]", model="fake")
 
+        if "Research Blueprint" in system:
+            return LLMResponse(text="# Báo cáo\n...\n[1]", model="fake")
+
         # analyze_node
         self.analyze_calls += 1
-        return LLMResponse(text="Nội dung phân tích [1].", model="fake")
+        return LLMResponse(text="Analysis content [1].", model="fake")
 
 
 def _scored(id_: str) -> ScoredChunk:
     return ScoredChunk(chunk=Chunk(id=id_, paper_id="p1", text="evidence text", chunk_index=0), score=0.9)
 
 
+@patch("app.agent.tools.search_external_papers.retrieve_external_evidence", return_value=[])
 @patch("app.agent.tools.search_papers.rerank")
 @patch("app.agent.tools.search_papers.search_hybrid")
-def test_graph_retries_on_critique_failure_then_passes(mock_hybrid, mock_rerank):
+def test_graph_retries_on_critique_failure_then_passes(mock_hybrid, mock_rerank, _mock_ext):
     mock_hybrid.return_value = []
     mock_rerank.return_value = [_scored("a")]
 
@@ -55,9 +59,10 @@ def test_graph_retries_on_critique_failure_then_passes(mock_hybrid, mock_rerank)
     assert state["report"].startswith("# Báo cáo")
 
 
+@patch("app.agent.tools.search_external_papers.retrieve_external_evidence", return_value=[])
 @patch("app.agent.tools.search_papers.rerank")
 @patch("app.agent.tools.search_papers.search_hybrid")
-def test_graph_stops_at_max_iterations_even_if_still_failing(mock_hybrid, mock_rerank):
+def test_graph_stops_at_max_iterations_even_if_still_failing(mock_hybrid, mock_rerank, _mock_ext):
     mock_hybrid.return_value = []
     mock_rerank.return_value = [_scored("a")]
 
@@ -71,9 +76,10 @@ def test_graph_stops_at_max_iterations_even_if_still_failing(mock_hybrid, mock_r
     assert "report" in state
 
 
+@patch("app.agent.tools.search_external_papers.retrieve_external_evidence", return_value=[])
 @patch("app.agent.tools.search_papers.rerank")
 @patch("app.agent.tools.search_papers.search_hybrid")
-def test_graph_dual_research_modes(mock_hybrid, mock_rerank):
+def test_graph_dual_research_modes(mock_hybrid, mock_rerank, _mock_ext):
     mock_hybrid.return_value = []
     mock_rerank.return_value = [_scored("a")]
 

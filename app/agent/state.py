@@ -14,5 +14,6 @@ class ResearchState(TypedDict, total=False):
     critique_feedback: str | None
     iterations: int
     research_mode: str
+    language: str  # mã ISO 639-1 của ngôn ngữ bài báo đầu ra (mặc định theo câu hỏi người dùng)
     baseline_analysis: str | None
     report: str

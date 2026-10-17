@@ -1,6 +1,7 @@
 """Node phân tích evidence: xây dựng context học thuật, tổng hợp chuyên sâu và đề xuất giải pháp."""
 
 from app.agent.format_sanitizer import sanitize_academic_markdown
+from app.agent.language import language_name
 from app.agent.state import ResearchState
 from app.ai.context_builder import build_context
 from app.ai.llm_gateway.base import LLMGateway, Message
@@ -57,6 +58,10 @@ def analyze_node(state: ResearchState, llm: LLMGateway | None = None) -> Researc
         f"Chế độ nghiên cứu: {mode_label}\n"
         f"Câu hỏi nghiên cứu: {state['question']}\n\n"
         f"Context tài liệu đã thu thập:\n{context_text}"
+    )
+    user_content += (
+        f"\n\nNGÔN NGỮ ĐẦU RA: viết toàn bộ bản phân tích bằng {language_name(state.get('language'))}. "
+        "Giữ nguyên tên riêng, tên phương pháp/mô hình, viết tắt, công thức, trích dẫn [n] và tiêu đề cột của bảng Quantitative Evidence Ledger (tiếng Anh)."
     )
     feedback = state.get("critique_feedback")
     if feedback:

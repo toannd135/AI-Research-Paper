@@ -44,10 +44,14 @@ def build_graph(llm: LLMGateway | None = None):
     return graph.compile()
 
 
-def run_graph(question: str, llm: LLMGateway | None = None) -> ResearchState:
+# Bài báo chuẩn quốc tế: luôn viết bằng tiếng Anh, bất kể câu hỏi của người dùng dùng ngôn ngữ nào.
+MANUSCRIPT_LANGUAGE = "en"
+
+
+def run_graph(question: str, llm: LLMGateway | None = None, language: str | None = None) -> ResearchState:
     """Entrypoint chạy Research Agent graph theo workflow đầy đủ."""
     app = build_graph(llm=llm)
-    initial_state: ResearchState = {"question": question, "iterations": 0}
+    initial_state: ResearchState = {"question": question, "iterations": 0, "language": language or MANUSCRIPT_LANGUAGE}
     return app.invoke(initial_state)
 
 
