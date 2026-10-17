@@ -166,7 +166,7 @@ def test_citations_reference_existing_chunks(mock_hybrid, mock_rerank):
         assert cit.page_number == chunk.page_number, f"page_number không khớp: {cit.page_number} != {chunk.page_number}"
 
 
-@patch("app.agent.nodes.search_node.retrieve_external_evidence", return_value=[])
+@patch("app.agent.tools.search_external_papers.retrieve_external_evidence", return_value=[])
 @patch("app.agent.tools.search_papers.rerank")
 @patch("app.agent.tools.search_papers.search_hybrid")
 def test_unknown_question_uses_fallback(mock_hybrid, mock_rerank, mock_ext):

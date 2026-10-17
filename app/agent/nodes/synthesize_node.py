@@ -4,7 +4,7 @@ Pipeline 6 chặng (blueprint → 1 Intro → 2 Related/Taxonomy → 3 Methodolo
 độc lập với chủ đề: nội dung chỉ được lấy từ draft đã kiểm chứng + danh sách trích dẫn của từng câu hỏi nghiên cứu.
 
 Enforces:
-1. Strict Single-Language Lock: 100% formal Academic English across all sections.
+1. Strict Single-Language Lock: one manuscript language (the user's language) across all sections.
 2. Zero Pipeline Leakage: Strips meta-commentary, stage labels, and internal scaffolding.
 3. Evidence Discipline: every claim/number traces to the draft or a cited [n]; nothing invented.
 4. Cross-section Consistency: notation, numbers and terminology fixed by the blueprint.
@@ -15,11 +15,14 @@ Enforces:
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from app.agent.evidence.citation_cleaner import clean_and_deduplicate_citations
 from app.agent.evidence.dataset_catalog import get_dataset_grounding_context
 from app.agent.format_sanitizer import sanitize_academic_markdown
+from app.agent.language import language_name
+from app.agent.report_postprocess import postprocess_report
 from app.agent.state import ResearchState
 from app.ai.llm_gateway.base import LLMGateway, Message
 from app.ai.llm_gateway.default import get_default_agent_gateway
@@ -41,14 +44,22 @@ _CHART_BLOCK_RULE = """   - FIGURES: visualize quantitative values that already 
      type is one of bar | barh | line | stacked_barh (parts of a whole per row, e.g. win / tie / loss %). Each series has exactly one value per label; use null (never 0) for a missing value. Never invent values; if there is not enough real data, omit the chart.
 """
 
+_MERMAID_BLOCK_RULE = """   - MERMAID SYNTAX: start with `graph TD` or `graph LR`; give every node a short ASCII id (A, B1, ...) and wrap each label in double quotes, e.g. A["Retriever [3]"] --> B["Reranker"]; no parentheses, brackets, semicolons, pipes or Unicode math symbols inside labels; no `direction` lines; close every `subgraph` with `end`; labels in the manuscript language; at most ~12 nodes. Put a '**Figure N: Caption**' line directly above the block.
+"""
+
+
+def _lang_label(state: ResearchState) -> str:
+    return language_name(state.get("language"))
+
 
 def _global_standards(state: ResearchState, mode: str) -> str:
     """Tiêu chuẩn học thuật chung cho mọi chặng (độc lập chủ đề)."""
     rules = f"""
 STRICT PEER-REVIEW PUBLICATION STANDARDS (MANDATORY ACROSS ALL SECTIONS):
 1. STRICT SINGLE-LANGUAGE CONSTRAINT:
-   - The ENTIRE manuscript must be written exclusively in formal Academic English from title to conclusion, even if the research question or the draft is in another language.
-   - NEVER output Vietnamese or any other language in any section under any circumstance.
+   - MANUSCRIPT LANGUAGE: {_lang_label(state)}. Write the ENTIRE manuscript (title, abstract, body, figure/table captions, diagram labels, chart captions) in this one language, in formal academic register, even if the draft or references are in another language.
+   - Keep unchanged: proper names, method/model names and acronyms, dataset names, citations [n], numbers, LaTeX and code. The structural markers '## Abstract', '**Keywords:**', '**Table N:**', '**Figure N:**' and '## References' keep their English tokens (the renderer parses them), but the text after them is in the manuscript language.
+   - NEVER mix languages inside a paragraph, a caption or a diagram label.
 2. ZERO META-PIPELINE LEAKAGE:
    - NEVER output internal pipeline terminology such as 'Blueprint', 'Stage Summary', 'Chặng', or meta-instructions.
    - Refer to previous parts naturally using standard academic conventions (e.g., 'as formalized in Section 3').
@@ -72,7 +83,7 @@ STRICT PEER-REVIEW PUBLICATION STANDARDS (MANDATORY ACROSS ALL SECTIONS):
    - Display math $$...$$ MUST be on its own line with empty lines before and after.
    - Every table MUST have a clear caption above it: '**Table N: Caption**'.
    - Mermaid diagrams: every node label in double quotes (NodeId["Label"]), '<br/>' for line breaks, edge labels as -->|"label"|.
-{_TABLE_BLOCK_RULE}{_CHART_BLOCK_RULE}"""
+{_TABLE_BLOCK_RULE}{_CHART_BLOCK_RULE}{_MERMAID_BLOCK_RULE}"""
     if mode == "novel_research":
         rules += (
             "8. REGISTERED-REPORT RULE (novel research):\n"
@@ -206,6 +217,7 @@ def _generate(
 def _user_prompt(state: ResearchState, instruction: str) -> str:
     return (
         f"Research Question: {state['question']}\n\n"
+        f"Manuscript language: {_lang_label(state)}\n\n"
         f"Draft Basis:\n{state.get('draft', '')}\n\n"
         f"{instruction}"
     )
@@ -259,7 +271,7 @@ def _generate_stage_0_blueprint(
         "Its purpose is to fix the title, terminology, notation and scope ONCE so that every later section stays consistent. "
         "Use only what is supported by the draft and the citations.\n\n"
         f"{_global_standards(state, mode)}\n\n"
-        "Generate the Blueprint in formal Academic English with these parts:\n"
+        "Generate the Blueprint in the manuscript language with these parts:\n"
         "1. TITLE & ACRONYM: an academic title specific to the research question"
         + (" (survey form: '[Topic]: A Comprehensive Survey and Taxonomy on ...')" if mode != "novel_research" else " and a concise acronym for the proposed method")
         + ".\n"
@@ -299,7 +311,7 @@ def _generate_stage_1_front_matter_and_intro(
     )
     system_prompt = (
         "You are writing Front Matter and Section 1 (INTRODUCTION) for a top-tier peer-reviewed academic paper.\n"
-        "Write in rigorous, fluent Academic English (~1,200 - 1,500 words).\n\n"
+        "Write in rigorous, fluent academic prose in the manuscript language (~1,200 - 1,500 words).\n\n"
         f"{_global_standards(state, mode)}\n\n"
         f"ESTABLISHED DESIGN PLAN:\n{blueprint}\n\n"
         "REQUIRED STRUCTURE FOR SECTION 1:\n"
@@ -318,27 +330,8 @@ def _generate_stage_1_front_matter_and_intro(
         "### 1.4 Paper Organization\n"
         "(Outline strictly Sections 2 through 6. Do NOT reference unwritten sections or phantom appendices.)"
     )
-<<<<<<< HEAD
-
-    user_prompt = (
-        f"Câu hỏi nghiên cứu: {state['question']}\n\n"
-        f"Draft cơ sở:\n{state.get('draft', '')}\n\n"
-        f"Danh sách trích dẫn hợp lệ (CHỈ được dùng các số [n] này):\n{references}\n\n"
-        "Hãy viết hoàn chỉnh Front Matter và Mục 1 (Introduction) với độ sâu học thuật cao nhất."
-    )
-
-    response = gateway.generate(
-        messages=[
-            Message(role="system", content=system_prompt),
-            Message(role="user", content=user_prompt),
-        ],
-        model_name=model_name,
-    )
-    return response.text.strip()
-=======
-    user_prompt = _user_prompt(state, "Write the front matter and Section 1 in formal Academic English with high academic depth.")
+    user_prompt = _user_prompt(state, "Write the front matter and Section 1 in the manuscript language with high academic depth.")
     return _generate(system_prompt, user_prompt, gateway, model_name)
->>>>>>> 3d4ddb0d209359d2a70405bb2031c320e674d2de
 
 
 def _generate_stage_2_related_work(
@@ -354,34 +347,15 @@ def _generate_stage_2_related_work(
     title, structure = _structure(mode, "stage2")
     system_prompt = (
         f"You are writing {title} for a top-tier peer-reviewed academic paper.\n"
-        "Write in rigorous, fluent Academic English (~1,400 - 1,600 words).\n\n"
+        "Write in rigorous, fluent academic prose in the manuscript language (~1,400 - 1,600 words).\n\n"
         f"{_global_standards(state, mode)}\n\n"
         f"ESTABLISHED DESIGN PLAN:\n{blueprint}\n\n"
         f"TRANSITION CONTEXT FROM SECTION 1:\n{sec1_transition}\n\n"
         f"AVAILABLE CITATIONS:\n{references}\n\n"
         f"REQUIRED STRUCTURE:\n{structure}"
     )
-<<<<<<< HEAD
-
-    user_prompt = (
-        f"Câu hỏi nghiên cứu: {state['question']}\n\n"
-        f"Draft cơ sở:\n{state.get('draft', '')}\n\n"
-        f"Danh sách trích dẫn hợp lệ (CHỈ được dùng các số [n] này):\n{references}\n\n"
-        "Hãy viết Section 2 với phân loại học thuật đa chiều và phân tích so sánh sâu sắc."
-    )
-
-    response = gateway.generate(
-        messages=[
-            Message(role="system", content=system_prompt),
-            Message(role="user", content=user_prompt),
-        ],
-        model_name=model_name,
-    )
-    return response.text.strip()
-=======
-    user_prompt = _user_prompt(state, "Write this section with comprehensive scholarly literature mapping in formal Academic English.")
+    user_prompt = _user_prompt(state, "Write this section with comprehensive scholarly literature mapping in the manuscript language.")
     return _generate(system_prompt, user_prompt, gateway, model_name)
->>>>>>> 3d4ddb0d209359d2a70405bb2031c320e674d2de
 
 
 def _generate_stage_3_methodology(
@@ -397,7 +371,7 @@ def _generate_stage_3_methodology(
     title, structure = _structure(mode, "stage3")
     system_prompt = (
         f"You are writing {title} for a top-tier peer-reviewed academic paper.\n"
-        "Write in rigorous, fluent Academic English (~2,000 - 2,500 words).\n"
+        "Write in rigorous, fluent academic prose in the manuscript language (~2,000 - 2,500 words).\n"
         "DO NOT output any stage summary or meta-commentary at the end.\n\n"
         f"{_global_standards(state, mode)}\n\n"
         f"ESTABLISHED DESIGN PLAN:\n{blueprint}\n\n"
@@ -405,27 +379,8 @@ def _generate_stage_3_methodology(
         f"AVAILABLE CITATIONS:\n{references}\n\n"
         f"REQUIRED STRUCTURE:\n{structure}"
     )
-<<<<<<< HEAD
-
-    user_prompt = (
-        f"Câu hỏi nghiên cứu: {state['question']}\n\n"
-        f"Draft cơ sở:\n{state.get('draft', '')}\n\n"
-        f"Danh sách trích dẫn hợp lệ (CHỈ được dùng các số [n] này):\n{references}\n\n"
-        "Hãy viết Section 3 với độ hoàn thiện kỹ thuật cao nhất, chuẩn bị cho bài báo hội nghị đỉnh cao."
-    )
-
-    response = gateway.generate(
-        messages=[
-            Message(role="system", content=system_prompt),
-            Message(role="user", content=user_prompt),
-        ],
-        model_name=model_name,
-    )
-    return response.text.strip()
-=======
-    user_prompt = _user_prompt(state, "Write this section with technical completeness and consistent terminology/notation in formal Academic English.")
+    user_prompt = _user_prompt(state, "Write this section with technical completeness and consistent terminology/notation in the manuscript language.")
     return _generate(system_prompt, user_prompt, gateway, model_name)
->>>>>>> 3d4ddb0d209359d2a70405bb2031c320e674d2de
 
 
 def _generate_stage_4_experiments(
@@ -441,7 +396,7 @@ def _generate_stage_4_experiments(
     title, structure = _structure(mode, "stage4")
     system_prompt = (
         f"You are writing {title} for a top-tier peer-reviewed academic paper.\n"
-        "Write in rigorous, fluent Academic English (~1,800 - 2,300 words).\n"
+        "Write in rigorous, fluent academic prose in the manuscript language (~1,800 - 2,300 words).\n"
         "DO NOT output any stage summary or meta-commentary at the end.\n\n"
         f"{_global_standards(state, mode)}\n\n"
         f"ESTABLISHED DESIGN PLAN:\n{blueprint}\n\n"
@@ -449,27 +404,8 @@ def _generate_stage_4_experiments(
         f"AVAILABLE CITATIONS:\n{references}\n\n"
         f"REQUIRED STRUCTURE:\n{structure}"
     )
-<<<<<<< HEAD
-
-    user_prompt = (
-        f"Câu hỏi nghiên cứu: {state['question']}\n\n"
-        f"Draft cơ sở:\n{state.get('draft', '')}\n\n"
-        f"Danh sách trích dẫn hợp lệ (CHỈ được dùng các số [n] này):\n{references}\n\n"
-        "Hãy viết Section 4 với dữ liệu thực nghiệm phong phú, bảng số liệu và biểu đồ khoa học."
-    )
-
-    response = gateway.generate(
-        messages=[
-            Message(role="system", content=system_prompt),
-            Message(role="user", content=user_prompt),
-        ],
-        model_name=model_name,
-    )
-    return response.text.strip()
-=======
     user_prompt = _user_prompt(state, "Write this section with a rigorous empirical structure; every number must come from the evidence with its [n].")
     return _generate(system_prompt, user_prompt, gateway, model_name)
->>>>>>> 3d4ddb0d209359d2a70405bb2031c320e674d2de
 
 
 def _generate_stage_5_discussion_and_conclusion(
@@ -485,52 +421,19 @@ def _generate_stage_5_discussion_and_conclusion(
     title, structure = _structure(mode, "stage5")
     system_prompt = (
         f"You are writing {title} for a top-tier peer-reviewed academic paper.\n"
-        "Write in rigorous, fluent Academic English (~1,200 - 1,500 words).\n\n"
+        "Write in rigorous, fluent academic prose in the manuscript language (~1,200 - 1,500 words).\n\n"
         f"{_global_standards(state, mode)}\n\n"
         f"ESTABLISHED DESIGN PLAN:\n{blueprint}\n\n"
         f"TRANSITION CONTEXT FROM SECTION 4:\n{sec4_transition}\n\n"
         f"AVAILABLE CITATIONS:\n{references}\n\n"
         f"REQUIRED STRUCTURE:\n{structure}"
     )
-<<<<<<< HEAD
-
-    user_prompt = (
-        f"Câu hỏi nghiên cứu: {state['question']}\n\n"
-        f"Draft cơ sở:\n{state.get('draft', '')}\n\n"
-        f"Danh sách trích dẫn hợp lệ (CHỈ được dùng các số [n] này):\n{references}\n\n"
-        "Hãy viết Section 5 (Discussion) và Section 6 (Conclusion) hoàn chỉnh."
-    )
-
-    response = gateway.generate(
-        messages=[
-            Message(role="system", content=system_prompt),
-            Message(role="user", content=user_prompt),
-        ],
-        model_name=model_name,
-    )
-    return response.text.strip()
-
-
-def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> ResearchState:
-    """Entrypoint tổng hợp báo cáo bằng Hierarchical Section-by-Section Synthesis Pipeline.
-
-    Quy trình 6 chặng:
-    - Chặng 0: Khóa ký hiệu và bản thiết kế nghiên cứu cốt lõi (Global Blueprint & Notation Lock).
-    - Chặng 1: Front Matter + Section 1 (Title, Abstract, Introduction & Contributions).
-    - Chặng 2: Section 2 (Related Work & Multi-Dimensional Taxonomy).
-    - Chặng 3: Section 3 (Proposed Methodology, Architecture, Formulations & Algorithm 1).
-    - Chặng 4: Section 4 (Experiments, Empirical Benchmark Matrix, Ablations & Case Studies).
-    - Chặng 5: Section 5 & 6 (Discussion, Limitations, Open Challenges & Conclusion).
-    - Chặng 6: Ghép nối (Stitch), gắn danh mục References chuẩn và Sanitization.
-    """
-=======
-    user_prompt = _user_prompt(state, "Write Sections 5 and 6 in formal Academic English with candid academic honesty.")
+    user_prompt = _user_prompt(state, "Write Sections 5 and 6 in the manuscript language with candid academic honesty.")
     return _generate(system_prompt, user_prompt, gateway, model_name)
 
 
 def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> ResearchState:
     """Entrypoint for the Hierarchical Section-by-Section Synthesis Pipeline."""
->>>>>>> 3d4ddb0d209359d2a70405bb2031c320e674d2de
     citations = state.get("citations", [])
     references_prompt = _format_references_prompt(citations)
     mode = state.get("research_mode", "survey")
@@ -541,16 +444,12 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
     logger.info("Executing Synthesis Stage 0: Research Blueprint & Mathematical Formulation...")
     blueprint = _generate_stage_0_blueprint(state, references_prompt, mode, gateway, model_name)
 
-<<<<<<< HEAD
-    # Chặng 1: Front Matter & Introduction
-=======
     # Handle mock fake gateway for fast offline tests
     if blueprint.startswith("# Báo cáo"):
         clean_mock = sanitize_academic_markdown(blueprint)
         return {**state, "report": clean_mock}
 
     # Stage 1: Front Matter & Introduction
->>>>>>> 3d4ddb0d209359d2a70405bb2031c320e674d2de
     logger.info("Executing Synthesis Stage 1: Front Matter & Section 1 (Introduction)...")
     sec1_text = _generate_stage_1_front_matter_and_intro(blueprint, state, references_prompt, mode, gateway, model_name)
     sec1_transition = _extract_last_paragraphs(sec1_text)
@@ -585,12 +484,11 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
     ]
     raw_stitched = "\n\n".join(full_markdown_parts)
 
-<<<<<<< HEAD
-    clean_report = sanitize_academic_markdown(raw_stitched)
-    logger.info("Synthesized report: %s chars", f"{len(clean_report):,}")
-=======
     # Deduplicate citations, remap numbers, and generate clean IEEE references
     updated_text, clean_references = clean_and_deduplicate_citations(citations, raw_stitched)
+    updated_text = postprocess_report(
+        updated_text, state.get("draft", ""), gateway, model_name, state.get("language", "en")
+    )
     final_text_with_refs = (
         updated_text
         + "\n\n## References\n\n"
@@ -599,5 +497,4 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
 
     clean_report = sanitize_academic_markdown(final_text_with_refs)
     logger.info(f"Synthesized comprehensive 10-page paper: {len(clean_report):,} chars")
->>>>>>> 3d4ddb0d209359d2a70405bb2031c320e674d2de
     return {**state, "report": clean_report}

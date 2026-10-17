@@ -16,6 +16,7 @@ _SYSTEM_PROMPT = (
     "   - [Khía cạnh 3]: Các điểm nghẽn, nhược điểm và failure modes của các phương pháp hiện tại (Bottlenecks & Limitations).\n"
     "   - [Khía cạnh 4]: Các hướng tiếp cận tiên tiến, công thức toán học hoặc kỹ thuật kết hợp (Advanced/Cross-domain Techniques).\n"
     "   - [Khía cạnh 5]: So sánh định lượng và kết quả thực nghiệm SOTA (Empirical Benchmark Comparisons).\n"
+    "Mọi truy vấn tìm kiếm PHẢI viết bằng tiếng Anh (kho bài báo quốc tế), dù câu hỏi dùng ngôn ngữ nào.\n"
     'Chỉ trả lời định dạng JSON hợp lệ: {"mode": "survey" | "novel_research", "queries": ["...", "..."]}, không thêm text nào khác.'
 )
 

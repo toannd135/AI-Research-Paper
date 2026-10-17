@@ -485,38 +485,28 @@ def _render_offline_flowchart(code: str, out_path: Path) -> Path:
 
 
 def render_mermaid_to_svg(code: str, out_path: Path) -> Path | None:
-<<<<<<< HEAD
     """Render Mermaid syntax to SVG via mermaid.ink with graceful fallback.
 
     Gửi nội dung sơ đồ tới dịch vụ công cộng — tắt bằng MERMAID_INK_ENABLED=false nếu báo cáo nhạy cảm.
     """
-=======
-    """Render Mermaid syntax to SVG via mermaid.ink with graceful offline fallback."""
->>>>>>> 3d4ddb0d209359d2a70405bb2031c320e674d2de
     import httpx
 
     if not get_settings().mermaid_ink_enabled:
         return None
     try:
         enc = base64.b64encode(code.encode("utf-8")).decode("ascii")
-        url = f"https://mermaid.ink/svg/{enc}"
-        r = httpx.get(url, timeout=5)
+        r = httpx.get(f"https://mermaid.ink/svg/{enc}", timeout=5)
         if r.status_code == 200 and "<svg" in r.text:
             out_path.write_text(r.text, encoding="utf-8")
             return out_path
     except Exception as e:
-<<<<<<< HEAD
-        logger.warning("Mermaid rendering via network failed: %s. Falling back to styled code block.", e)
-    return None
-=======
-        logger.info(f"Online Mermaid rendering unavailable ({e}). Using offline vector flowchart generator.")
+        logger.info("Online Mermaid rendering unavailable (%s). Using offline vector flowchart generator.", e)
 
     try:
         return _render_offline_flowchart(code, out_path)
     except Exception as e:
         logger.warning(f"Offline flowchart rendering failed: {e}")
         return None
->>>>>>> 3d4ddb0d209359d2a70405bb2031c320e674d2de
 
 
 def markdown_to_typst(
@@ -597,14 +587,8 @@ def markdown_to_typst(
             svg_name = f"chart_{fig_counter[0]}.svg"
             svg_path = work_dir / svg_name
             render_chart_spec_to_svg(spec, svg_path)
-<<<<<<< HEAD
             caption = strip_caption_prefix(spec.get("caption") or spec.get("title") or "")
             return save_block(f'#figure(\n  image("{svg_name}", width: 100%),\n  caption: [{caption}]\n)')
-=======
-            raw_caption = spec.get("caption") or spec.get("title") or f"Evaluation Metric Plot"
-            clean_caption = re.sub(r"^(?:Figure|Fig\.|Biểu đồ)\s*\d+[:\.]?\s*", "", str(raw_caption).strip(), flags=re.IGNORECASE)
-            return save_block(f'#figure(\n  image("{svg_name}", width: 100%),\n  caption: [{clean_caption}]\n)')
->>>>>>> 3d4ddb0d209359d2a70405bb2031c320e674d2de
         except Exception as e:
             logger.warning("Failed to render chart spec: %s", e)
             return ""
@@ -622,7 +606,6 @@ def markdown_to_typst(
         res = render_mermaid_to_svg(code, svg_path)
         label = caption or "Workflow Architecture Overview."
         if res:
-<<<<<<< HEAD
             return save_block(f'#figure(\n  image("{svg_name}", width: 100%),\n  caption: [{label}]\n)')
         # Fallback to styled code block
         return save_block(
@@ -638,11 +621,6 @@ def markdown_to_typst(
         body_md,
         flags=re.DOTALL | re.MULTILINE,
     )
-=======
-            return save_block(f'#figure(\n  image("{svg_name}", width: 100%),\n  caption: [System Architectural and Evaluation Pipeline Overview.]\n)')
-        return ""
-    body_md = re.sub(r"```mermaid[ \t]*\n(.*?)```", repl_mermaid, body_md, flags=re.DOTALL)
->>>>>>> 3d4ddb0d209359d2a70405bb2031c320e674d2de
 
     # 2c. Other Code / Algorithm blocks
     def repl_code(m):
@@ -663,15 +641,8 @@ def markdown_to_typst(
     tbl_counter = [0]
     def repl_table(m):
         tbl_counter[0] += 1
-<<<<<<< HEAD
         # Không có dòng "**Table N: ...**" phía trên -> để caption rỗng, Typst vẫn đánh số "Table n".
         clean_cap = strip_caption_prefix(m.group(1) or "")
-=======
-        raw_cap = m.group(1) or "Empirical Benchmark and Comparative Evaluation"
-        clean_cap = re.sub(r"^(?:Table|Bảng)\s*\d+[:\.]?\s*", "", raw_cap.strip(), flags=re.IGNORECASE).strip()
-        if not clean_cap:
-            clean_cap = "Empirical Benchmark and Comparative Evaluation"
->>>>>>> 3d4ddb0d209359d2a70405bb2031c320e674d2de
         tbl_str = m.group(2).strip()
         typ_tbl = parse_markdown_table_to_typst(tbl_str, clean_cap)
         return save_block(typ_tbl)

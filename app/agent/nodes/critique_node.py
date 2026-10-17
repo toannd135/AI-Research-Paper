@@ -1,10 +1,14 @@
 """Node tự phản biện kết quả: kiểm tra citation hợp lệ, phát hiện gán ép nguồn, hallucination và mâu thuẫn kỹ thuật."""
 
+import re
+
 from app.agent.evidence.citation_validator import (
     find_citation_misattributions,
     find_invalid_citations,
 )
 from app.agent.evidence.hallucination_detector import find_unsupported_sentences
+from app.agent.language import is_foreign_paragraph, language_name
+from app.agent.report_postprocess import _ledger_rows
 from app.agent.state import ResearchState
 from app.ai.context_builder import build_context
 from app.ai.llm_gateway.base import LLMGateway
@@ -50,10 +54,18 @@ def critique_node(state: ResearchState, llm: LLMGateway | None = None) -> Resear
     ]
 
     # 5. Kiểm tra ngôn ngữ lai tạp (Bilingual mixing): Nếu bài báo là tiếng Anh nhưng lẫn tiếng Việt
-    vietnamese_terms = [
-        w for w in ["chúng tôi", "phán quyết", "thực nghiệm", "phân tầng chất lượng", "mô hình giám khảo", "ước lượng điểm"]
-        if w in draft_lower
-    ]
+    target_lang = state.get("language", "en")
+    mixed_language = any(
+        is_foreign_paragraph(p, target_lang)
+        for p in re.sub(r"```.*?```", "", draft, flags=re.DOTALL).split("\n\n")
+        if p.strip() and not p.lstrip().startswith(("|", "#"))
+    )
+
+    # 5b. Sổ số liệu: nếu evidence có con số mà ledger rỗng thì bảng/biểu đồ sau này sẽ không có số liệu thật
+    evidence_has_numbers = any(
+        len(re.findall(r"\d+\.\d+|\d+\s*%", sc.chunk.text)) >= 3 for sc in state.get("evidence", [])
+    )
+    ledger_missing = evidence_has_numbers and not _ledger_rows(draft) and iterations <= 1
 
     # 6. Kiểm tra mâu thuẫn số học ngân sách (Arithmetic conflict): ví dụ cả $2.70 và $0.90
     budget_conflict = False
@@ -70,8 +82,9 @@ def critique_node(state: ResearchState, llm: LLMGateway | None = None) -> Resear
         and not hype_terms
         and not encoder_conflict
         and not leakage_terms
-        and not vietnamese_terms
+        and not mixed_language
         and not budget_conflict
+        and not ledger_missing
     ):
         return {**state, "critique_feedback": None, "iterations": iterations}
 
@@ -101,9 +114,14 @@ def critique_node(state: ResearchState, llm: LLMGateway | None = None) -> Resear
         feedback_parts.append(
             f"Rò rỉ siêu dữ liệu pipeline ({leakage_terms}): Tuyệt đối không dùng các từ nội bộ như 'Blueprint', 'Chặng', 'Global Notation Lock' trong bản thảo. Diễn đạt hoàn toàn bằng văn phong khoa học tự nhiên."
         )
-    if vietnamese_terms:
+    if mixed_language:
         feedback_parts.append(
-            f"Lẫn lộn ngôn ngữ: Phát hiện từ tiếng Việt ({vietnamese_terms}) trong bản thảo. Toàn bộ bài báo phải được viết 100% bằng tiếng Anh học thuật (Academic English)."
+            f"Lẫn lộn ngôn ngữ: bản thảo có đoạn không viết bằng {language_name(target_lang)}. "
+            f"Toàn bộ bản thảo phải dùng một ngôn ngữ duy nhất ({language_name(target_lang)}); giữ nguyên tên riêng, thuật ngữ viết tắt và trích dẫn [n]."
+        )
+    if ledger_missing:
+        feedback_parts.append(
+            "Thiếu hoặc rỗng mục '## Quantitative Evidence Ledger' dù evidence có số liệu: hãy chép NGUYÊN VĂN các con số (kèm [n], dataset, metric) từ context vào bảng sổ số liệu."
         )
     if budget_conflict:
         feedback_parts.append(
