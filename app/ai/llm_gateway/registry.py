@@ -1,5 +1,6 @@
 """Danh sách model user có thể chọn ở chat UI — map model id (client gửi lên) -> adapter thật."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from app.ai.llm_gateway.anthropic_adapter import (
@@ -25,10 +26,15 @@ class ModelOption:
     id: str
     label: str
     model_name: str  # model mặc định, dùng khi model_name_setting không có giá trị
-    gateway_factory: type[LLMGateway]
+    gateway_factory: Callable[[], LLMGateway]
     required_setting: str  # tên field trong Settings phải có giá trị thì model này mới dùng được
     # Tên field trong Settings cho phép đổi model qua .env (vd OPENROUTER_MODEL, GROQ_MODEL).
     model_name_setting: str | None = None
+
+
+def _gemma_gateway(key_attr: str) -> Callable[[], LLMGateway]:
+    """OpenRouterAdapter dùng key riêng của từng model Gemma."""
+    return lambda: OpenRouterAdapter(api_key=getattr(get_settings(), key_attr))
 
 
 AVAILABLE_MODELS: list[ModelOption] = [
@@ -39,6 +45,22 @@ AVAILABLE_MODELS: list[ModelOption] = [
         gateway_factory=OpenRouterAdapter,
         required_setting="openrouter_api_key",
         model_name_setting="openrouter_model",
+    ),
+    ModelOption(
+        id="gemma-4-31b-it-free",
+        label="OpenRouter Gemma 4 31B",
+        model_name="google/gemma-4-31b-it:free",
+        gateway_factory=_gemma_gateway("gemma_31b_api_key"),
+        required_setting="gemma_31b_api_key",
+        model_name_setting="model_gemma_4_31b_it_free",
+    ),
+    ModelOption(
+        id="gemma-4-26b-a4b-free",
+        label="OpenRouter Gemma 4 26B A4B",
+        model_name="google/gemma-4-26b-a4b:free",
+        gateway_factory=_gemma_gateway("gemma_26b_api_key"),
+        required_setting="gemma_26b_api_key",
+        model_name_setting="model_gemma_4_26b_a4b_free",
     ),
     ModelOption(
         id="groq-gpt-oss-120b",
@@ -57,17 +79,19 @@ AVAILABLE_MODELS: list[ModelOption] = [
     ),
     ModelOption(
         id="claude-sonnet-5",
-        label="Anthropic · Claude Sonnet 5",
+        label="Anthropic",
         model_name=ANTHROPIC_DEFAULT_MODEL,
         gateway_factory=AnthropicAdapter,
         required_setting="anthropic_api_key",
+        model_name_setting="anthropic_model",
     ),
     ModelOption(
         id="gpt-5.6",
-        label="OpenAI · GPT-5.6",
+        label="OpenAI",
         model_name=OPENAI_DEFAULT_MODEL,
         gateway_factory=OpenAIAdapter,
         required_setting="openai_api_key",
+        model_name_setting="openai_model",
     ),
 ]
 
