@@ -41,3 +41,16 @@ models/
 # Docs
 docs/
 README.md
+.git
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.coverage
+htmlcov
+dist
+build
+.env
