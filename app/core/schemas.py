@@ -266,6 +266,8 @@ class ResearchClarificationResponse(BaseModel):
 
 class ResearchTaskResponse(BaseModel):
     id: str
+    question: str = ""
+    refined_question: str | None = None
     status: ResearchStatus
     report: str | None = None
     citations: list[Citation] = Field(default_factory=list)

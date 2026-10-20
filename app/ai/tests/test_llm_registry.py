@@ -1,11 +1,17 @@
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from app.ai.llm_gateway.registry import (
     AVAILABLE_MODELS,
     DEFAULT_MODEL_ID,
+    build_gateway,
+    get_available_models,
     is_configured,
     resolve_model,
 )
+from app.ai.llm_gateway.openrouter_adapter import OpenRouterAdapter
+from app.core.config import Settings
 
 
 def test_resolve_model_returns_default_when_id_is_none():
@@ -31,3 +37,25 @@ def test_is_configured_reflects_required_setting(mock_get_settings):
     assert is_configured(by_id["gemini-3.6-flash"]) is True
     assert is_configured(by_id["claude-sonnet-5"]) is False
     assert is_configured(by_id["gpt-5.6"]) is False
+
+
+@pytest.mark.parametrize("api_key,available", [("test-key", True), ("", False)])
+@patch("app.ai.llm_gateway.registry.get_settings")
+def test_openrouter_models_follow_configuration(mock_get_settings, api_key, available):
+    mock_get_settings.return_value = Settings(
+        _env_file=None,
+        openrouter_api_key=api_key,
+        openrouter_model="vendor/primary",
+        openrouter_fallback_models=["vendor/primary", "vendor/fallback", ""],
+    )
+    options = [m for m in get_available_models() if m.id.startswith("openrouter:")]
+    assert [m.model_name for m in options] == ["vendor/primary", "vendor/fallback"]
+    for option in options:
+        assert option.label.startswith("OpenRouter")
+        assert is_configured(option) is available
+        resolved = resolve_model(option.id)
+        assert resolved == option
+        assert resolved.gateway_factory is OpenRouterAdapter
+        if available:
+            with patch("app.ai.llm_gateway.openrouter_adapter.get_settings", return_value=mock_get_settings.return_value):
+                assert isinstance(build_gateway(option), OpenRouterAdapter)

@@ -34,6 +34,14 @@ def test_sanitize_mermaid_already_quoted_stays_valid():
     assert 'B["Second Quoted"]' in cleaned
 
 
+def test_mermaid_math_labels_keep_latex_commands_and_braces():
+    formula = r"$\frac{x_{i}}{\sqrt{n}} + \nabla L$"
+    diagram = f'graph TD\nA["Estimate {formula}"] -->|"{formula}"| B["Result"]'
+    cleaned = sanitize_mermaid_block(diagram)
+    assert cleaned.count(formula) == 2
+    assert "<br/>abla" not in cleaned
+
+
 def test_sanitize_latex_math_isolation():
     raw_text = """Bắt đầu công thức:
 $$P(r) = 4d \\sum r_l$$

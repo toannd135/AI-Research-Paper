@@ -9,6 +9,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.ai.llm_gateway.base import LLMGatewayError, LLMResponse
+from app.ai.llm_gateway.registry import AVAILABLE_MODELS, DEFAULT_MODEL_ID
+from app.core.config import Settings
 from app.core.database import Base, get_db
 from app.core.schemas import Chunk, ScoredChunk
 from app.main import app
@@ -62,23 +64,36 @@ def test_chat_returns_answer_on_success(mock_hybrid, mock_rerank, mock_build_gat
     assert response.status_code == 200
     body = response.json()
     assert body["answer"] == "Câu trả lời."
-    assert body["model"] == "gemini-3.6-flash"  # model mặc định khi payload không chỉ định
+    assert body["model"] == DEFAULT_MODEL_ID
 
 
 @patch("app.api.routes.chat.build_gateway")
 @patch("app.api.routes.chat.rerank")
 @patch("app.api.routes.chat.search_hybrid")
-def test_chat_uses_requested_model(mock_hybrid, mock_rerank, mock_build_gateway, client):
+@pytest.mark.parametrize("model_id,model_name", [
+    ("claude-sonnet-5", None),
+    ("openrouter:vendor/primary", "vendor/primary"),
+    ("openrouter:vendor/fallback", "vendor/fallback"),
+])
+def test_chat_uses_requested_model(mock_hybrid, mock_rerank, mock_build_gateway, client, model_id, model_name):
     mock_hybrid.return_value = _candidates()
     mock_rerank.return_value = _candidates()
     mock_build_gateway.return_value = _fake_gateway(text="Trả lời từ Claude.")
 
-    response = client.post(
-        "/chat", json={"question": "Phương pháp là gì?", "model": "claude-sonnet-5"}
-    )
+    with patch("app.ai.llm_gateway.registry.get_settings", return_value=Settings(
+        _env_file=None,
+        openrouter_model="vendor/primary",
+        openrouter_fallback_models=["vendor/fallback"],
+    )):
+        response = client.post(
+            "/chat", json={"question": "Phương pháp là gì?", "model": model_id}
+        )
 
     assert response.status_code == 200
-    assert response.json()["model"] == "claude-sonnet-5"
+    assert response.json()["model"] == model_id
+    assert mock_build_gateway.call_args.args[0].id == model_id
+    if model_name:
+        assert mock_build_gateway.return_value.generate.call_args.kwargs["model_name"] == model_name
 
 
 @patch("app.api.routes.chat.build_gateway")
@@ -110,10 +125,24 @@ def test_chat_returns_503_instead_of_500_when_llm_gateway_fails(
     assert "quota" in response.json()["detail"].lower()
 
 
-def test_list_chat_models_reports_availability(client):
+@patch("app.ai.llm_gateway.registry.get_settings")
+def test_list_chat_models_reports_availability(mock_get_settings, client):
+    mock_get_settings.return_value = Settings(
+        _env_file=None,
+        openrouter_api_key="test-key",
+        openrouter_model="vendor/primary",
+        openrouter_fallback_models=["vendor/fallback"],
+    )
     response = client.get("/chat/models")
 
     assert response.status_code == 200
     models = {m["id"]: m for m in response.json()}
-    assert set(models) == {"gemini-3.6-flash", "claude-sonnet-5", "gpt-5.6"}
-    assert models["gemini-3.6-flash"]["available"] is True  # GEMINI_API_KEY luôn required, có trong .env test
+    assert set(models) == {option.id for option in AVAILABLE_MODELS} | {
+        "openrouter:vendor/primary", "openrouter:vendor/fallback",
+    }
+    assert models["openrouter:vendor/primary"]["available"] is True
+    assert models["openrouter:vendor/fallback"]["available"] is True
+
+    mock_get_settings.return_value.openrouter_api_key = ""
+    models = {m["id"]: m for m in client.get("/chat/models").json()}
+    assert models["openrouter:vendor/primary"]["available"] is False

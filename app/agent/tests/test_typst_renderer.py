@@ -48,6 +48,65 @@ def test_latex_to_typst_math_complex_equation():
     assert "dot" in typ
 
 
+@pytest.mark.parametrize("formula", [
+    r"\frac{x_{i}}{\sqrt{n}}",
+    r"\frac{\frac{a}{b}}{\frac{c}{d}}",
+    r"\frac{1}{N_{total}} + \frac{x^{2}}{y_{i}}",
+    r"\frac {x_{i}} {n}",
+    r"\dfrac{x_{i}}{n}",
+    r"\tfrac{x_{i}}{n}",
+    r"\frac{\{x\}}{n}",
+])
+def test_nested_fraction_pdf_compilation(formula):
+    converted = latex_to_typst_math(formula)
+    assert not any(macro in converted for macro in (r"\frac", r"\dfrac", r"\tfrac"))
+    report = "# Fraction regression\n\n## 1. Method\n\n$$\n" + formula + "\n$$"
+    assert render_report_to_pdf(report).startswith(b"%PDF-")
+
+
+def test_nested_fraction_in_abstract_inline_and_table():
+    report = r"""# Fraction contexts
+
+## Abstract
+The estimate is $\frac{x_{i}}{\sqrt{n}}$.
+
+## 1. Method
+Inline estimate: $\frac{x_{i}}{\sqrt{n}}$.
+
+| Estimate | Value |
+|---|---|
+| $\frac{x_{i}}{\sqrt{n}}$ | 1 |
+"""
+    assert render_report_to_pdf(report).startswith(b"%PDF-")
+
+
+@pytest.mark.parametrize("content", [
+    "Recall@10 and NDCG@10; contact researcher@example.org. See [10].",
+    r"Already escaped: Recall\@10.",
+    "## Recall@10\nThe ranking result.",
+    "| Metric | Value |\n|---|---|\n| Recall@10 | 0.8 |",
+    "**Table 1: Recall@10**\n\n| Metric | Value |\n|---|---|\n| NDCG@10 | 0.8 |",
+    "```python\nmetric = 'Recall@10'\n```",
+])
+def test_literal_at_sign_pdf_compilation(content):
+    report = "# Ranking\n\n## Abstract\nRecall@10 evaluation.\n\n## 1. Results\n\n" + content
+    source = markdown_to_typst(report)
+    assert r"Recall\@10 evaluation." in source
+    assert render_report_to_pdf(report).startswith(b"%PDF-")
+
+
+def test_literal_at_sign_in_chart_caption():
+    report = '''# Ranking
+
+## 1. Results
+
+```chart
+{"labels": ["Baseline"], "series": [{"values": [0.8]}], "caption": "Recall@10 results"}
+```
+'''
+    assert render_report_to_pdf(report).startswith(b"%PDF-")
+
+
 def test_parse_markdown_table_to_typst():
     table_md = """
 | Method ($M_{total}$) | Params ($K_{ret}$) | Accuracy (%) |
@@ -64,6 +123,24 @@ def test_parse_markdown_table_to_typst():
     assert '[*Method ($M_("total")$)*]' in typ_table
     assert '[*Params ($K_("ret")$)*]' in typ_table
     assert "[*91.2*]" in typ_table
+
+
+def test_typst_renders_json_table_as_table():
+    import json
+
+    spec = {
+        "columns": ["Method", "R@10", "R@50"],
+        "header_groups": [{"label": "Method", "span": 1}, {"label": "Recall", "span": 2}],
+        "rows": [["Baseline", 10, 20], ["", 12, 23]],
+        "caption": "Recall@10 results",
+        "bold_rows": [1],
+    }
+    report = "# Tables\n\n## 1. Results\n\n```table\n" + json.dumps(spec) + "\n```"
+    source = markdown_to_typst(report)
+    assert "```table" not in source
+    assert "table.cell(colspan: 2)" in source
+    assert "table.cell(rowspan: 2)" in source
+    assert render_report_to_pdf(report).startswith(b"%PDF-")
 
 
 def test_render_chart_spec_to_svg():

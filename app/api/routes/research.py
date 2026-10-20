@@ -3,7 +3,7 @@
 import json
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -23,6 +23,38 @@ from app.core.schemas import (
 from app.pipeline.tasks import run_research
 
 router = APIRouter(prefix="/research", tags=["research"])
+
+
+@router.get("/", include_in_schema=False)
+@router.get("")
+def list_research(
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    status: ResearchStatus | None = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(ResearchTask)
+    if status is not None:
+        query = query.filter(ResearchTask.status == status.value)
+    total = query.count()
+    tasks = query.with_entities(
+        ResearchTask.id, ResearchTask.question, ResearchTask.refined_question, ResearchTask.status,
+        (ResearchTask.report.isnot(None) & (ResearchTask.report != "")).label("has_report"),
+        ResearchTask.citations, ResearchTask.error, ResearchTask.created_at,
+    ).order_by(ResearchTask.created_at.desc(), ResearchTask.id.desc()).offset(offset).limit(limit).all()
+    return {
+        "items": [{
+            "id": task.id,
+            "question": task.question,
+            "refined_question": task.refined_question,
+            "status": task.status,
+            "has_report": task.has_report,
+            "citation_count": len(json.loads(task.citations)) if task.citations else 0,
+            "error": task.error,
+            "created_at": task.created_at,
+        } for task in tasks],
+        "total": total, "limit": limit, "offset": offset,
+    }
 
 
 @router.post("/", response_model=ResearchTaskResponse | ResearchClarificationResponse)
@@ -46,7 +78,10 @@ def create_research(payload: ResearchRequest, db: Session = Depends(get_db)):
 
     run_research.delay(task.id)
 
-    return ResearchTaskResponse(id=task.id, status=ResearchStatus.PENDING, created_at=task.created_at)
+    return ResearchTaskResponse(
+        id=task.id, question=task.question, refined_question=task.refined_question,
+        status=ResearchStatus.PENDING, created_at=task.created_at,
+    )
 
 
 @router.get("/{task_id}", response_model=ResearchTaskResponse)
@@ -59,6 +94,8 @@ def get_research(task_id: str, db: Session = Depends(get_db)) -> ResearchTaskRes
 
     return ResearchTaskResponse(
         id=task.id,
+        question=task.question,
+        refined_question=task.refined_question,
         status=ResearchStatus(task.status),
         report=task.report,
         citations=citations,
@@ -70,7 +107,8 @@ def get_research(task_id: str, db: Session = Depends(get_db)) -> ResearchTaskRes
 @router.get("/{task_id}/pdf")
 def export_research_pdf(
     task_id: str,
-    engine: str = "typst",
+    engine: str = "html",
+    columns: int = Query(default=2, ge=1, le=2),
     db: Session = Depends(get_db),
 ) -> Response:
     task = db.get(ResearchTask, task_id)
@@ -94,7 +132,7 @@ def export_research_pdf(
             try:
                 from app.pipeline.export.pdf_renderer import report_to_pdf
 
-                pdf = report_to_pdf(clean_report)
+                pdf = report_to_pdf(clean_report, columns=columns)
             except Exception as fallback_err:
                 logger.exception("Fallback PDF rendering also failed: %s", fallback_err)
                 raise HTTPException(
@@ -105,7 +143,7 @@ def export_research_pdf(
         try:
             from app.pipeline.export.pdf_renderer import report_to_pdf
 
-            pdf = report_to_pdf(clean_report)
+            pdf = report_to_pdf(clean_report, columns=columns)
         except Exception as e:
             logger.exception("PDF rendering failed for task %s: %s", task_id, e)
             raise HTTPException(

@@ -9,11 +9,21 @@
 import html
 import io
 import json
+import logging
+import math
 import re
 
 import markdown
 
-_FENCE_RE = re.compile(r"```(mermaid|chart|table)[ \t]*\n(.*?)```", re.DOTALL)
+from app.pipeline.export.browser_renderer import (
+    ASSET_ORIGIN,
+    launch_browser,
+    prepare_report_page,
+)
+
+logger = logging.getLogger(__name__)
+
+_FENCE_RE = re.compile(r"```([a-zA-Z0-9_-]*)[ \t]*\n(.*?)```", re.DOTALL)
 _DISPLAY_MATH_RE = re.compile(r"\$\$(.+?)\$\$", re.DOTALL)
 _INLINE_MATH_RE = re.compile(r"\\\((.+?)\\\)")
 # $...$ (không dính tiền tệ như "$5 to $10": sau $ mở không có khoảng trắng, trước $ đóng không có khoảng trắng)
@@ -50,7 +60,7 @@ def _render_chart_svg(spec: dict) -> str:
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    raw_labels = [str(x) for x in spec["labels"]]
+    raw_labels = [re.sub(r"\*\*(.*?)\*\*", r"\1", str(x)) for x in spec["labels"]]
     series = [
         {"name": s.get("name"), "values": [_num(v) for v in s["values"]]}
         for s in spec["series"]
@@ -60,6 +70,8 @@ def _render_chart_svg(spec: dict) -> str:
     if not keep_idx or not series:
         raise ValueError("chart spec thiếu labels/series hợp lệ")
     kind = spec.get("type", "bar")
+    if kind not in {"bar", "barh", "line", "stacked_bar", "stacked_barh"}:
+        raise ValueError(f"Loại biểu đồ chưa được hỗ trợ: {kind}")
     horizontal = kind in ("barh", "stacked_barh")
     stacked = kind.startswith("stacked")
     labels = [textwrap.fill(raw_labels[i], 26 if horizontal else 16) for i in keep_idx]
@@ -80,7 +92,7 @@ def _render_chart_svg(spec: dict) -> str:
             ys = [float("nan") if v is None else v for v in s["values"]]
             ax.plot(labels, ys, marker="o", linewidth=1.6, color=_PALETTE[i % len(_PALETTE)], label=s["name"])
             for x, y in zip(labels, ys):
-                if y == y:
+                if not math.isnan(y):
                     ax.annotate(f"{y:g}", (x, y), textcoords="offset points", xytext=(0, 5), ha="center", fontsize=7)
     elif stacked:
         left = [0.0] * m
@@ -103,7 +115,7 @@ def _render_chart_svg(spec: dict) -> str:
                 bars = ax.barh(offset, vals, height=width * 0.9, color=color, label=s["name"])
             else:
                 bars = ax.bar(offset, vals, width=width * 0.9, color=color, label=s["name"])
-            ax.bar_label(bars, labels=["" if v != v else f"{v:g}" for v in vals], fontsize=7, padding=3)
+            ax.bar_label(bars, labels=["" if math.isnan(v) else f"{v:g}" for v in vals], fontsize=7, padding=3)
         # chừa chỗ cho nhãn số ở cả hai đầu (kể cả giá trị âm) để không đè lên tên trục
         values = [v for s in series for v in s["values"] if v is not None]
         lo, hi = min(0.0, *values), max(0.0, *values)
@@ -147,6 +159,7 @@ def _render_chart_svg(spec: dict) -> str:
 def _cell_html(text) -> str:
     """Escape ô bảng, cho phép **đậm** và *nghiêng* kiểu Markdown."""
     t = html.escape(str(text))
+    t = _DOLLAR_MATH_RE.sub(lambda m: r"\(" + m.group(1) + r"\)", t)
     t = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", t)
     return re.sub(r"(?<!\*)\*(?!\*)(.+?)\*", r"<i>\1</i>", t)
 
@@ -163,8 +176,7 @@ def _render_table_html(spec: dict) -> str:
     columns = [str(c) for c in spec["columns"]]
     rows = [[("" if c is None else c) for c in r] for r in spec["rows"]]
     n = len(columns)
-    rows = [r for r in rows if len(r) == n]
-    if not rows:
+    if not n or not rows or any(len(row) != n for row in rows):
         raise ValueError("table spec không có hàng hợp lệ")
     bold_rows = set(spec.get("bold_rows", []))
 
@@ -203,7 +215,7 @@ def _render_table_html(spec: dict) -> str:
     body = []
     for r, row in enumerate(rows):
         tds = []
-        if str(row[0]).strip():
+        if str(row[0]).strip() or r == 0:
             span = 1
             while r + span < len(rows) and not str(rows[r + span][0]).strip():
                 span += 1
@@ -219,7 +231,14 @@ def _render_table_html(spec: dict) -> str:
             cls += (" bd" if whole_bold else "") + (" best" if r in best.get(i, ()) else "")
             tds.append(f'<td class="{cls.strip()}">{text}</td>')
         body.append(f'<tr class="{cls_row}">{"".join(tds)}</tr>')
-    return f'<table class="spec"><thead>{head}</thead><tbody>{"".join(body)}</tbody></table>'
+    # Give descriptive columns more room than numeric metrics in wide benchmark tables.
+    weights = []
+    for index in range(n):
+        numbers = sum(_num(str(row[index]).replace("*", "")) is not None for row in rows)
+        weights.append(1.0 if numbers >= max(1, len(rows) / 2) else 2.2)
+    total = sum(weights)
+    colgroup = "<colgroup>" + "".join(f'<col style="width:{weight / total * 100:.2f}%">' for weight in weights) + "</colgroup>"
+    return f'<table class="spec">{colgroup}<thead>{head}</thead><tbody>{"".join(body)}</tbody></table>'
 
 
 def _extract_blocks(md: str) -> tuple[str, list[str]]:
@@ -235,19 +254,23 @@ def _extract_blocks(md: str) -> tuple[str, list[str]]:
         kind, body = match.group(1), match.group(2).strip()
         if kind == "mermaid":
             return keep(f'<figure class="fig" data-kind="figure"><pre class="mermaid">{html.escape(body)}</pre>__CAPTION__</figure>')
+        if kind not in {"chart", "table"}:
+            return keep(f'<pre><code class="language-{html.escape(kind)}">{html.escape(body)}</code></pre>')
         if kind == "table":
             try:
                 spec = json.loads(body)
                 table = _render_table_html(spec)
-            except Exception:
-                return ""
+            except Exception as exc:  # noqa: BLE001 -- Keep source visible for any table rendering failure.
+                logger.warning("Cannot render table: %s", exc)
+                return keep(f'<div class="render-warning">Không render được bảng; dữ liệu gốc:</div><pre class="render-error">{html.escape(body)}</pre>')
             caption = html.escape(spec.get("caption") or "")
             return keep(table.replace('<table class="spec"', f'<table class="spec" data-caption="{caption}"', 1))
         try:
             spec = json.loads(body)
             svg = _render_chart_svg(spec)
-        except Exception:
-            return ""  # spec hỏng thì bỏ biểu đồ, không làm hỏng cả bài
+        except Exception as exc:  # noqa: BLE001 -- Keep source visible for any chart rendering failure.
+            logger.warning("Cannot render chart: %s", exc)
+            return keep(f'<div class="render-warning">Không render được biểu đồ; dữ liệu gốc:</div><pre class="render-error">{html.escape(body)}</pre>')
         caption = html.escape(spec.get("caption") or spec.get("title") or "")
         return keep(f'<figure class="fig chart" data-kind="figure" data-caption="{caption}">{svg}__CAPTION__</figure>')
 
@@ -319,8 +342,23 @@ def _layout_front_matter(body: str) -> str:
     return re.sub(r"<h2>References</h2>(.*)$", r'<section class="refs"><h2>References</h2>\1</section>', body, flags=re.DOTALL)
 
 
-def report_to_html(report_md: str) -> str:
-    md, blocks = _extract_blocks(report_md)
+def _layout_columns(body: str, columns: int) -> str:
+    """Keep front matter full width; let print layout span large objects across both columns."""
+    if columns not in (1, 2):
+        raise ValueError("PDF columns must be 1 or 2")
+    front = re.compile(
+        r'\s*(?:<h1\b[^>]*>.*?</h1>|<div class="(?:authors|affil)">.*?</div>'
+        r'|<section class="abstract">.*?</section>)',
+        re.DOTALL,
+    )
+    pos = 0
+    while match := front.match(body, pos):
+        pos = match.end()
+    return body[:pos] + f'<main class="paper-body columns-{columns}">' + body[pos:] + '</main>'
+
+
+def report_to_html(report_md: str, *, columns: int = 2) -> str:
+    md, blocks = _extract_blocks(report_md.replace("\r\n", "\n"))
     parser = markdown.Markdown(extensions=["tables", "fenced_code", "sane_lists"])
     # LLM hay thụt lề đoạn văn sau công thức → Markdown hiểu nhầm là khối code. Code thật dùng ``` nên tắt indented code.
     parser.parser.blockprocessors.deregister("code")
@@ -328,33 +366,19 @@ def report_to_html(report_md: str) -> str:
     body = _PLACEHOLDER_RE.sub(lambda m: blocks[int(m.group(1))], body)
     body = re.sub(r"PAPERAIINLINE(\d+)END", lambda m: blocks[int(m.group(1))], body)
     body = _layout_front_matter(_number_figures_and_tables(body))
+    body = _layout_columns(body, columns)
     return _TEMPLATE.replace("{{BODY}}", body)
 
 
-def report_to_pdf(report_md: str) -> bytes:
+def report_to_pdf(report_md: str, *, columns: int = 2) -> bytes:
     from playwright.sync_api import sync_playwright
 
-    page_html = report_to_html(report_md)
+    page_html = report_to_html(report_md, columns=columns)
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = launch_browser(p)
         try:
             page = browser.new_page()
-            page.set_content(page_html, wait_until="networkidle", timeout=60_000)
-            page.evaluate(
-                """async () => {
-                    if (window.mermaid) {
-                        mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose',
-                                             flowchart: { htmlLabels: true, useMaxWidth: true } });
-                        await mermaid.run({ suppressErrors: true });
-                    }
-                    if (window.renderMathInElement) {
-                        renderMathInElement(document.body, { delimiters: [
-                            { left: '\\\\[', right: '\\\\]', display: true },
-                            { left: '\\\\(', right: '\\\\)', display: false } ], throwOnError: false });
-                    }
-                    await document.fonts.ready;
-                }"""
-            )
+            prepare_report_page(page, page_html)
             return page.pdf(
                 format="A4",
                 margin={"top": "20mm", "bottom": "20mm", "left": "18mm", "right": "18mm"},
@@ -372,14 +396,20 @@ def report_to_pdf(report_md: str) -> bytes:
 
 _TEMPLATE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400&family=Noto+Sans:wght@400;600;700&display=swap">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<link rel="stylesheet" href="https://paperai-assets.invalid/katex/katex.min.css">
+<script src="https://paperai-assets.invalid/katex/katex.min.js"></script>
+<script src="https://paperai-assets.invalid/katex/contrib/auto-render.min.js"></script>
+<script src="https://paperai-assets.invalid/mermaid.min.js"></script>
+<script>if (window.mermaid) mermaid.initialize({startOnLoad: false});</script>
 <style>
   @page { size: A4; }
   body { font-family: 'Noto Serif', 'Times New Roman', serif; font-size: 10.5pt; line-height: 1.5; color: #111; margin: 0; }
+  .columns-2 { column-count: 2; column-gap: 18pt; column-fill: balance; font-size: 9.5pt; line-height: 1.4; }
+  .columns-2 > .tbl, .columns-2 > figure.fig { column-span: all; }
+  .columns-2 h2 { font-size: 11pt; }
+  .columns-2 h3 { font-size: 10pt; }
+  .columns-2 h4 { font-size: 9.5pt; }
+  .columns-2 p { orphans: 3; widows: 3; }
   h1.title { font-size: 19pt; line-height: 1.25; text-align: center; margin: 0 0 10pt; }
   .authors { text-align: center; font-size: 11pt; font-weight: 700; }
   .affil { text-align: center; font-size: 9.5pt; font-style: italic; color: #333; margin-bottom: 14pt; }
@@ -391,18 +421,24 @@ _TEMPLATE = """<!doctype html>
   p, li { text-align: justify; hyphens: auto; }
   p { margin: 0 0 6pt; }
   ul, ol { margin: 0 0 6pt; padding-left: 18pt; }
-  .tbl { margin: 10pt 0 12pt; break-inside: avoid; }
+  .tbl { margin: 10pt 0 12pt; break-inside: auto; }
+  .tbl.keep-together { break-inside: avoid; }
+  .tbl > .caption { break-after: avoid; }
   .caption, figcaption { font-family: 'Noto Sans', sans-serif; font-size: 8.5pt; text-align: center; margin: 4pt 0; }
   table { width: 100%; border-collapse: collapse; font-family: 'Noto Sans', sans-serif; font-size: 7.5pt; line-height: 1.35;
-          border-top: 1.2pt solid #111; border-bottom: 1.2pt solid #111; }
+          border-top: 1.2pt solid #111; border-bottom: 1.2pt solid #111; table-layout: fixed; overflow-wrap: anywhere; }
+  thead { display: table-header-group; }
+  tr { break-inside: avoid; }
+  table.wide { font-size: 7pt; }
   thead th { border-bottom: .6pt solid #111; text-align: left; padding: 4pt 4pt; vertical-align: bottom; }
   td { padding: 3pt 4pt; vertical-align: top; text-align: left; }
   tbody tr:nth-child(even) td { background: #f5f5f5; }
   figure.fig { margin: 12pt 0; text-align: center; break-inside: avoid; }
-  figure.fig svg { max-width: 100%; height: auto; max-height: 190mm; }
-  figure.chart svg { width: 78%; }
+  figure.fig svg { max-width: 100%; height: auto; }
   pre.mermaid { background: none; border: 0; font-family: 'Noto Sans', sans-serif; }
-  pre:not(.mermaid) { font-size: 8pt; background: #f6f6f6; border-left: 2pt solid #999; padding: 6pt 8pt; white-space: pre-wrap; break-inside: avoid; }
+  pre:not(.mermaid) { font-size: 8pt; background: #f6f6f6; border-left: 2pt solid #999; padding: 6pt 8pt; white-space: pre-wrap; overflow-wrap: anywhere; break-inside: auto; }
+  .render-warning { color: #9c3d10; font: 9pt Arial, sans-serif; }
+  img { max-width: 100%; }
   code { font-size: 8.5pt; }
   table.spec { font-size: 8.5pt; }
   table.spec thead th { text-align: center; }
@@ -420,4 +456,4 @@ _TEMPLATE = """<!doctype html>
   .refs p { text-align: left; padding-left: 18pt; text-indent: -18pt; margin-bottom: 3pt; }
 </style></head>
 <body>{{BODY}}</body></html>
-"""
+""".replace("https://paperai-assets.invalid", ASSET_ORIGIN)

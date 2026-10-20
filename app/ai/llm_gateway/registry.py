@@ -13,6 +13,8 @@ from app.ai.llm_gateway.groq_adapter import DEFAULT_MODEL as GROQ_DEFAULT_MODEL
 from app.ai.llm_gateway.groq_adapter import GroqAdapter
 from app.ai.llm_gateway.openai_adapter import DEFAULT_MODEL as OPENAI_DEFAULT_MODEL
 from app.ai.llm_gateway.openai_adapter import OpenAIAdapter
+from app.ai.llm_gateway.openrouter_adapter import DEFAULT_MODEL as OPENROUTER_DEFAULT_MODEL
+from app.ai.llm_gateway.openrouter_adapter import OpenRouterAdapter
 from app.core.config import get_settings
 
 
@@ -56,8 +58,29 @@ AVAILABLE_MODELS: list[ModelOption] = [
     ),
 ]
 
-_BY_ID = {option.id: option for option in AVAILABLE_MODELS}
 DEFAULT_MODEL_ID = AVAILABLE_MODELS[0].id
+
+
+def get_available_models() -> list[ModelOption]:
+    """Include the configured OpenRouter primary and fallback models in the chat menu."""
+    settings = get_settings()
+    model_names = dict.fromkeys([
+        settings.openrouter_model or OPENROUTER_DEFAULT_MODEL,
+        *settings.openrouter_fallback_models,
+    ])
+    return [
+        *AVAILABLE_MODELS,
+        *[
+            ModelOption(
+                id=f"openrouter:{name}",
+                label=f"OpenRouter · {name}",
+                model_name=name,
+                gateway_factory=OpenRouterAdapter,
+                required_setting="openrouter_api_key",
+            )
+            for name in model_names if name
+        ],
+    ]
 
 
 def is_configured(option: ModelOption) -> bool:
@@ -66,7 +89,10 @@ def is_configured(option: ModelOption) -> bool:
 
 def resolve_model(model_id: str | None) -> ModelOption:
     """Trả về ModelOption khớp `model_id`; model_id không hợp lệ hoặc rỗng -> model mặc định."""
-    return _BY_ID.get(model_id or DEFAULT_MODEL_ID, AVAILABLE_MODELS[0])
+    return next(
+        (option for option in get_available_models() if option.id == model_id),
+        AVAILABLE_MODELS[0],
+    )
 
 
 def build_gateway(option: ModelOption) -> LLMGateway:

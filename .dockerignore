@@ -32,6 +32,7 @@ build/
 data/
 uploads/
 models/
+**/node_modules/
 
 # Editor & OS
 .idea/

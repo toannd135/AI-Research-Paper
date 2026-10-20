@@ -7,8 +7,8 @@ from app.ai.context_builder import build_context
 from app.ai.llm_gateway.base import LLMGatewayError
 from app.ai.llm_gateway.base import Message as LLMMessage
 from app.ai.llm_gateway.registry import (
-    AVAILABLE_MODELS,
     build_gateway,
+    get_available_models,
     is_configured,
     resolve_model,
 )
@@ -63,7 +63,7 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db)) -> ChatResponse:
 def list_chat_models():
     return [
         {"id": option.id, "label": option.label, "available": is_configured(option)}
-        for option in AVAILABLE_MODELS
+        for option in get_available_models()
     ]
 
 

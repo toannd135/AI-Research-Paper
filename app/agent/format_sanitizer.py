@@ -23,6 +23,13 @@ def _clean_mermaid_label(raw: str) -> str:
     elif s.startswith("'") and s.endswith("'") and len(s) >= 2:
         s = s[1:-1]
 
+    # Preserve LaTeX groups and commands (including \nabla) inside math labels.
+    math_parts: list[str] = []
+    def keep_math(match: re.Match) -> str:
+        math_parts.append(match.group(0))
+        return f"PAPERAIMATHLABEL{len(math_parts) - 1}END"
+    s = re.sub(r"(?<!\\)(\${1,2})(.+?)(?<!\\)\1", keep_math, s, flags=re.DOTALL)
+
     # Thay thế ký tự xuống dòng
     s = s.replace(r"\n", "<br/>").replace("\n", "<br/>")
     # Thay thế ngoặc nhọn để tránh conflict syntax
@@ -31,6 +38,8 @@ def _clean_mermaid_label(raw: str) -> str:
     s = s.replace('"', "'")
     # Thay toán tử || tránh xung đột nhãn cạnh
     s = s.replace("||", "‖")
+    for index, formula in enumerate(math_parts):
+        s = s.replace(f"PAPERAIMATHLABEL{index}END", formula)
     return s
 
 
