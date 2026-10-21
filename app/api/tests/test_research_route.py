@@ -1,6 +1,7 @@
 """Test POST /research, GET /research/{id} — mock clarify() và Celery .delay(), DB SQLite in-memory."""
 
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,6 +11,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.ai.llm_gateway.base import LLMGatewayError
 from app.core.database import Base, get_db
+from app.api.models.research_task import ResearchTask
 from app.main import app
 
 
@@ -33,6 +35,23 @@ def client():
     app.dependency_overrides[get_db] = override_get_db
     yield TestClient(app)
     app.dependency_overrides.clear()
+
+
+@pytest.mark.parametrize("params,columns", [({}, 2), ({"columns": "2"}, 2), ({"columns": "1"}, 1)])
+def test_pdf_export_parses_column_query(client, params, columns):
+    db = MagicMock()
+    db.get.return_value = SimpleNamespace(report="# Paper\n\n## 1. Method\nEvidence.", citations=None)
+    app.dependency_overrides[get_db] = lambda: db
+    with patch("app.pipeline.export.pdf_renderer.report_to_pdf", return_value=b"%PDF-test") as render:
+        response = client.get("/research/test-task/pdf", params=params)
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/pdf"
+    render.assert_called_once_with(ANY, columns=columns)
+
+
+@pytest.mark.parametrize("columns", ["0", "3", "invalid"])
+def test_pdf_export_rejects_invalid_column_count(client, columns):
+    assert client.get("/research/test-task/pdf", params={"columns": columns}).status_code == 422
 
 
 @patch("app.api.routes.research.run_research")
@@ -109,40 +128,36 @@ def test_get_research_returns_task_status(mock_clarify, mock_run_research, clien
     assert body["citations"] == []
 
 
-@patch("app.api.routes.research.run_research")
-@patch("app.api.routes.research.clarify")
-def test_list_research_returns_summaries_newest_first(mock_clarify, mock_run_research, client):
-    mock_clarify.return_value = {"status": "ready", "refined_question": "q"}
-    first = client.post("/research/", json={"question": "câu hỏi 1"}).json()
-    second = client.post("/research/", json={"question": "câu hỏi 2"}).json()
+def test_research_history_paginates_filters_and_preserves_reports(client):
+    from datetime import datetime, timedelta, timezone
 
-    response = client.get("/research", params={"limit": 10})
+    session = app.dependency_overrides[get_db]()
+    db = next(session)
+    try:
+        for index, status in enumerate(("done", "pending", "done")):
+            db.add(ResearchTask(
+                id=f"history-{index}", question=f"Question {index}", refined_question=f"Refined {index}",
+                status=status, report="# Saved report" if status == "done" else None,
+                created_at=datetime(2026, 1, 1, tzinfo=timezone.utc) + timedelta(days=index),
+            ))
+        db.commit()
+    finally:
+        session.close()
 
-    assert response.status_code == 200
-    body = response.json()
+    for path in ("/research", "/research/"):
+        response = client.get(path, params={"limit": 1, "offset": 1})
+        assert response.status_code == 200
+        body = response.json()
+        assert body["total"] == 3
+        assert body["items"][0]["id"] == "history-1"
+        assert body["items"][0]["has_report"] is False
+        assert "report" not in body["items"][0]
+
+    body = client.get("/research", params={"status": "done"}).json()
     assert body["total"] == 2
-    assert [item["id"] for item in body["items"]] == [second["id"], first["id"]]
-    item = body["items"][0]
-    assert item["question"] == "câu hỏi 2"
-    assert item["has_report"] is False
-    assert "report" not in item  # summary không kèm report để payload nhẹ
-
-
-@patch("app.api.routes.research.run_research")
-@patch("app.api.routes.research.clarify")
-def test_delete_research_removes_task(mock_clarify, mock_run_research, client):
-    mock_clarify.return_value = {"status": "ready", "refined_question": "q"}
-    created = client.post("/research/", json={"question": "câu hỏi"}).json()
-
-    assert client.delete(f"/research/{created['id']}").status_code == 204
-    assert client.get(f"/research/{created['id']}").status_code == 404
-    assert client.delete("/research/missing").status_code == 404
-
-
-def test_export_pdf_returns_409_when_no_report(client):
-    with patch("app.api.routes.research.clarify") as mock_clarify, patch("app.api.routes.research.run_research"):
-        mock_clarify.return_value = {"status": "ready", "refined_question": "q"}
-        created = client.post("/research/", json={"question": "câu hỏi"}).json()
-
-    assert client.get(f"/research/{created['id']}/pdf").status_code == 409
-    assert client.get(f"/research/{created['id']}/pdf", params={"engine": "docx"}).status_code == 422
+    assert [task["id"] for task in body["items"]] == ["history-2", "history-0"]
+    assert all(task["has_report"] for task in body["items"])
+    restored = client.get("/research/history-2").json()
+    assert restored["question"] == "Question 2"
+    assert restored["refined_question"] == "Refined 2"
+    assert restored["report"] == "# Saved report"

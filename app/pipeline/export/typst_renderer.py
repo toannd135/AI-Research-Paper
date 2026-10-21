@@ -14,7 +14,6 @@ Key features:
 
 from __future__ import annotations
 
-import base64
 import json
 import logging
 import re
@@ -24,33 +23,11 @@ from typing import Any
 
 import typst
 
-from app.core.config import get_settings
-
 logger = logging.getLogger(__name__)
 
-
-def typst_string(value: str) -> str:
-    """Escape 1 chuỗi Python để nhúng an toàn vào string literal Typst "...".
-
-    Title/author do LLM sinh có thể chứa dấu ngoặc kép hoặc backslash — không escape sẽ làm
-    typst.compile() lỗi cú pháp cho cả báo cáo.
-    """
-    return value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
-
-# Bảng từ 5 cột trở lên được trải ngang toàn trang thay vì ép trong 1 cột.
-_WIDE_TABLE_MIN_COLS = 5
-
-# LLM thường tự đánh số sẵn trong caption ("Figure 1: ..."), trong khi Typst cũng tự đánh số
-# -> caption bị lặp "Figure 2: Figure 1: ...". Cắt bỏ tiền tố tự đánh số này.
-_CAPTION_PREFIX_RE = re.compile(r"^\s*(?:figure|fig\.?|hình|bảng|table)\s*\d*\s*[:.\-]\s*", re.IGNORECASE)
-
-
-def strip_caption_prefix(caption: str) -> str:
-    """Bỏ tiền tố 'Figure N:' / 'Bảng N.' do LLM tự thêm, tránh lặp với số của Typst."""
-    return _CAPTION_PREFIX_RE.sub("", caption or "", count=1).strip()
-
-# Color palette for publication plots
-_PALETTE = ["#1f4e79", "#c55a11", "#548235", "#7f6000", "#7030a0", "#2e75b6"]
+def _escape_typst_references(text: str) -> str:
+    """Keep Markdown at-signs (e.g. Recall@10) as literal text in Typst."""
+    return re.sub(r"(?<!\\)@", r"\\@", text)
 
 
 def _replace_macro_braces(macro_name: str, target_name: str, s: str) -> str:
@@ -76,13 +53,51 @@ def _replace_macro_braces(macro_name: str, target_name: str, s: str) -> str:
     return s
 
 
+def _replace_latex_fractions(s: str) -> str:
+    """Translate fractions using balanced groups, including nested fractions."""
+    def read_group(start: int) -> tuple[str, int] | None:
+        while start < len(s) and s[start].isspace():
+            start += 1
+        if start == len(s) or s[start] != "{":
+            return None
+        depth = 1
+        pos = start + 1
+        while pos < len(s):
+            if s[pos] == "\\":
+                # Escaped braces are literal delimiters, not group boundaries.
+                pos += 2
+                continue
+            if s[pos] == "{":
+                depth += 1
+            elif s[pos] == "}":
+                depth -= 1
+                if depth == 0:
+                    return s[start + 1:pos].strip(), pos + 1
+            pos += 1
+        return None
+
+    parts: list[str] = []
+    cursor = 0
+    pattern = re.compile(r"\\(?:frac|dfrac|tfrac)(?![a-zA-Z])")
+    while match := pattern.search(s, cursor):
+        numerator = read_group(match.end())
+        denominator = read_group(numerator[1]) if numerator else None
+        if numerator is None or denominator is None:
+            parts.append(s[cursor:match.end()])
+            cursor = match.end()
+            continue
+        parts.append(s[cursor:match.start()])
+        num = _replace_latex_fractions(numerator[0])
+        den = _replace_latex_fractions(denominator[0])
+        parts.append(f"({num}) / ({den})")
+        cursor = denominator[1]
+    parts.append(s[cursor:])
+    return "".join(parts)
+
+
 def latex_to_typst_math(s: str) -> str:
     """Translate LaTeX math expressions into native Typst math syntax."""
     s = s.strip()
-
-    # 0a. Dấu phân cách hàng nghìn kiểu LaTeX: 10{,}000 -> 10,000 (nếu không sẽ in ra "10{, }000")
-    s = re.sub(r"\{\s*,\s*\}", ",", s)
-    s = re.sub(r"\{\s*\\,\s*\}", ",", s)
 
     # 0. Clean environments & alignment
     s = re.sub(r"\\begin\{(?:aligned|split|equation\*?)\}", "", s)
@@ -118,12 +133,7 @@ def latex_to_typst_math(s: str) -> str:
     s = re.sub(r"\\mathcal\{([A-Za-z0-9]+)\}", r"cal(\1)", s)
 
     # 3. Fractions \frac{a}{b} -> (a) / (b)
-    while r"\frac" in s:
-        m = re.search(r"\\frac\{([^{}]+)\}\{([^{}]+)\}", s)
-        if not m:
-            break
-        num, den = m.group(1).strip(), m.group(2).strip()
-        s = s[:m.start()] + f"({num}) / ({den})" + s[m.end():]
+    s = _replace_latex_fractions(s)
 
     # 4. Underbrace & Overbrace & Nested Macro Braces (using depth counter)
     s = _replace_macro_braces("underbrace", "underbrace", s)
@@ -262,9 +272,33 @@ def latex_to_typst_math(s: str) -> str:
     return s.strip()
 
 
+def _format_table_inline(text: str) -> str:
+    # Protect math with placeholders
+    math_holders: list[str] = []
+    def repl_m(m):
+        idx = len(math_holders)
+        math_holders.append(f"${latex_to_typst_math(m.group(1))}$")
+        return f"TBLMATH{idx}END"
+    text = re.sub(r"(?<![\\\$])\$(?!\$)([^\n$]+?)(?<![\\\$])\$(?!\$)", repl_m, text)
+    text = _escape_typst_references(text)
+
+    # Protect escaped tokens
+    text = text.replace(r"\*", "\uE000").replace(r"\_", "\uE001")
+    text = re.sub(r"\*\*\*([^*]+)\*\*\*", r"#strong[#emph[\1]]", text)
+    text = re.sub(r"(?<!\*)\*([^* \n][^*]*?[^* \n])\*(?!\*)", r"_\1_", text)
+    text = re.sub(r"(?<!\\)(?<!\*)\*(?!\*)", r"\\*", text)
+    text = re.sub(r"\*\*([^*]+)\*\*", r"*\1*", text)
+    text = text.replace("\uE000", r"\*").replace("\uE001", r"\_")
+
+    # Restore math
+    for i, m_str in enumerate(math_holders):
+        text = text.replace(f"TBLMATH{i}END", m_str)
+    return text
+
+
 def parse_markdown_table_to_typst(tbl_str: str, caption: str = "") -> str:
     """Convert a Markdown table into a Typst Booktabs #figure(table(...)) block."""
-    lines = [ln.strip() for ln in tbl_str.strip().splitlines() if ln.strip()]
+    lines = [l.strip() for l in tbl_str.strip().splitlines() if l.strip()]
     if len(lines) < 2:
         return ""
 
@@ -292,30 +326,8 @@ def parse_markdown_table_to_typst(tbl_str: str, caption: str = "") -> str:
             cols.append("")
         data_rows.append(cols[:num_cols])
 
-    def _format_inner(text: str) -> str:
-        # Protect math with placeholders
-        math_holders: list[str] = []
-        def repl_m(m):
-            idx = len(math_holders)
-            math_holders.append(f"${latex_to_typst_math(m.group(1))}$")
-            return f"TBLMATH{idx}END"
-        text = re.sub(r"(?<![\\\$])\$(?!\$)([^\n$]+?)(?<![\\\$])\$(?!\$)", repl_m, text)
-
-        # Protect escaped tokens
-        text = text.replace(r"\*", "\uE000").replace(r"\_", "\uE001")
-        text = re.sub(r"\*\*\*([^*]+)\*\*\*", r"#strong[#emph[\1]]", text)
-        text = re.sub(r"(?<!\*)\*([^* \n][^*]*?[^* \n])\*(?!\*)", r"_\1_", text)
-        text = re.sub(r"(?<!\\)(?<!\*)\*(?!\*)", r"\\*", text)
-        text = re.sub(r"\*\*([^*]+)\*\*", r"*\1*", text)
-        text = text.replace("\uE000", r"\*").replace("\uE001", r"\_")
-
-        # Restore math
-        for i, m_str in enumerate(math_holders):
-            text = text.replace(f"TBLMATH{i}END", m_str)
-        return text
-
     def format_cell(text: str) -> str:
-        return f"[{_format_inner(text)}]"
+        return f"[{_format_table_inline(text)}]"
 
     # 1st column 1.3fr, others 1fr
     if num_cols > 1:
@@ -323,15 +335,10 @@ def parse_markdown_table_to_typst(tbl_str: str, caption: str = "") -> str:
     else:
         cols_spec = "(1fr,)"
 
-    # Bảng rộng không vừa 1 cột (~8cm) của layout 2 cột: chữ sẽ xuống dòng từng ký tự.
-    # Cho bảng tràn hết chiều ngang trang như `table*` của LaTeX, và thu nhỏ cỡ chữ theo số cột.
-    is_wide = num_cols >= _WIDE_TABLE_MIN_COLS
-    font_size = "6.5pt" if num_cols >= 8 else ("7.5pt" if is_wide else "8pt")
-
     typ_cells = []
     for h in headers:
         clean_h = re.sub(r"^\*\*(.+)\*\*$", r"\1", h.strip())
-        inner_h = _format_inner(clean_h)
+        inner_h = _format_table_inline(clean_h)
         if inner_h.startswith("*") and inner_h.endswith("*") and len(inner_h) > 2:
             typ_cells.append(f"[{inner_h}]")
         else:
@@ -345,17 +352,14 @@ def parse_markdown_table_to_typst(tbl_str: str, caption: str = "") -> str:
     rows_str = ",\n".join(body_blocks)
 
     if caption:
-        cap_inner = _format_inner(caption)
+        cap_inner = _format_table_inline(caption)
         cap_clause = f",\n  caption: [{cap_inner}]"
     else:
         cap_clause = ""
-
-    figure_code = f"""#figure(
+    return f"""#figure(
   table(
     columns: {cols_spec},
     stroke: none,
-    inset: (x: 3pt, y: 2.5pt),
-    align: (left, ..({num_cols - 1} * (center,))),
     table.hline(stroke: 1.2pt),
     {header_block},
     table.hline(stroke: 0.6pt),
@@ -364,149 +368,21 @@ def parse_markdown_table_to_typst(tbl_str: str, caption: str = "") -> str:
   ){cap_clause}
 )"""
 
-    if is_wide:
-        # scope: "parent" đưa figure ra ngoài phạm vi cột, trải hết bề ngang trang (như table* LaTeX).
-        return (
-            f'#place(top, scope: "parent", float: true)[\n'
-            f"  #text(size: {font_size})[\n    {figure_code}\n  ]\n]"
-        )
-    return f"#text(size: {font_size})[\n{figure_code}\n]"
-
 
 def render_chart_spec_to_svg(spec: dict, out_path: Path) -> Path:
-    """Render a quantitative chart specification (bar, line, barh) into an SVG file."""
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
+    """Use the same chart renderer for the HTML and Typst exports."""
+    from app.pipeline.export.pdf_renderer import _render_chart_svg
 
-    labels = [str(x) for x in spec["labels"]]
-    series = [s for s in spec["series"] if len(s.get("values", [])) == len(labels)]
-    if not labels or not series:
-        raise ValueError("Chart spec lacks valid labels or series")
-
-    kind = spec.get("type", "bar")
-    plt.rcParams.update({"font.family": "DejaVu Serif", "font.size": 8.5, "svg.fonttype": "path"})
-    fig, ax = plt.subplots(figsize=(4.8, 2.8))
-    n = len(series)
-
-    if kind == "line":
-        for i, s in enumerate(series):
-            ax.plot(labels, s["values"], marker="o", linewidth=1.6, color=_PALETTE[i % len(_PALETTE)], label=s.get("name"))
-    else:
-        width = 0.8 / n
-        positions = range(len(labels))
-        for i, s in enumerate(series):
-            offset = [p - 0.4 + width * (i + 0.5) for p in positions]
-            color = _PALETTE[i % len(_PALETTE)]
-            if kind == "barh":
-                bars = ax.barh(offset, s["values"], height=width, color=color, label=s.get("name"))
-            else:
-                bars = ax.bar(offset, s["values"], width=width, color=color, label=s.get("name"))
-            ax.bar_label(bars, fmt="%g", fontsize=6.5, padding=2)
-
-        if kind == "barh":
-            ax.set_yticks(list(positions), labels)
-            ax.invert_yaxis()
-        else:
-            ax.set_xticks(list(positions), labels, rotation=20 if max(map(len, labels)) > 10 else 0, ha="right" if max(map(len, labels)) > 10 else "center")
-
-    if spec.get("x_label"):
-        ax.set_xlabel(spec["x_label"], fontsize=8)
-    if spec.get("y_label"):
-        ax.set_ylabel(spec["y_label"], fontsize=8)
-    ax.spines[["top", "right"]].set_visible(False)
-    ax.grid(axis="x" if kind == "barh" else "y", linestyle=":", alpha=0.6)
-    if n > 1 or series[0].get("name"):
-        ax.legend(frameon=False, fontsize=7.5)
-
-    fig.tight_layout()
-    fig.savefig(str(out_path), format="svg", bbox_inches="tight")
-    plt.close(fig)
+    out_path.write_text(_render_chart_svg(spec), encoding="utf-8")
     return out_path
 
 
-def _render_offline_flowchart(code: str, out_path: Path) -> Path:
-    """Render a clean offline vector flowchart using matplotlib when network rendering is unavailable."""
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    from matplotlib.patches import FancyBboxPatch
+def render_mermaid_to_svg(code: str, out_path: Path) -> Path:
+    """Render the complete original graph locally; propagate errors to the HTML fallback."""
+    from app.pipeline.export.browser_renderer import mermaid_to_svg
 
-    subgraphs = re.findall(r'subgraph\s+[A-Za-z0-9_]+\s*\["([^"]+)"\]', code)
-    nodes = re.findall(r'[A-Za-z0-9_]+\["([^"]+)"\]', code)
-
-    stages = [sg.replace("<br/>", "\n") for sg in subgraphs]
-    if not stages:
-        node_labels = [n.replace("<br/>", "\n") for n in nodes][:4]
-        stages = node_labels or ["Experimental Setup", "Execution & Inference", "Statistical Analysis", "Reporting & Verification"]
-
-    n_stages = max(len(stages), 1)
-    fig, ax = plt.subplots(figsize=(6.5, 2.2), dpi=200)
-    ax.axis("off")
-    ax.set_xlim(0, 10)
-    ax.set_ylim(0, 3)
-
-    box_w = min(2.0, 7.5 / n_stages)
-    box_h = 1.4
-    spacing = (8.5 - (n_stages * box_w)) / max(n_stages - 1, 1)
-
-    for i, stage_name in enumerate(stages):
-        x = 0.5 + i * (box_w + spacing)
-        y = 0.8
-        p = FancyBboxPatch(
-            (x, y), box_w, box_h,
-            boxstyle="round,pad=0.08,rounding_size=0.12",
-            facecolor="#f8fafc",
-            edgecolor=_PALETTE[i % len(_PALETTE)],
-            linewidth=1.4,
-        )
-        ax.add_patch(p)
-        clean_text = stage_name.replace("  ", " ").strip()
-        ax.text(
-            x + box_w / 2, y + box_h / 2,
-            clean_text,
-            ha="center", va="center",
-            fontsize=7, fontweight="bold",
-            color="#1e293b",
-        )
-
-        if i < n_stages - 1:
-            ax.annotate(
-                "",
-                xy=(x + box_w + spacing, y + box_h / 2),
-                xytext=(x + box_w, y + box_h / 2),
-                arrowprops=dict(arrowstyle="->", color="#64748b", lw=1.4),
-            )
-
-    fig.tight_layout()
-    fig.savefig(str(out_path), format="svg", bbox_inches="tight")
-    plt.close(fig)
+    out_path.write_text(mermaid_to_svg(code), encoding="utf-8")
     return out_path
-
-
-def render_mermaid_to_svg(code: str, out_path: Path) -> Path | None:
-    """Render Mermaid syntax to SVG via mermaid.ink with graceful fallback.
-
-    Gửi nội dung sơ đồ tới dịch vụ công cộng — tắt bằng MERMAID_INK_ENABLED=false nếu báo cáo nhạy cảm.
-    """
-    import httpx
-
-    if not get_settings().mermaid_ink_enabled:
-        return None
-    try:
-        enc = base64.b64encode(code.encode("utf-8")).decode("ascii")
-        r = httpx.get(f"https://mermaid.ink/svg/{enc}", timeout=5)
-        if r.status_code == 200 and "<svg" in r.text:
-            out_path.write_text(r.text, encoding="utf-8")
-            return out_path
-    except Exception as e:
-        logger.info("Online Mermaid rendering unavailable (%s). Using offline vector flowchart generator.", e)
-
-    try:
-        return _render_offline_flowchart(code, out_path)
-    except Exception as e:
-        logger.warning(f"Offline flowchart rendering failed: {e}")
-        return None
 
 
 def markdown_to_typst(
@@ -551,6 +427,7 @@ def markdown_to_typst(
         abs_math_placeholders.append(f"${latex_to_typst_math(m.group(1))}$")
         return f"ABSMATH{idx}END"
     abstract = re.sub(r"(?<![\\\$])\$(?!\$)((?:\\[$]|[^$\n])+?)(?<![\\\$])\$(?!\$)", _repl_abs_math, abstract)
+    abstract = _escape_typst_references(abstract)
 
     abstract = abstract.replace(r"\*", "\uE000").replace(r"\_", "\uE001")
     abstract = re.sub(r"\*\*\*([^*]+)\*\*\*", r"#strong[#emph[\1]]", abstract)
@@ -587,40 +464,64 @@ def markdown_to_typst(
             svg_name = f"chart_{fig_counter[0]}.svg"
             svg_path = work_dir / svg_name
             render_chart_spec_to_svg(spec, svg_path)
-            caption = strip_caption_prefix(spec.get("caption") or spec.get("title") or "")
-            return save_block(f'#figure(\n  image("{svg_name}", width: 100%),\n  caption: [{caption}]\n)')
+            raw_caption = spec.get("caption") or spec.get("title") or f"Evaluation Metric Plot"
+            clean_caption = re.sub(r"^(?:Figure|Fig\.|Biểu đồ)\s*\d+[:\.]?\s*", "", str(raw_caption).strip(), flags=re.IGNORECASE)
+            clean_caption = _escape_typst_references(clean_caption)
+            return save_block(f'#figure(\n  image("{svg_name}", width: 100%),\n  caption: [{clean_caption}]\n)')
         except Exception as e:
-            logger.warning("Failed to render chart spec: %s", e)
-            return ""
+            raise ValueError(f"Không render được biểu đồ: {e}") from e
     body_md = re.sub(r"```chart[ \t]*\n(.*?)```", repl_chart, body_md, flags=re.DOTALL)
 
-    # 2b. Mermaid blocks — lấy caption "**Figure N: ...**" ngay trên/dưới khối nếu LLM có viết,
-    # nếu không mới dùng nhãn mặc định (trước đây luôn dùng nhãn cứng nên caption thật bị mồ côi
-    # thành một đoạn văn riêng, và hình bị đánh số trùng).
+    # 2b. Mermaid blocks
     def repl_mermaid(m):
         fig_counter[0] += 1
-        caption = strip_caption_prefix(m.group("capbefore") or m.group("capafter") or "")
-        code = m.group("code").strip()
+        code = m.group(1).strip()
         svg_name = f"flow_{fig_counter[0]}.svg"
         svg_path = work_dir / svg_name
-        res = render_mermaid_to_svg(code, svg_path)
-        label = caption or "Workflow Architecture Overview."
-        if res:
-            return save_block(f'#figure(\n  image("{svg_name}", width: 100%),\n  caption: [{label}]\n)')
-        # Fallback to styled code block
-        return save_block(
-            f"#figure(\n  block(stroke: 0.5pt + luma(180), inset: 8pt, radius: 2pt, fill: luma(250))[```\n{code}\n```],\n"
-            f"  caption: [{label}]\n)"
-        )
+        render_mermaid_to_svg(code, svg_path)
+        return save_block(f'#figure(\n  image("{svg_name}", width: 100%),\n  caption: [System Architectural and Evaluation Pipeline Overview.]\n)')
+    body_md = re.sub(r"```mermaid[ \t]*\n(.*?)```", repl_mermaid, body_md, flags=re.DOTALL)
 
-    body_md = re.sub(
-        r"(?:^[ \t]*\*\*(?:Figure|Fig\.?|Hình)\s*\d*\s*[:.]\s*(?P<capbefore>[^*\n]*?)\*\*[ \t]*\n+)?"
-        r"```mermaid[ \t]*\n(?P<code>.*?)```"
-        r"(?:\s*\n[ \t]*\*\*(?:Figure|Fig\.?|Hình)\s*\d*\s*[:.]\s*(?P<capafter>[^*\n]*?)\*\*[ \t]*$)?",
-        repl_mermaid,
-        body_md,
-        flags=re.DOTALL | re.MULTILINE,
-    )
+    # JSON tables are academic tables, not code samples. Render grouped headers and row spans.
+    def repl_json_table(m):
+        spec = json.loads(m.group(1))
+        columns = spec["columns"]
+        rows = spec["rows"]
+        if not columns or not rows or any(len(row) != len(columns) for row in rows):
+            raise ValueError("Bảng JSON có số cột không hợp lệ")
+        cells = []
+        groups = spec.get("header_groups", [])
+        if groups:
+            if sum(int(group["span"]) for group in groups) != len(columns):
+                raise ValueError("Nhóm tiêu đề bảng JSON không khớp số cột")
+            for group in groups:
+                label = _format_table_inline(str(group.get("label", "")))
+                cells.append(f'table.cell(colspan: {int(group["span"])})[{label}]')
+        for column in columns:
+            cells.append(f'[*{_format_table_inline(str(column))}*]')
+        cells.append("table.hline(stroke: 0.6pt)")
+        for index, row in enumerate(rows):
+            for col, value in enumerate(row):
+                text = str(value) if value is not None else ""
+                if col == 0 and not text.strip() and index > 0:
+                    continue
+                if col == 0 and text.strip():
+                    span = 1
+                    while index + span < len(rows) and not str(rows[index + span][0] or "").strip():
+                        span += 1
+                else:
+                    span = 1
+                cell_body = f"[{_format_table_inline(text)}]"
+                if index in spec.get("bold_rows", []):
+                    cell_body = f"[#strong{cell_body}]"
+                cells.append(f"table.cell(rowspan: {span}){cell_body}")
+        caption = _format_table_inline(str(spec.get("caption", "")))
+        content = ",\n".join(cells)
+        return save_block(
+            f'#figure(table(columns: {len(columns)}, stroke: none, table.hline(stroke: 1.2pt),\n'
+            f'{content}, table.hline(stroke: 1.2pt)), caption: [{caption}])'
+        )
+    body_md = re.sub(r"```table[ \t]*\n(.*?)```", repl_json_table, body_md, flags=re.DOTALL)
 
     # 2c. Other Code / Algorithm blocks
     def repl_code(m):
@@ -641,8 +542,10 @@ def markdown_to_typst(
     tbl_counter = [0]
     def repl_table(m):
         tbl_counter[0] += 1
-        # Không có dòng "**Table N: ...**" phía trên -> để caption rỗng, Typst vẫn đánh số "Table n".
-        clean_cap = strip_caption_prefix(m.group(1) or "")
+        raw_cap = m.group(1) or "Empirical Benchmark and Comparative Evaluation"
+        clean_cap = re.sub(r"^(?:Table|Bảng)\s*\d+[:\.]?\s*", "", raw_cap.strip(), flags=re.IGNORECASE).strip()
+        if not clean_cap:
+            clean_cap = "Empirical Benchmark and Comparative Evaluation"
         tbl_str = m.group(2).strip()
         typ_tbl = parse_markdown_table_to_typst(tbl_str, clean_cap)
         return save_block(typ_tbl)
@@ -661,6 +564,7 @@ def markdown_to_typst(
         inline_math_placeholders.append(f"${math_typ}$")
         return f"TYPSTMATH{idx}END"
     body_md = re.sub(r"(?<![\\\$])\$(?!\$)((?:\\[$]|[^$\n])+?)(?<![\\\$])\$(?!\$)", repl_inline_math, body_md)
+    body_md = _escape_typst_references(body_md)
 
     # 3. Headings
     body_md = re.sub(r"^##\s+(.+)$", r"= \1", body_md, flags=re.MULTILINE)
@@ -691,13 +595,13 @@ def markdown_to_typst(
         body_md = body_md.replace(f"TYPSTMATH{i}END", m_str)
 
     # 7. Format authors & affiliations tuples (ensure trailing comma for 1-element arrays)
-    auth_elements = [f'"{typst_string(a)}"' for a in authors]
+    auth_elements = [f'"{a}"' for a in authors]
     auth_str = ", ".join(auth_elements) + ("," if len(auth_elements) == 1 else "")
 
-    affil_elements = [f'"{typst_string(a)}"' for a in affiliations]
+    affil_elements = [f'"{a}"' for a in affiliations]
     affil_str = ", ".join(affil_elements) + ("," if len(affil_elements) == 1 else "")
 
-    kw_elements = [f'"{typst_string(k)}"' for k in keywords]
+    kw_elements = [f'"{k}"' for k in keywords]
     kw_str = ", ".join(kw_elements) + ("," if len(kw_elements) == 1 else "")
 
     # Load canonical CVPR/IEEE Typst template content
@@ -707,7 +611,7 @@ def markdown_to_typst(
     typst_doc = f"""{template_code}
 
 #show: cvpr_paper.with(
-  title: "{typst_string(title)}",
+  title: "{title}",
   authors: ({auth_str}),
   affiliations: ({affil_str}),
   abstract: [{abstract}],
@@ -738,11 +642,11 @@ def render_report_to_pdf(
             out.parent.mkdir(parents=True, exist_ok=True)
             try:
                 out.write_bytes(pdf_bytes)
-                logger.info("Generated publication PDF: %s (%d bytes)", out, len(pdf_bytes))
+                logger.info(f"Generated publication PDF: {out} ({len(pdf_bytes)} bytes)")
             except PermissionError:
                 import time
                 fallback = out.with_stem(f"{out.stem}_{int(time.time())}")
                 fallback.write_bytes(pdf_bytes)
-                logger.warning("File %s is locked (e.g. open in PDF viewer). Saved to %s instead.", out, fallback)
+                logger.warning(f"File {out} is locked (e.g. open in PDF viewer). Saved to {fallback} instead.")
 
         return pdf_bytes

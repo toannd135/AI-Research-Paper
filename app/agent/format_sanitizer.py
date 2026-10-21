@@ -14,38 +14,21 @@ import re
 # Regex tìm khối mermaid
 _MERMAID_BLOCK_RE = re.compile(r"```mermaid[ \t]*\n(.*?)```", re.DOTALL)
 
-# Dòng `direction TB|LR|...` bên trong subgraph: trình render của mermaid.ink không xử lý ổn định
-# (sơ đồ trả HTTP 404 khi đi kèm nhãn chứa ký tự Unicode), trong khi bỏ đi không đổi bố cục đáng kể.
-_DIRECTION_LINE_RE = re.compile(r"^\s*direction\s+(?:TB|TD|BT|RL|LR)\s*$", re.IGNORECASE)
-
-# Chỉ số dưới/trên và ký hiệu toán dạng Unicode trong nhãn node làm mermaid.ink render thất bại.
-# Chuyển về ASCII tương đương để sơ đồ vẫn hiện ra thay vì rơi về khối code.
-_UNICODE_LABEL_MAP = {
-    "₀": "0", "₁": "1", "₂": "2", "₃": "3", "₄": "4",
-    "₅": "5", "₆": "6", "₇": "7", "₈": "8", "₉": "9",
-    "⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4",
-    "⁵": "5", "⁶": "6", "⁷": "7", "⁸": "8", "⁹": "9",
-    "⁽": "(", "⁾": ")", "ᐟ": "/", "₍": "(", "₎": ")",
-    "∈": " in ", "∉": " not in ", "≤": "<=", "≥": ">=", "≠": "!=",
-    "≈": "~", "×": "x", "·": ".", "±": "+/-", "∞": "inf",
-    "→": "->", "←": "<-", "⇒": "=>", "∑": "sum", "∏": "prod",
-    "√": "sqrt", "∀": "forall", "∃": "exists", "∩": "and", "∪": "or",
-    "—": "-", "–": "-", "“": "'", "”": "'", "‘": "'", "’": "'",
-}
-
-
-def _to_ascii_label(s: str) -> str:
-    """Chuyển ký hiệu Unicode thường gặp trong nhãn node sang ASCII tương đương."""
-    for src, dst in _UNICODE_LABEL_MAP.items():
-        s = s.replace(src, dst)
-    return s
-
 
 def _clean_mermaid_label(raw: str) -> str:
     """Làm sạch nội dung label bên trong node Mermaid."""
     s = raw.strip()
-    if (s.startswith('"') and s.endswith('"') and len(s) >= 2) or (s.startswith("'") and s.endswith("'") and len(s) >= 2):
+    if s.startswith('"') and s.endswith('"') and len(s) >= 2:
         s = s[1:-1]
+    elif s.startswith("'") and s.endswith("'") and len(s) >= 2:
+        s = s[1:-1]
+
+    # Preserve LaTeX groups and commands (including \nabla) inside math labels.
+    math_parts: list[str] = []
+    def keep_math(match: re.Match) -> str:
+        math_parts.append(match.group(0))
+        return f"PAPERAIMATHLABEL{len(math_parts) - 1}END"
+    s = re.sub(r"(?<!\\)(\${1,2})(.+?)(?<!\\)\1", keep_math, s, flags=re.DOTALL)
 
     # Thay thế ký tự xuống dòng
     s = s.replace(r"\n", "<br/>").replace("\n", "<br/>")
@@ -53,10 +36,11 @@ def _clean_mermaid_label(raw: str) -> str:
     s = s.replace("{", "(").replace("}", ")")
     # Thay ngoặc kép bên trong thành nháy đơn
     s = s.replace('"', "'")
-    # Thay toán tử || bằng ký hiệu chuẩn (norm) để không xung đột cú pháp nhãn cạnh -->|...|
+    # Thay toán tử || tránh xung đột nhãn cạnh
     s = s.replace("||", "‖")
-    # Khử ký hiệu Unicode (chỉ số dưới/trên, ký hiệu toán) khiến mermaid.ink render lỗi
-    return _to_ascii_label(s)
+    for index, formula in enumerate(math_parts):
+        s = s.replace(f"PAPERAIMATHLABEL{index}END", formula)
+    return s
 
 
 def sanitize_mermaid_block(mermaid_code: str) -> str:
@@ -72,10 +56,6 @@ def sanitize_mermaid_block(mermaid_code: str) -> str:
             sanitized_lines.append(line)
             continue
 
-        # Bỏ hẳn `direction ...` (xem ghi chú ở _DIRECTION_LINE_RE)
-        if _DIRECTION_LINE_RE.match(stripped):
-            continue
-
         if any(stripped.startswith(k) for k in ("graph ", "flowchart ", "classDef ", "style ", "class ", "%%", "click ", "linkStyle ")):
             sanitized_lines.append(line)
             continue
@@ -87,7 +67,7 @@ def sanitize_mermaid_block(mermaid_code: str) -> str:
         if sub_bracket_match:
             sub_id = sub_bracket_match.group(1)
             raw_title = sub_bracket_match.group(2).strip().strip('"').strip("'")
-            clean_title = _to_ascii_label(raw_title.replace(r"\n", " ").replace('"', "'"))
+            clean_title = raw_title.replace(r"\n", " ").replace('"', "'")
             sanitized_lines.append(f'{indent}subgraph {sub_id} ["{clean_title}"]')
             continue
 
@@ -95,7 +75,7 @@ def sanitize_mermaid_block(mermaid_code: str) -> str:
         if sub_plain_match and not sub_plain_match.group(2).startswith("["):
             sub_id = sub_plain_match.group(1)
             raw_title = sub_plain_match.group(2).strip().strip('"').strip("'")
-            clean_title = _to_ascii_label(raw_title.replace(r"\n", " ").replace('"', "'"))
+            clean_title = raw_title.replace(r"\n", " ").replace('"', "'")
             sanitized_lines.append(f'{indent}subgraph {sub_id} ["{clean_title}"]')
             continue
 

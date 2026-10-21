@@ -2,12 +2,12 @@
 
 import tempfile
 from pathlib import Path
-
+import pytest
 from app.pipeline.export.typst_renderer import (
     latex_to_typst_math,
-    markdown_to_typst,
     parse_markdown_table_to_typst,
     render_chart_spec_to_svg,
+    markdown_to_typst,
     render_report_to_pdf,
 )
 
@@ -48,6 +48,65 @@ def test_latex_to_typst_math_complex_equation():
     assert "dot" in typ
 
 
+@pytest.mark.parametrize("formula", [
+    r"\frac{x_{i}}{\sqrt{n}}",
+    r"\frac{\frac{a}{b}}{\frac{c}{d}}",
+    r"\frac{1}{N_{total}} + \frac{x^{2}}{y_{i}}",
+    r"\frac {x_{i}} {n}",
+    r"\dfrac{x_{i}}{n}",
+    r"\tfrac{x_{i}}{n}",
+    r"\frac{\{x\}}{n}",
+])
+def test_nested_fraction_pdf_compilation(formula):
+    converted = latex_to_typst_math(formula)
+    assert not any(macro in converted for macro in (r"\frac", r"\dfrac", r"\tfrac"))
+    report = "# Fraction regression\n\n## 1. Method\n\n$$\n" + formula + "\n$$"
+    assert render_report_to_pdf(report).startswith(b"%PDF-")
+
+
+def test_nested_fraction_in_abstract_inline_and_table():
+    report = r"""# Fraction contexts
+
+## Abstract
+The estimate is $\frac{x_{i}}{\sqrt{n}}$.
+
+## 1. Method
+Inline estimate: $\frac{x_{i}}{\sqrt{n}}$.
+
+| Estimate | Value |
+|---|---|
+| $\frac{x_{i}}{\sqrt{n}}$ | 1 |
+"""
+    assert render_report_to_pdf(report).startswith(b"%PDF-")
+
+
+@pytest.mark.parametrize("content", [
+    "Recall@10 and NDCG@10; contact researcher@example.org. See [10].",
+    r"Already escaped: Recall\@10.",
+    "## Recall@10\nThe ranking result.",
+    "| Metric | Value |\n|---|---|\n| Recall@10 | 0.8 |",
+    "**Table 1: Recall@10**\n\n| Metric | Value |\n|---|---|\n| NDCG@10 | 0.8 |",
+    "```python\nmetric = 'Recall@10'\n```",
+])
+def test_literal_at_sign_pdf_compilation(content):
+    report = "# Ranking\n\n## Abstract\nRecall@10 evaluation.\n\n## 1. Results\n\n" + content
+    source = markdown_to_typst(report)
+    assert r"Recall\@10 evaluation." in source
+    assert render_report_to_pdf(report).startswith(b"%PDF-")
+
+
+def test_literal_at_sign_in_chart_caption():
+    report = '''# Ranking
+
+## 1. Results
+
+```chart
+{"labels": ["Baseline"], "series": [{"values": [0.8]}], "caption": "Recall@10 results"}
+```
+'''
+    assert render_report_to_pdf(report).startswith(b"%PDF-")
+
+
 def test_parse_markdown_table_to_typst():
     table_md = """
 | Method ($M_{total}$) | Params ($K_{ret}$) | Accuracy (%) |
@@ -64,6 +123,24 @@ def test_parse_markdown_table_to_typst():
     assert '[*Method ($M_("total")$)*]' in typ_table
     assert '[*Params ($K_("ret")$)*]' in typ_table
     assert "[*91.2*]" in typ_table
+
+
+def test_typst_renders_json_table_as_table():
+    import json
+
+    spec = {
+        "columns": ["Method", "R@10", "R@50"],
+        "header_groups": [{"label": "Method", "span": 1}, {"label": "Recall", "span": 2}],
+        "rows": [["Baseline", 10, 20], ["", 12, 23]],
+        "caption": "Recall@10 results",
+        "bold_rows": [1],
+    }
+    report = "# Tables\n\n## 1. Results\n\n```table\n" + json.dumps(spec) + "\n```"
+    source = markdown_to_typst(report)
+    assert "```table" not in source
+    assert "table.cell(colspan: 2)" in source
+    assert "table.cell(rowspan: 2)" in source
+    assert render_report_to_pdf(report).startswith(b"%PDF-")
 
 
 def test_render_chart_spec_to_svg():
@@ -160,53 +237,3 @@ The proposed method consistently outperforms static baselines.
         assert len(pdf_bytes) > 1000
         assert pdf_bytes.startswith(b"%PDF-")
         assert pdf_out.exists()
-
-
-def test_typst_string_escapes_quotes_and_backslashes():
-    from app.pipeline.export.typst_renderer import typst_string
-
-    assert typst_string('A "quoted" title') == 'A \\"quoted\\" title'
-    assert typst_string("back\\slash") == "back\\\\slash"
-    assert typst_string("multi\nline") == "multi line"
-
-
-def test_markdown_to_typst_escapes_title_with_quotes(tmp_path):
-    md = '# The "Best" Method: A Study\n\n**Authors:** A "B" | **Affiliations:** Lab\n\n## Abstract\nText.\n\n## 1. Introduction\nBody.\n'
-    typ = markdown_to_typst(md, work_dir=tmp_path)
-    assert 'title: "The \\"Best\\" Method: A Study"' in typ
-    assert '"A \\"B\\""' in typ
-
-
-def test_render_mermaid_disabled_by_setting(tmp_path, monkeypatch):
-    from app.core.config import get_settings
-    from app.pipeline.export.typst_renderer import render_mermaid_to_svg
-
-    monkeypatch.setattr(get_settings(), "mermaid_ink_enabled", False)
-    assert render_mermaid_to_svg("graph TD\n A --> B", tmp_path / "x.svg") is None
-
-
-def test_latex_thousands_separator_is_not_printed_literally():
-    """`10{,}000` của LaTeX trước đây in ra thành '10{, }000' trong PDF."""
-    assert latex_to_typst_math(r"B = 10{,}000") == "B = 10,000"
-    assert "4,802" in latex_to_typst_math(r"N_{min} = 4{,}802")
-
-
-def test_wide_table_spans_both_columns():
-    """Bảng nhiều cột ép trong 1 cột của layout 2 cột làm chữ vỡ từng ký tự."""
-    header = "| " + " | ".join(f"C{i}" for i in range(9)) + " |"
-    sep = "|" + "---|" * 9
-    row = "| " + " | ".join(str(i) for i in range(9)) + " |"
-    out = parse_markdown_table_to_typst(f"{header}\n{sep}\n{row}", "Main results")
-    assert 'scope: "parent"' in out and "float: true" in out
-    assert "6.5pt" in out
-
-    narrow = parse_markdown_table_to_typst("| A | B |\n|---|---|\n| 1 | 2 |", "Nhỏ")
-    assert 'scope: "parent"' not in narrow
-
-
-def test_strip_caption_prefix_avoids_double_numbering():
-    from app.pipeline.export.typst_renderer import strip_caption_prefix
-
-    assert strip_caption_prefix("Figure 1: Wilson CI vs Sample Size") == "Wilson CI vs Sample Size"
-    assert strip_caption_prefix("Hình 2. Sơ đồ kiến trúc") == "Sơ đồ kiến trúc"
-    assert strip_caption_prefix("Recall by method") == "Recall by method"
