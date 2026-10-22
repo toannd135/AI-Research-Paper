@@ -198,6 +198,7 @@ def latex_to_typst_math(s: str) -> str:
     s = s.replace(r"\left", "").replace(r"\right", "")
     s = s.replace(r"\|", "||")
     s = s.replace(r"\parallel", "||")
+    s = re.sub(r"\\[lr]?vert(?![a-zA-Z])", "|", s)
 
     # 2. Blackboard bold & Calligraphy & Math Fonts
     s = s.replace(r"\mathbb{R}", "RR")
@@ -504,16 +505,16 @@ def markdown_to_typst(
     title_match = re.search(r"^#\s+(.+)$", report_md, re.MULTILINE)
     title = title_match.group(1).strip() if title_match else "Untitled Research Paper"
 
-    authors = ["PaperAI Automated Research Protocol"]
-    affiliations = ["Open-Source Automated Science Initiative"]
-    auth_match = re.search(r"\*\*Authors:\*\*(.*?)\|\s*\*\*Affiliations:\*\*(.*?)(?=\n)", report_md)
+    authors: list[str] = []
+    affiliations: list[str] = []
+    auth_match = re.search(r"\*\*Authors:\*\*(.*?)(?:\|\s*|\s*\n\s*)\*\*Affiliations:\*\*(.*?)(?=\n)", report_md)
     if auth_match:
         parsed_a = [a.strip() for a in auth_match.group(1).split(",") if a.strip()]
         parsed_aff = [a.strip() for a in auth_match.group(2).split(",") if a.strip()]
-        if parsed_a:
-            authors = parsed_a
-        if parsed_aff:
-            affiliations = parsed_aff
+        # Placeholder do sanitizer chèn không phải tác giả thật: bỏ khỏi trang đầu.
+        placeholders = {"PaperAI Automated Research Protocol", "Open-Source Automated Science Initiative"}
+        authors = [a for a in parsed_a if a not in placeholders]
+        affiliations = [a for a in parsed_aff if a not in placeholders]
 
     abstract = ""
     keywords = []

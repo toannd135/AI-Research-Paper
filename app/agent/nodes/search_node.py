@@ -37,7 +37,7 @@ def search_node(state: ResearchState) -> ResearchState:
     filtered_internal = clean_internal if clean_internal else internal_evidence
 
     # 2. Truy xuất tài liệu học thuật liên quan từ Internet (OpenAlex)
-    external_evidence = retrieve_external_evidence(queries, count_per_query=8, max_total=30)
+    external_evidence = retrieve_external_evidence(queries, count_per_query=12, max_total=50)
     # Lọc bỏ các bài báo bị lệch miền nghiên cứu (off-domain)
     relevant_external = [sc for sc in external_evidence if is_domain_relevant(sc.chunk, state["question"], state.get("field"))]
     filtered_external = relevant_external if relevant_external else external_evidence

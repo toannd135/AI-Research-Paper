@@ -133,6 +133,59 @@ def delete_research(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+def _task_report(task_id: str, db: Session, user: User) -> str:
+    task = db.get(ResearchTask, task_id)
+    if task is None or not can_access(user, task.user_id):
+        raise HTTPException(status_code=404, detail="Research task không tồn tại")
+    if not task.report:
+        raise HTTPException(status_code=409, detail="Research task chưa có báo cáo")
+    from app.agent.format_sanitizer import sanitize_academic_markdown
+
+    return sanitize_academic_markdown(task.report)
+
+
+@router.get("/{task_id}/bib")
+def export_research_bibtex(
+    task_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user_or_query_token)
+) -> Response:
+    """references.bib với cite key ref{n} khớp [n] trong báo cáo."""
+    from app.pipeline.export.bibliography import parse_references, references_to_bibtex
+
+    refs = parse_references(_task_report(task_id, db, user))
+    if not refs:
+        raise HTTPException(status_code=409, detail="Báo cáo không có mục References")
+    return Response(
+        content=references_to_bibtex(refs),
+        media_type="application/x-bibtex",
+        headers={"Content-Disposition": f'attachment; filename="paperai-{task_id[:8]}.bib"'},
+    )
+
+
+@router.get("/{task_id}/latex")
+def export_research_latex(
+    task_id: str,
+    chart_format: str = Query(default="pdf", pattern="^(pdf|eps)$"),
+    survey_table: bool = False,
+    template: str = Query(default="ieee", pattern="^(ieee|cvpr)$"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user_or_query_token),
+) -> Response:
+    """Gói zip (template ieee = IEEEtran, cvpr = cvpr.sty tự cung cấp): paper.tex + references.bib + figures/ (biểu đồ vector PDF/EPS)."""
+    from app.pipeline.export.latex_renderer import export_latex_bundle
+
+    report = _task_report(task_id, db, user)
+    try:
+        bundle = export_latex_bundle(report, chart_format, survey_table, template)
+    except Exception as e:
+        logger.exception("LaTeX export failed for task %s: %s", task_id, e)
+        raise HTTPException(status_code=500, detail=f"Lỗi khi xuất LaTeX: {e}")
+    return Response(
+        content=bundle,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="paperai-{task_id[:8]}-ieee.zip"'},
+    )
+
+
 @router.get("/{task_id}/pdf")
 def export_research_pdf(
     task_id: str,

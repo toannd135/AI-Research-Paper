@@ -20,6 +20,14 @@ class LLMGatewayError(Exception):
     """Lỗi khi gọi LLM provider (rate limit, timeout, auth, response rỗng...)."""
 
 
+class LLMRateLimitError(LLMGatewayError):
+    """Provider trả 429; `retry_after` (giây) lấy từ header Retry-After nếu có."""
+
+    def __init__(self, message: str, retry_after: float | None = None) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
 class LLMGateway(ABC):
     @abstractmethod
     def generate(self, messages: list[Message], model_name: str) -> LLMResponse:

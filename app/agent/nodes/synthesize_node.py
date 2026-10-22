@@ -16,10 +16,12 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import date
 from typing import Any
 
 from app.agent.evidence.citation_cleaner import clean_and_deduplicate_citations
 from app.agent.evidence.dataset_catalog import get_dataset_grounding_context
+from app.agent.evidence.report_structure import finalize_structure, source_diversity_warning, strip_dangling_citations
 from app.agent.format_sanitizer import sanitize_academic_markdown
 from app.agent.language import language_name
 from app.agent.profiles import adaptation_rules, audience_profile, field_profile, missing_end_sections
@@ -43,7 +45,13 @@ _TABLE_BLOCK_RULE = """   - QUANTITATIVE COMPARISON TABLES (results with numbers
 
 _CHART_BLOCK_RULE = """   - FIGURES: visualize quantitative values that already appear in the draft/references with a ```chart fenced block containing JSON:
      {"type": "bar", "caption": "What is shown (source [n])", "labels": ["A", "B"], "series": [{"name": "F1 (%)", "values": [90.0, 84.1]}], "y_label": "%"}
-     type is one of bar | barh | line | stacked_barh (parts of a whole per row, e.g. win / tie / loss %). Each series has exactly one value per label; use null (never 0) for a missing value. Never invent values; if there is not enough real data, omit the chart.
+     type is one of bar | barh | line | stacked_barh (parts of a whole per row, e.g. win / tie / loss %). Each series has exactly one value per label; use null (never 0) for a missing value. Optional "errors": [..] per series (same length as values; SD or 95% CI, only if the source reports it) draws error bars.
+     Pick the figure that matches the evidence (use only numbers reported in the draft/references; never invent values or samples; if there is not enough real data, omit the chart):
+       * Performance comparison (proposed vs baselines, per dataset/metric) and ablation (full model vs "w/o module"): grouped bar, with errors when multiple runs are reported.
+       * Training/convergence, 1D parameter sensitivity, scalability: {"type": "xyline", "x_label": "Epoch", "y_label": "Loss", "series": [{"name": "Train", "x": [1, 2, 3], "y": [0.9, 0.5, 0.3], "errors": [0.05, 0.04, 0.02]}]} (optional "x_scale"/"y_scale": "log").
+       * 2D sensitivity (two hyperparameters): {"type": "heatmap", "x_labels": [...], "y_labels": [...], "matrix": [[...]], "c_label": "F1"}.
+       * Feature space (PCA/t-SNE/UMAP points) : {"type": "scatter", "series": [{"name": "Class A", "x": [...], "y": [...]}]}.
+       * Distributions: {"type": "histogram" | "boxplot", "series": [{"name": "...", "samples": [...]}]}; latency/response time: {"type": "cdf", "series": [{"name": "...", "samples": [...]}], "percentiles": [95, 99]}.
 """
 
 _IMAGE_BLOCK_RULE = """   - REAL FIGURES: to show a real image from the AVAILABLE FIGURES list, write a ```image fenced block containing JSON:
@@ -70,6 +78,7 @@ STRICT PEER-REVIEW PUBLICATION STANDARDS (MANDATORY ACROSS ALL SECTIONS):
    - MANUSCRIPT LANGUAGE: {_lang_label(state)}. Write the ENTIRE manuscript (title, abstract, body, figure/table captions, diagram labels, chart captions) in this one language, in formal academic register, even if the draft or references are in another language.
    - Keep unchanged: proper names, method/model names and acronyms, dataset names, citations [n], numbers, LaTeX and code. The structural markers '## Abstract', '**Keywords:**', '**Table N:**', '**Figure N:**' and '## References' keep their English tokens (the renderer parses them), but the text after them is in the manuscript language.
    - NEVER mix languages inside a paragraph, a caption or a diagram label.
+   - HEADINGS: use only '## N. Title' and '### N.M Title' (never '####'); for finer divisions use a bold run-in lead such as '**Metric definitions.**'. Do not add a 'Paper Organization' subsection or front-matter lines such as Manuscript Type / Protocol Version.
 2. ZERO META-PIPELINE LEAKAGE:
    - NEVER output internal pipeline terminology such as 'Blueprint', 'Stage Summary', 'Chặng', or meta-instructions.
    - Refer to previous parts naturally using standard academic conventions (e.g., 'as formalized in Section 3').
@@ -82,6 +91,9 @@ STRICT PEER-REVIEW PUBLICATION STANDARDS (MANDATORY ACROSS ALL SECTIONS):
    - Every factual claim, number, dataset, metric value and method name must come from the Draft Basis or the Available Citations, with the supporting [n]. Do not add outside facts or new citations.
    - NEVER invent statistics, dataset sizes, benchmark scores, author names, institutions, costs, or experimental results. If a value is not in the evidence, describe it qualitatively or write '–'.
    - Do not force-map a method to a citation that is not its original or a direct survey of it. State only what the cited source actually supports.
+   - Use ONLY citation numbers listed in Available Citations. Never attribute a number to [n] unless that value appears in the evidence for [n]; if the paper has no experiments of its own, do not call any section 'empirical' or 'experimental results' — present it as a synthesis of reported evidence.
+   - Today is {date.today().isoformat()}. Never hard-code a year range for a research agenda or outlook (e.g. '2024-2025'); use relative wording or years that appear in the evidence.
+   - Present each comparison table ONCE. Do not restate the same matrix under another caption, and do not repeat Discussion points in the Conclusion.
 5. CROSS-SECTION CONSISTENCY:
    - Use exactly the title, acronym, notation, terminology and numbers fixed in the ESTABLISHED DESIGN PLAN. A number or symbol appearing in two sections must be identical.
    - Every mathematical symbol must be defined where it first appears. Only introduce formulas that are necessary and correct.
@@ -149,8 +161,8 @@ _STAGE_STRUCTURES: dict[str, dict[str, str]] = {
             "- Include formulas or short pseudocode only when the cited sources give them.",
         ),
         "stage4": (
-            "Section 4 (EMPIRICAL BENCHMARK MATRIX AND COMPARATIVE ANALYSIS)",
-            "## 4. Empirical Benchmark Matrix & Comparative Analysis\n"
+            "Section 4 (COMPARATIVE EVIDENCE SYNTHESIS)",
+            "## 4. Comparative Evidence Synthesis\n"
             "### 4.1 Standard Benchmark Datasets & Metrics\n"
             "- Only datasets and metrics that appear in the evidence; explain why each metric is (in)appropriate.\n"
             "### 4.2 Comprehensive Benchmark Comparison Table\n"
@@ -358,10 +370,10 @@ def _generate_stage_1_front_matter_and_intro(
         f"{_global_standards(state, mode)}\n\n"
         f"ESTABLISHED DESIGN PLAN:\n{blueprint}\n\n"
         "REQUIRED STRUCTURE FOR SECTION 1:\n"
-        "# [Title from the design plan]\n\n"
+        "# [Title from the design plan: at most 15 words, one line of concept + method; no subtitle after a dash]\n\n"
         "**Authors:** PaperAI Automated Research Protocol | **Affiliations:** Open-Source Automated Science Initiative\n\n"
         "## Abstract\n"
-        "(Self-contained 200-280 word abstract: context & motivation, gap in existing work, approach/scope, key findings or highlights supported by the evidence, implications. No citations [n] in the abstract.)\n\n"
+        "(ONE self-contained paragraph of 150-220 words, no bold sub-labels, no bullet list: context & motivation, gap in existing work, approach/scope, key findings or highlights supported by the evidence, implications. No citations [n] and no display math in the abstract.)\n\n"
         "**Keywords:** k1, k2, k3, k4, k5\n\n"
         + (audience_profile(state)["front"] + "\n\n" if audience_profile(state)["front"] else "")
         + "## 1. Introduction\n"
@@ -436,7 +448,7 @@ def _generate_stage_4_experiments(
     gateway: LLMGateway,
     model_name: str | None,
 ) -> str:
-    """Stage 4: Section 4 (Experiments & Results / Empirical Benchmark Matrix)."""
+    """Stage 4: Section 4 (Experiments & Results / Comparative Evidence Synthesis)."""
     title, structure = _stage_structure(state, mode, "stage4")
     system_prompt = (
         f"You are writing {title} for a top-tier peer-reviewed academic paper.\n"
@@ -470,7 +482,12 @@ def _generate_stage_5_discussion_and_conclusion(
         f"ESTABLISHED DESIGN PLAN:\n{blueprint}\n\n"
         f"TRANSITION CONTEXT FROM SECTION 4:\n{sec4_transition}\n\n"
         f"AVAILABLE CITATIONS:\n{references}\n\n"
-        f"REQUIRED STRUCTURE:\n{structure}"
+        f"REQUIRED STRUCTURE:\n{structure}\n\n"
+        "APPENDIX (after the last required section, only when the draft contains such details):\n"
+        "## Appendix A. Implementation and Evaluation Details\n"
+        "(150-400 words: dataset/benchmark descriptions, metric definitions, hyper-parameters, evaluation protocol and any extra table the main text refers to. "
+        "Use only facts already in the draft or references, with [n]; use bold run-in leads such as '**Datasets.**' instead of '###' headings. "
+        "Omit the whole appendix if the draft has no such details; never invent settings.)"
     )
     user_prompt = _user_prompt(state, "Write Sections 5 and 6 in the manuscript language with candid academic honesty.")
     return _generate(system_prompt, user_prompt, gateway, model_name)
@@ -502,9 +519,15 @@ def _generate_audience_appendix(
     return _generate(system_prompt, user_prompt, gateway, model_name)
 
 
+class InsufficientEvidenceError(ValueError):
+    """Không có nguồn thật nào cho paper; chặn xuất bản thay vì để LLM tự gán [1]."""
+
+
 def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> ResearchState:
     """Entrypoint for the Hierarchical Section-by-Section Synthesis Pipeline."""
     citations = state.get("citations", [])
+    if not citations:
+        raise InsufficientEvidenceError("Không có nguồn nào để trích dẫn: không tạo paper khi References rỗng")
     references_prompt = _format_references_prompt(citations)
     state = {**state, "figures": _collect_figures(citations)}
     mode = state.get("research_mode", "survey")
@@ -567,13 +590,19 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
     # Deduplicate citations, remap numbers, and generate clean IEEE references
     updated_text, clean_references = clean_and_deduplicate_citations(citations, raw_stitched)
     updated_text = postprocess_report(
-        updated_text, state.get("draft", ""), gateway, model_name, state.get("language", "en"), state["figures"]
+        updated_text, state.get("draft", ""), gateway, model_name, state.get("language", "en"), state["figures"],
+        evidence_text=" ".join(str(getattr(c, "text_snippet", "") or "") for c in citations),
     )
-    final_text_with_refs = (
-        updated_text
-        + "\n\n## References\n\n"
-        + ("\n".join(clean_references) if clean_references else "(None cited.)")
-    )
+    updated_text, dangling = strip_dangling_citations(updated_text, len(clean_references))
+    if dangling:
+        logger.warning("Đã xóa %d marker trích dẫn không có trong References: %s", len(dangling), sorted(set(dangling)))
+    warning = source_diversity_warning(updated_text, len(clean_references))
+    if warning:
+        logger.warning("Chất lượng nguồn: %s", warning)
+    updated_text = finalize_structure(updated_text)
+    final_text_with_refs = updated_text
+    if clean_references:
+        final_text_with_refs += "\n\n## References\n\n" + "\n".join(clean_references)
 
     clean_report = sanitize_academic_markdown(final_text_with_refs)
     logger.info(f"Synthesized comprehensive 10-page paper: {len(clean_report):,} chars")

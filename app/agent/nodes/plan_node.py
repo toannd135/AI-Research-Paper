@@ -63,7 +63,9 @@ def plan_node(state: ResearchState, llm: LLMGateway | None = None) -> ResearchSt
         detected_field = normalize_field(parsed.get("field")) if isinstance(parsed.get("field"), str) else None
 
     if not queries:
-        queries = [question]
+        from app.ai.external.query_rewrite import to_english_search_query
+
+        queries = [to_english_search_query(question, gateway, model_name)]
 
     mode = detect_research_mode(question, detected_mode)
 

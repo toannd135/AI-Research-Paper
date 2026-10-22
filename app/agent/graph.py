@@ -9,7 +9,7 @@ from app.agent.nodes.critique_node import critique_node
 from app.agent.nodes.fallback import FALLBACK_MESSAGE
 from app.agent.nodes.plan_node import plan_node
 from app.agent.nodes.search_node import search_node
-from app.agent.nodes.synthesize_node import synthesize_node
+from app.agent.nodes.synthesize_node import InsufficientEvidenceError, synthesize_node
 from app.agent.profiles import normalize_audience, normalize_field
 from app.agent.state import ResearchState
 from app.ai.llm_gateway.base import LLMGateway
@@ -76,7 +76,10 @@ def build_research_graph(llm: LLMGateway | None = None):
 
 def run_research_agent(question: str, llm: LLMGateway | None = None) -> dict:
     """Chạy graph và bổ sung các trường tổng hợp (answer/papers/steps) mà evaluator sử dụng."""
-    state = run_graph(question=question, llm=llm)
+    try:
+        state = run_graph(question=question, llm=llm)
+    except InsufficientEvidenceError:
+        state = {"question": question, "evidence": []}
     if not state.get("evidence"):
         state["answer"] = FALLBACK_MESSAGE
         state["citations"] = []

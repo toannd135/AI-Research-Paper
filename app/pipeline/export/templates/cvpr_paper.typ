@@ -11,13 +11,13 @@
 ) = {
   // Page setup
   set page(
-    paper: "a4",
+    paper: "us-letter",
     margin: (x: 1.8cm, top: 2.2cm, bottom: 2.2cm),
     columns: 2,
     header: context {
       if here().page() > 1 {
         align(center)[
-          #text(size: 8pt, fill: luma(100), font: "Times New Roman")[
+          #text(size: 8pt, fill: luma(100), font: ("Times New Roman", "Liberation Serif", "Nimbus Roman", "DejaVu Serif"))[
             #title
           ]
         ]
@@ -25,7 +25,7 @@
     },
     footer: context {
       align(center)[
-        #text(size: 9pt, font: "Times New Roman")[
+        #text(size: 9pt, font: ("Times New Roman", "Liberation Serif", "Nimbus Roman", "DejaVu Serif"))[
           #counter(page).display()
         ]
       ]
@@ -36,7 +36,7 @@
 
   // Typography settings
   set text(
-    font: ("Times New Roman", "DejaVu Serif", "Noto Serif", "serif"),
+    font: ("Times New Roman", "Liberation Serif", "Nimbus Roman", "DejaVu Serif", "Noto Serif", "serif"),
     size: 10pt,
     lang: "en",
     hyphenate: true
@@ -92,10 +92,12 @@
   set table(inset: (x: 3pt, y: 4pt))
   show table: set text(size: 7.5pt, hyphenate: true)
   show table: set par(justify: false, first-line-indent: 0pt, leading: 0.5em)
+  // Hàng tiêu đề không ngắt từ ("Representativ e"); ô thân vẫn được ngắt để không tràn cột hẹp.
+  show table.cell.where(y: 0): set text(hyphenate: false)
   set figure(gap: 0.8em)
   show figure.where(kind: table): set figure.caption(position: top)
   show figure.caption: it => [
-    #text(size: 8.5pt, font: ("Arial", "Helvetica", "Noto Sans", "sans-serif"))[
+    #text(size: 9pt)[
       #it
     ]
   ]
@@ -105,19 +107,20 @@
   align(center)[
     // Title
     #v(0.5cm)
-    #text(size: 17pt, weight: "bold")[#title]
+    #set par(justify: false)
+    #text(size: 15pt, weight: "bold", hyphenate: false)[#title]
     #v(0.8em)
 
     // Authors & Affiliations
     #if authors.len() > 0 [
-      #text(size: 11pt, weight: "bold")[
+      #text(size: 11pt)[
         #authors.join("    ")
       ]
       #v(0.3em)
     ]
 
     #if affiliations.len() > 0 [
-      #text(size: 9.5pt, style: "italic", fill: luma(80))[
+      #text(size: 10pt)[
         #affiliations.join("\n")
       ]
       #v(1em)

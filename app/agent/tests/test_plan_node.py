@@ -19,12 +19,13 @@ def test_plan_node_parses_queries_from_llm():
     assert state["question"] == "So sánh A và B"
 
 
-def test_plan_node_falls_back_to_question_when_unparseable():
+def test_plan_node_falls_back_to_english_rewrite_of_question_when_unparseable():
     llm = _fake_llm("not json")
+    llm.generate.side_effect = [LLMResponse(text="not json", model="fake"), LLMResponse(text="comparison of A and B", model="fake")]
 
     state = plan_node({"question": "So sánh A và B"}, llm=llm)
 
-    assert state["search_queries"] == ["So sánh A và B"]
+    assert state["search_queries"] == ["comparison of A and B"]
     assert state["research_mode"] == "survey"
 
 

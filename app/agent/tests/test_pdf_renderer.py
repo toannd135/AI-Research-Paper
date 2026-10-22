@@ -183,3 +183,60 @@ def test_large_diagram_and_long_table_fit_pdf(tmp_path):
         assert "Stage 00" in text and "Stage 25" in text
         assert "Row000" in text and "Row099" in text
         assert text.count("Recall@10") > 1  # Table headings repeat across page breaks.
+
+
+@pytest.mark.parametrize("spec", [
+    {"type": "bar", "labels": ["A", "B"], "series": [{"name": "F1", "values": [90, 84], "errors": [1.2, 0.8]}]},
+    {"type": "line", "labels": ["A", "B"], "series": [{"name": "F1", "values": [90, 84], "errors": [1, 2]}]},
+    {"type": "xyline", "series": [{"name": "Train", "x": [1, 2, 3], "y": [0.9, "0.5", 0.3], "errors": [0.1, 0.1, 0.05]}]},
+    {"type": "scatter", "series": [{"name": "c1", "x": [1, 2], "y": [2, 3]}, {"name": "c2", "x": [3], "y": [1]}]},
+    {"type": "cdf", "series": [{"name": "ours", "samples": [10, 12, 15, 30]}], "percentiles": [95]},
+    {"type": "histogram", "series": [{"name": "d", "samples": [1, 2, 2, 3, 5]}], "bins": 4},
+    {"type": "boxplot", "series": [{"name": "a", "samples": [1, 2, 3, 9]}, {"name": "b", "samples": [2, 3, 4]}]},
+    {"type": "heatmap", "x_labels": ["0.1", "0.2"], "y_labels": ["16", "32"], "matrix": [[0.8, 0.82], [0.85, "0.9"]]},
+])
+def test_scientific_chart_types_render(spec):
+    from app.pipeline.export.pdf_renderer import _render_chart_svg
+
+    assert _render_chart_svg(spec).startswith("<svg")
+
+
+def test_scientific_chart_without_data_raises():
+    from app.pipeline.export.pdf_renderer import _render_chart_svg
+
+    with pytest.raises(ValueError):
+        _render_chart_svg({"type": "xyline", "series": [{"name": "x", "x": [], "y": []}]})
+
+
+def test_front_matter_authors_on_separate_lines_and_status_note():
+    md = ("# T\n\n**Authors:** A One, B Two  \n**Affiliations:** Lab X  \n**Status:** Pre-registration  \n\n---\n\n"
+          "## Abstract\n\nText.\n\n## 1. Intro\n\nBody.")
+    doc = report_to_html(md)
+    assert '<div class="authors"> A One, B Two</div>' in doc.replace("  ", " ") or 'class="authors"' in doc
+    assert 'class="affil"' in doc and 'class="meta"' in doc and "Pre-registration" in doc
+    front, _, rest = doc.partition('<main class="paper-body')
+    assert 'class="abstract"' in front  # abstract nằm ngoài phần 2 cột, dù có <hr> phía trước
+
+
+def test_pipe_inside_math_in_table_row_survives():
+    from app.agent.format_sanitizer import sanitize_table_math_pipes
+
+    row = r"| **H2** | $ |\text{FPR} - 0.5| \le \delta $ | x |"
+    fixed = sanitize_table_math_pipes(row)
+    assert fixed.count("|") == 4 and r"\vert" in fixed
+    assert sanitize_table_math_pipes("a | $b|c$ stays") == "a | $b|c$ stays"
+    money = "| $0.15/M) | $Tokens \\times 0.15$ | x |"
+    assert sanitize_table_math_pipes(money) == money
+
+
+def test_padded_inline_math_is_tightened_but_currency_is_kept():
+    from app.agent.format_sanitizer import sanitize_padded_inline_math
+
+    out = sanitize_padded_inline_math("| Null ($ H_0 $) | Alt ($ H_1 $) |")
+    assert out == "| Null ($H_0$) | Alt ($H_1$) |"
+    tight = r"| For $N$ pairwise instances $(q, a)$, each $J$ evaluates ($\Delta$ tertiles)"
+    assert sanitize_padded_inline_math(tight) == tight
+    money = "| API (est. $0.15/M) | $ x $ | ~$2.70 |"
+    assert sanitize_padded_inline_math(money) == money
+    prose = "Prose keeps $ x $ untouched"
+    assert sanitize_padded_inline_math(prose) == prose

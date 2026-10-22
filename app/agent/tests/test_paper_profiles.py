@@ -211,7 +211,8 @@ class _StageGateway:
 
 
 def _student_state():
-    return {"question": "Lạm phát và GDP", "audience": "student", "field": "economics", "draft": "d", "citations": [], "language": "en"}
+    return {"question": "Lạm phát và GDP", "audience": "student", "field": "economics", "draft": "d", "language": "en",
+            "citations": [{"paper_id": "Title: Inflation Study Authors: A. Smith (2023)", "text_snippet": ""}]}
 
 
 def test_synthesize_adds_missing_student_sections_with_one_extra_call():

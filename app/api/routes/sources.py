@@ -6,6 +6,7 @@ from app.api.deps import get_current_user
 
 from app.ai.external.openalex_client import OpenAlexError, search_works
 from app.ai.external.openalex_mapper import build_source_search_response
+from app.ai.external.query_rewrite import to_english_search_query
 from app.core.schemas import SourceSearchResponse
 
 router = APIRouter(prefix="/sources", tags=["sources"], dependencies=[Depends(get_current_user)])
@@ -17,7 +18,7 @@ def search_sources(
     limit: int = Query(150, ge=1, le=300),
 ) -> SourceSearchResponse:
     try:
-        works = search_works(query, count=limit)
+        works = search_works(to_english_search_query(query), count=limit)
     except OpenAlexError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 

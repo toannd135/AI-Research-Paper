@@ -7,7 +7,13 @@ except ImportError:
 
 import httpx
 
-from app.ai.llm_gateway.base import LLMGateway, LLMGatewayError, LLMResponse, Message
+from app.ai.llm_gateway.base import (
+    LLMGateway,
+    LLMGatewayError,
+    LLMRateLimitError,
+    LLMResponse,
+    Message,
+)
 from app.ai.llm_gateway.retry import call_with_retry
 from app.core.config import get_settings
 
@@ -23,6 +29,13 @@ KNOWN_TEXT_MODELS = [
 ]
 
 
+def _parse_retry_after(headers) -> float | None:
+    try:
+        return float(headers["retry-after"]) if headers and headers.get("retry-after") else None
+    except (TypeError, ValueError):
+        return None
+
+
 class GroqAdapter(LLMGateway):
     def __init__(self, api_key: str | None = None, base_url: str = GROQ_BASE_URL) -> None:
         key = api_key or get_settings().groq_api_key
@@ -33,7 +46,7 @@ class GroqAdapter(LLMGateway):
 
         if openai is not None:
             try:
-                self._client = openai.OpenAI(api_key=key, base_url=base_url)
+                self._client = openai.OpenAI(api_key=key, base_url=base_url, max_retries=0)  # retry do call_with_retry lo
             except Exception:
                 self._client = None
         else:
@@ -81,6 +94,11 @@ class GroqAdapter(LLMGateway):
                 raise
             except Exception as exc:
                 err_str = str(exc)
+                if "429" in err_str or "rate_limit" in err_str.lower():
+                    headers = getattr(getattr(exc, "response", None), "headers", None)
+                    raise LLMRateLimitError(
+                        f"Groq Cloud bị rate limit: {exc}", _parse_retry_after(headers)
+                    ) from exc
                 if "401" in err_str or "Authentication" in err_str:
                     raise LLMGatewayError(f"Groq Cloud API Key không hợp lệ: {exc}") from exc
                 if "404" in err_str or "model_not_found" in err_str:
@@ -113,6 +131,10 @@ class GroqAdapter(LLMGateway):
                         payload["model"] = fallback_model
                         res = client.post(url, headers=headers, json=payload)
                         chosen_model = fallback_model
+                if res.status_code == 429:
+                    raise LLMRateLimitError(
+                        f"Groq Cloud bị rate limit: {res.text}", _parse_retry_after(res.headers)
+                    )
                 if res.status_code != 200:
                     raise LLMGatewayError(f"Groq API returned HTTP {res.status_code}: {res.text}")
                 data = res.json()

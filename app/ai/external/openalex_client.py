@@ -1,5 +1,7 @@
 """Client gọi OpenAlex API (https://api.openalex.org) — tìm paper thật theo chủ đề."""
 
+import re
+
 import httpx
 
 from app.core.config import get_settings
@@ -7,8 +9,16 @@ from app.core.config import get_settings
 _MAX_PER_PAGE = 200  # giới hạn cứng của OpenAlex cho tham số per-page
 
 
+# `*` là wildcard của OpenAlex: markdown như **Few-Shot Learning** thành "leading wildcard" -> 400.
+_WILDCARD_RE = re.compile(r"\*+")
+
+
 class OpenAlexError(Exception):
     pass
+
+
+def _sanitize_query(query: str) -> str:
+    return _WILDCARD_RE.sub(" ", query).strip()
 
 
 def search_works(query: str, count: int = 25) -> list[dict]:
@@ -22,6 +32,7 @@ def search_works(query: str, count: int = 25) -> list[dict]:
     hoá vị trí đã dừng, không phụ thuộc việc tính lại điểm relevance.
     """
     settings = get_settings()
+    query = _sanitize_query(query)
     results: list[dict] = []
     cursor: str | None = "*"
 
@@ -34,6 +45,8 @@ def search_works(query: str, count: int = 25) -> list[dict]:
         try:
             response = httpx.get(f"{settings.open_alex_api_url}/works", params=params, timeout=20.0)
             response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise OpenAlexError(f"Lỗi gọi OpenAlex API: {exc} — {exc.response.text[:300]}") from exc
         except httpx.HTTPError as exc:
             raise OpenAlexError(f"Lỗi gọi OpenAlex API: {exc}") from exc
 

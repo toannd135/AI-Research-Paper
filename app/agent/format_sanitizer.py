@@ -193,6 +193,128 @@ def sanitize_author_placeholders(text: str) -> str:
     return text
 
 
+_INLINE_MATH_SPAN_RE = re.compile(r"(?<![\\$])\$(?!\$)([^$\n]+?)(?<![\\$])\$(?!\$)")
+
+
+def sanitize_table_math_pipes(text: str) -> str:
+    """'|' trong công thức ở hàng bảng (vd. $|x-y|$) bị tách thành ô mới → đổi thành \\vert.
+
+    Bỏ qua '|' có khoảng trắng hai bên: đó là dấu phân cột giữa hai ký hiệu '$' tiền tệ bị ghép nhầm thành một cặp.
+    """
+
+    def fix_row(line: str) -> str:
+        if not line.lstrip().startswith("|"):
+            return line
+        return _INLINE_MATH_SPAN_RE.sub(lambda m: "$" + re.sub(r"(?<!\\)(?<!\s)\||(?<!\\)\|(?!\s)", r"\\vert ", m.group(1)) + "$", line)
+
+    return "\n".join(fix_row(line) for line in text.split("\n"))
+
+
+_PADDED_MATH_RE = re.compile(r"(?<![^\s(\[|,;:>\-])\$(?!\$)[ \t]+([^$\n]+?)[ \t]*(?<![\\$])\$(?!\$)")
+
+
+_CURRENCY_HINT_RE = re.compile(r"(?<!\\)\$\d")  # '$0.15/M' có thể là tiền tệ: không đoán ghép cặp $ trong dòng này
+
+
+def sanitize_padded_inline_math(text: str) -> str:
+    """Hàng bảng: '$ x $' → '$x$'. KaTeX auto-render ghép '$ H_0 $) | Alt ($ H_1 $' thành một công thức xuyên ô.
+
+    Chỉ áp cho hàng bảng; $ mở phải đứng sau khoảng trắng / dấu mở / đầu dòng, nếu không đó là $ đóng của công thức khác.
+    """
+    return "\n".join(
+        _PADDED_MATH_RE.sub(lambda m: "$" + m.group(1) + "$", line) if line.lstrip().startswith("|") and not _CURRENCY_HINT_RE.search(line) else line
+        for line in text.split("\n")
+    )
+
+
+_RAW_REF_RE = re.compile(r'^\[(\d+)\]\s+(?P<head>.*?),\s*Page:\s*[^,]*,\s*Section:.*?[—-]\s*"(?P<snippet>.*)"\s*$')
+
+
+def sanitize_raw_references(text: str) -> str:
+    """Dòng References còn là snippet thô ('…, Page: 1, Section: … — "Title: … Authors: …"') → '[n] Authors, "Title," *Venue*, Year.'
+
+    Chỉ dùng thông tin có trong snippet; thiếu năm thì ghi n.d. thay vì đoán.
+    """
+    from app.agent.evidence.citation_cleaner import _extract_citation_metadata
+
+    body, sep, refs = text.partition("\n## References")
+    if not sep:
+        return text
+    out = []
+    for line in refs.split("\n"):
+        m = _RAW_REF_RE.match(line.strip())
+        if not m:
+            out.append(line)
+            continue
+        snippet = m.group("snippet")
+        meta = _extract_citation_metadata(m.group("head"), snippet)
+        year = meta["year"] if re.search(r"\b(?:19|20)\d{2}\b", snippet) else "n.d."
+        authors = meta["authors"] if re.search(r"Authors:", snippet, re.IGNORECASE) else "Anonymous"
+        doi = f", DOI: {meta['doi'].rstrip('.…')}" if meta["doi"] and not meta["doi"].endswith("...") else ""
+        title = meta["title"].rstrip(".…")
+        if "..." in authors or "…" in authors:  # snippet cũ bị cắt giữa tên → bỏ phần dở dang
+            names = [n.strip() for n in re.split(r",|\s+and\s+", authors) if n.strip() and not re.search(r"\.\.\.|…", n)]
+            names = [re.sub(r"\s*et al\.?$", "", n) for n in names]
+            authors = (", ".join(names) + " et al.") if names else "Anonymous"
+        venue = meta["venue"] if not re.search(r"\.\.\.|…", meta["venue"]) else "Online"
+        tail = f"{year}{doi}"
+        out.append(f'[{m.group(1)}] {authors}, "{title}," *{venue}*, {tail}{"" if tail.endswith(".") else "."}')
+    return body + sep + "\n".join(out)
+
+
+_REF_LINE_RE = re.compile(r'^\[(\d+)\]\s+.*?"(?P<title>.+?),?"')
+_CITE_GROUP_RE = re.compile(r"\[(\d+(?:\s*[,–-]\s*\d+)*)\]")
+_REMAP_FENCE_RE = re.compile(r"(```.*?```)", re.DOTALL)
+
+
+def _remap_cites(text: str, mapping: dict[int, int]) -> str:
+    def repl(m: re.Match) -> str:
+        nums: list[int] = []
+        for part in re.split(r"\s*,\s*", m.group(1)):
+            r = re.fullmatch(r"(\d+)\s*[–-]\s*(\d+)", part)
+            nums += range(int(r.group(1)), int(r.group(2)) + 1) if r and int(r.group(1)) <= int(r.group(2)) <= int(r.group(1)) + 50 else [int(n) for n in re.findall(r"\d+", part)]
+        new = sorted({mapping.get(n, n) for n in nums})
+        return "[" + ", ".join(map(str, new)) + "]"
+
+    return _CITE_GROUP_RE.sub(repl, text)
+
+
+def dedupe_references(text: str) -> str:
+    """Gộp các dòng References cùng tiêu đề, đánh số lại tuần tự và cập nhật mọi [n] trong thân bài (kể cả chuỗi trong khối table/chart)."""
+    body, sep, refs = text.partition("\n## References")
+    if not sep:
+        return text
+    lines = refs.split("\n")
+    seen: dict[str, int] = {}
+    mapping: dict[int, int] = {}
+    kept: list[str] = []
+    for line in lines:
+        m = _REF_LINE_RE.match(line.strip())
+        if not m:
+            kept.append(line)
+            continue
+        old = int(m.group(1))
+        key = " ".join(re.sub(r"[^a-z0-9]+", " ", m.group("title").lower()).split())
+        if key in seen:
+            mapping[old] = seen[key]
+            continue
+        seen[key] = mapping[old] = len(seen) + 1
+        kept.append(re.sub(r"^\[\d+\]", f"[{mapping[old]}]", line.strip(), count=1))
+    if all(k == v for k, v in mapping.items()):
+        return text
+
+    def fix_fence(m: re.Match) -> str:
+        block = m.group(1)
+        kind = re.match(r"```(\w*)", block).group(1)
+        if kind in ("table", "chart"):
+            return re.sub(r'"(?:[^"\\]|\\.)*"', lambda q: _remap_cites(q.group(0), mapping), block)
+        return block
+
+    parts = _REMAP_FENCE_RE.split(body)
+    body = "".join(fix_fence(re.match(r"(.*)", p, re.DOTALL)) if i % 2 else _remap_cites(p, mapping) for i, p in enumerate(parts))
+    return body + sep + "\n".join(kept)
+
+
 def sanitize_currency_symbols(text: str) -> str:
     """Chuẩn hóa ký hiệu tiền tệ USD ($) không đóng thành \\$ để tránh xung đột với LaTeX inline math delimiters."""
     return re.sub(r"(?<=\s|[~(=])(?<!\\)\$(\d+(?:\.\d+)?)(?=\s+[a-zA-Z])", r"\\$\1", text)
@@ -227,16 +349,41 @@ def sanitize_pipeline_leakages(text: str) -> str:
     return text
 
 
+def ensure_title_heading(text: str) -> str:
+    """LLM đôi khi viết tiêu đề thành dòng thường (thiếu '# '); frontend/renderer chỉ nhận tiêu đề từ H1
+    nên sẽ rơi về câu hỏi của người dùng. Khôi phục '# ' khi dòng đầu rõ ràng là tiêu đề front matter."""
+    lines = text.lstrip().split("\n")
+    first = lines[0].strip()
+    if not first or first.startswith(("#", "**", "|", "```", "$$")) or len(first) > 300:
+        return text
+    following = next((ln.strip() for ln in lines[1:] if ln.strip()), "")
+    if not re.match(r"(?:\*\*Authors:|##\s+(?:Abstract|Tóm tắt))", following, flags=re.IGNORECASE):
+        return text
+    return "\n".join([f"# {first.strip(chr(34))}", *lines[1:]])
+
+
 def sanitize_academic_markdown(text: str) -> str:
     """Hàm tổng hợp duy nhất: chuẩn hóa toàn bộ markdown học thuật trước khi xuất/lưu trữ."""
     if not text:
         return ""
 
+    # 0. Tiêu đề thiếu '# '
+    result = ensure_title_heading(text)
+
     # 1. Khử rò rỉ pipeline nội bộ
-    result = sanitize_pipeline_leakages(text)
+    result = sanitize_pipeline_leakages(result)
 
     # 2. Khử placeholder tác giả
     result = sanitize_author_placeholders(result)
+
+    # 2a. References còn là snippet thô → định dạng IEEE
+    result = sanitize_raw_references(result)
+
+    # 2a'. Gộp reference trùng tiêu đề, đánh số lại [n]
+    result = dedupe_references(result)
+
+    # 2b. '|' trong công thức của hàng bảng
+    result = sanitize_table_math_pipes(result)
 
     # 3. Chuẩn hóa ký hiệu tiền tệ tránh xung đột inline math
     result = sanitize_currency_symbols(result)

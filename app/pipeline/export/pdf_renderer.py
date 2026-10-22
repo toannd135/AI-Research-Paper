@@ -1,14 +1,13 @@
 """Render report Markdown → HTML dàn trang bài báo → PDF (Chromium headless qua Playwright).
 
 - Bảng Markdown → bảng 3 đường kẻ (booktabs), đánh số "Table n".
-- Khối ```chart {json}``` → biểu đồ matplotlib (SVG), đánh số "Figure n".
+- Khối ```chart {json}``` → biểu đồ matplotlib (SVG), đánh số "Figure n" (bar/line có error bar; xyline, scatter, cdf, histogram, boxplot, heatmap ở chart_scientific.py).
 - Khối ```mermaid``` → sơ đồ do mermaid.js render trong Chromium, đánh số "Figure n".
 - Công thức $$...$$ và \\(...\\) → KaTeX.
 """
 
 import base64
 import html
-import io
 import json
 import logging
 import math
@@ -48,13 +47,18 @@ def _num(v) -> float | None:
         return None
 
 
-def _render_chart_svg(spec: dict) -> str:
+def _render_chart_svg(spec: dict, fmt: str = "svg") -> str | bytes:
     """Vẽ biểu đồ theo spec JSON.
 
     {type: bar | barh | line | stacked_barh | stacked_bar, labels, series: [{name, values}], x_label, y_label}
     - values thiếu số liệu ghi null; nhãn nào không có giá trị ở mọi series thì bị bỏ.
     """
     import textwrap
+
+    from app.pipeline.export.chart_scientific import SCIENTIFIC_TYPES, finish_figure, render_scientific_svg
+
+    if spec.get("type") in SCIENTIFIC_TYPES:
+        return render_scientific_svg(spec, fmt)
 
     import matplotlib
 
@@ -67,6 +71,9 @@ def _render_chart_svg(spec: dict) -> str:
         for s in spec["series"]
         if len(s.get("values", [])) == len(raw_labels)
     ]
+    for s, src in zip(series, [x for x in spec["series"] if len(x.get("values", [])) == len(raw_labels)]):
+        errs = src.get("errors")  # độ lệch chuẩn / CI95 mỗi giá trị → error bar
+        s["errors"] = [_num(e) for e in errs] if isinstance(errs, list) and len(errs) == len(raw_labels) else None
     keep_idx = [i for i in range(len(raw_labels)) if any(s["values"][i] is not None for s in series)]
     if not keep_idx or not series:
         raise ValueError("chart spec thiếu labels/series hợp lệ")
@@ -78,6 +85,8 @@ def _render_chart_svg(spec: dict) -> str:
     labels = [textwrap.fill(raw_labels[i], 26 if horizontal else 16) for i in keep_idx]
     for s in series:
         s["values"] = [s["values"][i] for i in keep_idx]
+        if s["errors"]:
+            s["errors"] = [s["errors"][i] or 0.0 for i in keep_idx]
     n, m = len(series), len(labels)
 
     plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 9, "svg.fonttype": "path"})
@@ -91,7 +100,10 @@ def _render_chart_svg(spec: dict) -> str:
     if kind == "line":
         for i, s in enumerate(series):
             ys = [float("nan") if v is None else v for v in s["values"]]
-            ax.plot(labels, ys, marker="o", linewidth=1.6, color=_PALETTE[i % len(_PALETTE)], label=s["name"])
+            if s["errors"]:
+                ax.errorbar(labels, ys, yerr=s["errors"], marker="o", linewidth=1.6, capsize=2.5, color=_PALETTE[i % len(_PALETTE)], label=s["name"])
+            else:
+                ax.plot(labels, ys, marker="o", linewidth=1.6, color=_PALETTE[i % len(_PALETTE)], label=s["name"])
             for x, y in zip(labels, ys):
                 if not math.isnan(y):
                     ax.annotate(f"{y:g}", (x, y), textcoords="offset points", xytext=(0, 5), ha="center", fontsize=7)
@@ -112,11 +124,14 @@ def _render_chart_svg(spec: dict) -> str:
             offset = [p - 0.4 + width * (i + 0.5) for p in pos]
             vals = [float("nan") if v is None else v for v in s["values"]]
             color = _PALETTE[i % len(_PALETTE)]
+            err = {"capsize": 2, "error_kw": {"elinewidth": 0.9}}
+            if s["errors"]:
+                err["yerr" if not horizontal else "xerr"] = s["errors"]
             if horizontal:
-                bars = ax.barh(offset, vals, height=width * 0.9, color=color, label=s["name"])
+                bars = ax.barh(offset, vals, height=width * 0.9, color=color, label=s["name"], **(err if s["errors"] else {}))
             else:
-                bars = ax.bar(offset, vals, width=width * 0.9, color=color, label=s["name"])
-            ax.bar_label(bars, labels=["" if math.isnan(v) else f"{v:g}" for v in vals], fontsize=7, padding=3)
+                bars = ax.bar(offset, vals, width=width * 0.9, color=color, label=s["name"], **(err if s["errors"] else {}))
+            ax.bar_label(bars, labels=["" if math.isnan(v) else f"{v:g}" for v in vals], fontsize=7, padding=3 + (5 if s["errors"] else 0))
         # chừa chỗ cho nhãn số ở cả hai đầu (kể cả giá trị âm) để không đè lên tên trục
         values = [v for s in series for v in s["values"] if v is not None]
         lo, hi = min(0.0, *values), max(0.0, *values)
@@ -150,11 +165,7 @@ def _render_chart_svg(spec: dict) -> str:
         ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.01), ncol=min(n, 4), frameon=True, fontsize=8, edgecolor="#bbb")
     fig.tight_layout()
 
-    buf = io.StringIO()
-    fig.savefig(buf, format="svg", bbox_inches="tight")
-    plt.close(fig)
-    svg = buf.getvalue()
-    return svg[svg.index("<svg") :]
+    return finish_figure(fig, fmt)
 
 
 def _cell_html(text) -> str:
@@ -348,16 +359,30 @@ def _number_figures_and_tables(body: str) -> str:
     return re.sub(r"</table>(?!</div>)", "</table></div>", "".join(out))
 
 
+_FRONT_FIELD_RE = re.compile(r"<strong>([^<:]+):</strong>(.*?)(?=<br\s*/?>|\s*\|\s*<strong>|$)", re.DOTALL)
+
+
 def _layout_front_matter(body: str) -> str:
-    """Tách tiêu đề, dòng tác giả, abstract thành khối đầu bài kiểu tạp chí."""
+    """Tách tiêu đề, tác giả, đơn vị, ghi chú (Status…) và abstract thành khối đầu bài kiểu CVPR/IEEE.
+
+    Chấp nhận cả 'Authors: … | Affiliations: …' trên một dòng lẫn mỗi trường một dòng.
+    """
     body = re.sub(r"<h1>(.*?)</h1>", r'<h1 class="title">\1</h1>', body, count=1, flags=re.DOTALL)
-    body = re.sub(
-        r"<p><strong>Authors:</strong>(.*?)\|\s*<strong>Affiliations:</strong>(.*?)</p>",
-        r'<div class="authors">\1</div><div class="affil">\2</div>',
-        body,
-        count=1,
-        flags=re.DOTALL,
-    )
+
+    def front(m: re.Match) -> str:
+        fields = {k.strip().lower(): v.strip() for k, v in _FRONT_FIELD_RE.findall(m.group(1))}
+        parts = []
+        if fields.get("authors"):
+            parts.append(f'<div class="authors">{fields.pop("authors")}</div>')
+        if fields.get("affiliations"):
+            parts.append(f'<div class="affil">{fields.pop("affiliations")}</div>')
+        # Manuscript Type / Protocol Version / Status gộp thành một dòng ghi chú nhỏ
+        notes = " · ".join(v.rstrip(" |") for v in fields.values() if v)
+        if notes:
+            parts.append(f'<div class="meta">{notes}</div>')
+        return "".join(parts)
+
+    body = re.sub(r"<p>(<strong>Authors:</strong>.*?)</p>", front, body, count=1, flags=re.DOTALL)
     body = re.sub(
         r"<h2>Abstract</h2>(.*?)(?=<h2)",
         r'<section class="abstract"><h2>Abstract</h2>\1</section>',
@@ -373,7 +398,7 @@ def _layout_columns(body: str, columns: int) -> str:
     if columns not in (1, 2):
         raise ValueError("PDF columns must be 1 or 2")
     front = re.compile(
-        r'\s*(?:<h1\b[^>]*>.*?</h1>|<div class="(?:authors|affil)">.*?</div>'
+        r'\s*(?:<h1\b[^>]*>.*?</h1>|<hr\s*/?>|<div class="(?:authors|affil|meta)">.*?</div>'
         r'|<section class="abstract">.*?</section>)',
         re.DOTALL,
     )
@@ -384,7 +409,10 @@ def _layout_columns(body: str, columns: int) -> str:
 
 
 def report_to_html(report_md: str, *, columns: int = 2) -> str:
-    md, blocks = _extract_blocks(report_md.replace("\r\n", "\n"))
+    from app.agent.format_sanitizer import sanitize_padded_inline_math
+
+    # chỉ engine HTML bị lỗi ghép '$ a $) | ($ b $' xuyên ô; Typst có bộ ghép $ riêng nên không đụng vào
+    md, blocks = _extract_blocks(sanitize_padded_inline_math(report_md.replace("\r\n", "\n")))
     parser = markdown.Markdown(extensions=["tables", "fenced_code", "sane_lists"])
     # LLM hay thụt lề đoạn văn sau công thức → Markdown hiểu nhầm là khối code. Code thật dùng ``` nên tắt indented code.
     parser.parser.blockprocessors.deregister("code")
@@ -406,7 +434,7 @@ def report_to_pdf(report_md: str, *, columns: int = 2) -> bytes:
             page = browser.new_page()
             prepare_report_page(page, page_html)
             return page.pdf(
-                format="A4",
+                format="Letter",
                 margin={"top": "20mm", "bottom": "20mm", "left": "18mm", "right": "18mm"},
                 print_background=True,
                 display_header_footer=True,
@@ -428,17 +456,18 @@ _TEMPLATE = """<!doctype html>
 <script src="https://paperai-assets.invalid/mermaid.min.js"></script>
 <script>if (window.mermaid) mermaid.initialize({startOnLoad: false});</script>
 <style>
-  @page { size: A4; }
-  body { font-family: 'Noto Serif', 'Times New Roman', serif; font-size: 10.5pt; line-height: 1.5; color: #111; margin: 0; }
-  .columns-2 { column-count: 2; column-gap: 18pt; column-fill: balance; font-size: 9.5pt; line-height: 1.4; }
+  @page { size: Letter; }
+  body { font-family: 'Times New Roman', 'Liberation Serif', 'Nimbus Roman', 'Noto Serif', serif; font-size: 10.5pt; line-height: 1.5; color: #111; margin: 0; }
+  .columns-2 { column-count: 2; column-gap: 18pt; column-fill: balance; font-size: 10pt; line-height: 1.3; }
   .columns-2 > .tbl, .columns-2 > figure.fig { column-span: all; }
   .columns-2 h2 { font-size: 11pt; }
   .columns-2 h3 { font-size: 10pt; }
   .columns-2 h4 { font-size: 9.5pt; }
   .columns-2 p { orphans: 3; widows: 3; }
-  h1.title { font-size: 19pt; line-height: 1.25; text-align: center; margin: 0 0 10pt; }
-  .authors { text-align: center; font-size: 11pt; font-weight: 700; }
-  .affil { text-align: center; font-size: 9.5pt; font-style: italic; color: #333; margin-bottom: 14pt; }
+  h1.title { font-size: 15pt; line-height: 1.25; text-align: center; margin: 0 0 10pt; }
+  .authors { text-align: center; font-size: 11pt; }
+  .affil { text-align: center; font-size: 10pt; color: #111; margin-bottom: 6pt; }
+  .meta { text-align: center; font-size: 8.5pt; font-style: italic; color: #444; margin-bottom: 12pt; }
   .abstract { border-top: 1.2pt solid #111; border-bottom: 1.2pt solid #111; padding: 6pt 0 8pt; margin-bottom: 14pt; font-size: 9.5pt; }
   .abstract h2 { font-size: 10.5pt; text-transform: uppercase; letter-spacing: .06em; margin: 2pt 0 4pt; border: 0; }
   h2 { font-size: 13pt; margin: 16pt 0 6pt; break-after: avoid; }
@@ -450,8 +479,8 @@ _TEMPLATE = """<!doctype html>
   .tbl { margin: 10pt 0 12pt; break-inside: auto; }
   .tbl.keep-together { break-inside: avoid; }
   .tbl > .caption { break-after: avoid; }
-  .caption, figcaption { font-family: 'Noto Sans', sans-serif; font-size: 8.5pt; text-align: center; margin: 4pt 0; }
-  table { width: 100%; border-collapse: collapse; font-family: 'Noto Sans', sans-serif; font-size: 7.5pt; line-height: 1.35;
+  .caption, figcaption { font-size: 9pt; text-align: center; margin: 4pt 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 8pt; line-height: 1.35;
           border-top: 1.2pt solid #111; border-bottom: 1.2pt solid #111; table-layout: fixed; overflow-wrap: anywhere; }
   thead { display: table-header-group; }
   tr { break-inside: avoid; }

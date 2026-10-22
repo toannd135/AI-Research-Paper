@@ -104,6 +104,50 @@ def _is_grounded(cell: str, known: set[float]) -> bool:
     return all(float(n) in known for n in nums)
 
 
+_CLAIM_NUM_RE = re.compile(r"\d+(?:\.\d+)?\s*(?:%|×|x\b)|\b\d+\.\d+\b|\b[A-Za-z]\s*=\s*\d+")
+_YEAR_RE = re.compile(r"^(?:19|20)\d{2}$")
+_SENT_SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?=[A-Z])")
+
+
+def _sentence_is_ungrounded(sentence: str, known: set[float]) -> bool:
+    """Câu có trích dẫn [n] và số liệu kiểu %, ×, thập phân, 'T=50' mà số đó không xuất hiện trong draft/evidence."""
+    if not _CITE_RE.search(sentence):
+        return False
+    body = _CITE_RE.sub(" ", sentence)
+    for m in _CLAIM_NUM_RE.finditer(body):
+        for n in _NUM_RE.findall(m.group(0)):
+            if not _YEAR_RE.match(n) and float(n) not in known:
+                return True
+    return False
+
+
+def drop_ungrounded_claims(text: str, draft: str, evidence_text: str = "") -> tuple[str, list[str]]:
+    """Gỡ câu văn xuôi gán số liệu cho nguồn [n] nhưng số đó không có trong draft/evidence (nghi bịa/gán sai nguồn).
+
+    Bỏ qua tiêu đề, bảng, danh sách ký hiệu, khối code. Trả về (văn bản, các câu đã gỡ).
+    """
+    known = _draft_numbers(draft) | _draft_numbers(evidence_text)
+    dropped: list[str] = []
+    out: list[str] = []
+    in_fence = False
+    for line in text.split("\n"):
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            out.append(line)
+            continue
+        if in_fence or not line.strip() or line.lstrip().startswith(("#", "|", "$", "**Table", "**Figure")):
+            out.append(line)
+            continue
+        kept = []
+        for sent in _SENT_SPLIT_RE.split(line):
+            if _sentence_is_ungrounded(sent, known):
+                dropped.append(sent.strip())
+            else:
+                kept.append(sent)
+        out.append(" ".join(kept))
+    return "\n".join(out), dropped
+
+
 def scrub_table_spec(body: str, draft: str) -> str | None:
     """Thay ô số không xuất hiện trong draft bằng '–'. Trả về JSON mới, hoặc None nếu spec hỏng/không còn số liệu."""
     try:
@@ -233,38 +277,139 @@ def _skip_paragraph(p: str) -> bool:
     return not t or t.startswith(("|", "#", "$$", "[", "**Keywords", "**Authors"))
 
 
+def _llm_translate(text: str, target: str, gateway: LLMGateway, model_name: str | None, what: str = "text") -> str | None:
+    try:
+        return gateway.generate(
+            messages=[
+                Message(
+                    role="system",
+                    content=(
+                        f"Translate the {what} to {language_name(target)} in formal academic register. Keep markdown, citations [n], numbers, "
+                        "LaTeX, code, proper names and method/model acronyms unchanged. Output only the translation."
+                    ),
+                ),
+                Message(role="user", content=text),
+            ],
+            model_name=model_name,
+        ).text.strip()
+    except Exception as e:
+        logger.warning("Translate call failed: %s", e)
+        return None
+
+
+def _is_foreign_text(text: str, target: str) -> bool:
+    """is_foreign_paragraph sau khi bỏ công thức: biến như d_i, di… làm bộ nhận diện nhầm sang tiếng Indonesia."""
+    return is_foreign_paragraph(re.sub(r"\$[^$\n]*\$", " ", text), target)
+
+
+def _is_foreign_short(text: str, target: str) -> bool:
+    """Tiêu đề / ô bảng / nhãn ngắn: ngưỡng từ thấp hơn đoạn văn."""
+    plain = re.sub(r"\$[^$]*\$|[#*|`]", " ", text)
+    return is_foreign_paragraph(plain, target, min_words=2)
+
+
+def _shape(obj):
+    """Cấu trúc JSON bỏ chuỗi: khoá, độ dài list, số — để kiểm tra bản dịch không làm đổi dữ liệu."""
+    if isinstance(obj, dict):
+        return {k: _shape(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_shape(v) for v in obj]
+    return "s" if isinstance(obj, str) else obj
+
+
+def _strip_fence(text: str) -> str:
+    return re.sub(r"^```[a-z]*\n|\n?```$", "", text.strip())
+
+
+def _translate_table(block: str, target: str, gateway: LLMGateway, model_name: str | None) -> str:
+    out = _llm_translate(block, target, gateway, model_name, "Markdown table (keep every '|' and the separator row exactly)")
+    if out:
+        out = _strip_fence(out)
+        a, b = block.strip().split("\n"), out.split("\n")
+        if len(a) == len(b) and all(x.count("|") == y.count("|") for x, y in zip(a, b)):
+            return out
+    return block
+
+
+def _translate_heading(line: str, target: str, gateway: LLMGateway, model_name: str | None) -> str:
+    hashes, _, title = line.partition(" ")
+    out = _llm_translate(title, target, gateway, model_name, "section heading (output the heading text only)")
+    out = (out or "").strip().strip("#").strip()
+    return f"{hashes} {out}" if out and "\n" not in out and not _is_foreign_short(out, target) else line
+
+
+def _translate_json_block(kind: str, body: str, target: str, gateway: LLMGateway, model_name: str | None) -> str:
+    """Dịch các giá trị chuỗi (caption, nhãn, tên cột…) của khối table/chart; từ chối nếu cấu trúc/số đổi."""
+    try:
+        spec = json.loads(body)
+    except ValueError:
+        return body
+    out = _llm_translate(body, target, gateway, model_name, "JSON (translate only human-readable string values; keep keys, numbers and structure identical)")
+    try:
+        new = json.loads(_strip_fence(out or ""))
+    except ValueError:
+        return body
+    return json.dumps(new, ensure_ascii=False) if _shape(new) == _shape(spec) else body
+
+
+def _translate_mermaid(body: str, target: str, gateway: LLMGateway, model_name: str | None) -> str:
+    out = _llm_translate(body, target, gateway, model_name, "Mermaid diagram (translate only the quoted node labels; keep ids, arrows and syntax identical)")
+    if out:
+        out = _strip_fence(out)
+        if not validate_mermaid(out) and out.count("-->") == body.count("-->") and len(out.split("\n")) == len(body.strip().split("\n")):
+            return out
+    return body
+
+
+def _translate_lines(part: str, target: str, gateway: LLMGateway, model_name: str | None) -> str:
+    """Tiêu đề '#…' và khối bảng '|…' (bị bỏ qua ở bước đoạn văn) — dịch riêng, kiểm tra cấu trúc."""
+    lines, out, i = part.split("\n"), [], 0
+    while i < len(lines):
+        line = lines[i]
+        if line.lstrip().startswith("|"):
+            j = i
+            while j < len(lines) and lines[j].lstrip().startswith("|"):
+                j += 1
+            block = "\n".join(lines[i:j])
+            out.append(_translate_table(block, target, gateway, model_name) if _is_foreign_short(block, target) else block)
+            i = j
+            continue
+        if re.match(r"^#{1,6}\s", line) and _is_foreign_short(line, target):
+            line = _translate_heading(line, target, gateway, model_name)
+        out.append(line)
+        i += 1
+    return "\n".join(out)
+
+
 def translate_foreign_paragraphs(text: str, target: str, gateway: LLMGateway | None, model_name: str | None) -> str:
-    """Dịch các đoạn lẫn ngôn ngữ khác về ngôn ngữ đích (bỏ qua khối code/bảng/công thức, mục References)."""
+    """Dịch mọi chỗ lẫn ngôn ngữ về ngôn ngữ đích: đoạn văn, tiêu đề, bảng Markdown, khối table/chart JSON, nhãn mermaid.
+
+    Bỏ qua khối code, công thức $$ và mục References; mọi bản dịch cấu trúc đều được kiểm tra rồi mới thay.
+    """
     if gateway is None:
         return text
     body, sep, refs = text.partition("\n## References")
     parts = re.split(r"(```.*?```|\$\$.*?\$\$)", body, flags=re.DOTALL)
     for i, part in enumerate(parts):
         if i % 2:
+            fence = re.match(r"```(table|chart|mermaid)[ \t]*\n(.*?)\n?```$", part, re.DOTALL)
+            if fence and _is_foreign_short(fence.group(2), target):
+                kind, inner = fence.groups()
+                new = (_translate_mermaid if kind == "mermaid" else lambda b, *a: _translate_json_block(kind, b, *a))(inner, target, gateway, model_name)
+                parts[i] = f"```{kind}\n{new.strip()}\n```"
             continue
-        for p in part.split("\n\n"):
-            if _skip_paragraph(p) or not is_foreign_paragraph(p, target):
+        for chunk in part.split("\n\n"):
+            lines = chunk.split("\n")
+            k = 0
+            while k < len(lines) and lines[k].lstrip().startswith("#"):  # tiêu đề dính liền đoạn văn: dịch riêng ở _translate_lines
+                k += 1
+            p = "\n".join(lines[k:])
+            if _skip_paragraph(p) or not (_is_foreign_text(p, target) or _is_foreign_short(p, target)):
                 continue
-            try:
-                out = gateway.generate(
-                    messages=[
-                        Message(
-                            role="system",
-                            content=(
-                                f"Translate to {language_name(target)} in formal academic register. Keep markdown, citations [n], numbers, "
-                                "LaTeX, code, proper names and method/model acronyms unchanged. Output only the translation."
-                            ),
-                        ),
-                        Message(role="user", content=p),
-                    ],
-                    model_name=model_name,
-                ).text.strip()
-            except Exception as e:
-                logger.warning("Translate call failed: %s", e)
-                continue
-            if out and not is_foreign_paragraph(out, target):
+            out = _llm_translate(p, target, gateway, model_name, "text")
+            if out and not _is_foreign_text(out, target) and not _is_foreign_short(out, target):
                 part = part.replace(p, out)
-        parts[i] = part
+        parts[i] = _translate_lines(part, target, gateway, model_name)
     return "".join(parts) + sep + refs
 
 
@@ -276,6 +421,7 @@ def postprocess_report(
     model_name: str | None,
     language: str = "en",
     figures: list[dict] | None = None,
+    evidence_text: str = "",
 ) -> str:
     """Kiểm chứng/sửa mọi khối mermaid, table, chart, image; dịch đoạn lẫn Việt; chèn biểu đồ ledger nếu thiếu."""
     used_figures: set[str] = set()
@@ -303,6 +449,9 @@ def postprocess_report(
 
     report = _FENCE_RE.sub(_fix, report)
     report = translate_foreign_paragraphs(report, language, gateway, model_name)
+    report, dropped = drop_ungrounded_claims(report, draft, evidence_text)
+    for sent in dropped:
+        logger.warning("Gỡ câu có số liệu không có trong evidence: %s", sent[:160])
 
     if "```chart" not in report:
         chart = build_ledger_chart(draft)
