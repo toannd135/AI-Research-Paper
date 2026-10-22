@@ -66,13 +66,20 @@ def run_research(task_id: str) -> dict:
     try:
         task = db.get(ResearchTask, task_id)
         if task is None:
-            raise ValueError(f"ResearchTask {task_id} không tồn tại")
+            # Phiên đã bị xoá khi tác vụ còn nằm trong hàng đợi: bỏ qua, không coi là lỗi.
+            logger.info("Research task %s không còn tồn tại, bỏ qua", task_id)
+            return {"task_id": task_id, "status": "deleted"}
 
         task.status = ResearchStatus.PROCESSING.value
         task.error = None
         db.commit()
 
         try:
+            from app.api.models.user import User
+            from app.core.scope import allowed_paper_ids_for, set_allowed_paper_ids
+
+            owner = db.get(User, task.user_id) if task.user_id else None
+            set_allowed_paper_ids(allowed_paper_ids_for(db, owner))
             question = task.refined_question or task.question
             state = run_graph(question)
 
@@ -100,4 +107,7 @@ def run_research(task_id: str) -> dict:
             db.commit()
             raise
     finally:
+        from app.core.scope import set_allowed_paper_ids
+
+        set_allowed_paper_ids(None)
         db.close()

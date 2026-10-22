@@ -220,6 +220,7 @@ class ChatRequest(BaseModel):
     question: str
     paper_id: str | None = None
     conversation_id: str | None = None
+    research_task_id: str | None = None
     model: str | None = None
 
 

@@ -3,7 +3,7 @@
 import json
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -11,7 +11,10 @@ logger = logging.getLogger(__name__)
 
 from app.agent.clarify import clarify
 from app.ai.llm_gateway.base import LLMGatewayError
+from app.api.deps import can_access, get_current_user, get_current_user_or_query_token
+from app.api.models.conversation import Conversation
 from app.api.models.research_task import ResearchTask
+from app.api.models.user import ROLE_ADMIN, User
 from app.core.database import get_db
 from app.core.schemas import (
     Citation,
@@ -22,7 +25,7 @@ from app.core.schemas import (
 )
 from app.pipeline.tasks import run_research
 
-router = APIRouter(prefix="/research", tags=["research"])
+router = APIRouter(prefix="/research", tags=["research"], dependencies=[Depends(get_current_user)])
 
 
 @router.get("/", include_in_schema=False)
@@ -32,8 +35,11 @@ def list_research(
     offset: int = Query(default=0, ge=0),
     status: ResearchStatus | None = None,
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     query = db.query(ResearchTask)
+    if user.role != ROLE_ADMIN:
+        query = query.filter(ResearchTask.user_id == user.id)
     if status is not None:
         query = query.filter(ResearchTask.status == status.value)
     total = query.count()
@@ -58,7 +64,9 @@ def list_research(
 
 
 @router.post("/", response_model=ResearchTaskResponse | ResearchClarificationResponse)
-def create_research(payload: ResearchRequest, db: Session = Depends(get_db)):
+def create_research(
+    payload: ResearchRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+):
     try:
         result = clarify(payload.question, payload.clarification_answers)
     except LLMGatewayError as exc:
@@ -72,6 +80,7 @@ def create_research(payload: ResearchRequest, db: Session = Depends(get_db)):
         clarification_answers=json.dumps(payload.clarification_answers) if payload.clarification_answers else None,
         refined_question=result["refined_question"],
         status=ResearchStatus.PENDING.value,
+        user_id=user.id,
     )
     db.add(task)
     db.commit()
@@ -85,9 +94,11 @@ def create_research(payload: ResearchRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/{task_id}", response_model=ResearchTaskResponse)
-def get_research(task_id: str, db: Session = Depends(get_db)) -> ResearchTaskResponse:
+def get_research(
+    task_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> ResearchTaskResponse:
     task = db.get(ResearchTask, task_id)
-    if task is None:
+    if task is None or not can_access(user, task.user_id):
         raise HTTPException(status_code=404, detail="Research task không tồn tại")
 
     citations = [Citation(**c) for c in json.loads(task.citations)] if task.citations else []
@@ -104,15 +115,31 @@ def get_research(task_id: str, db: Session = Depends(get_db)) -> ResearchTaskRes
     )
 
 
+@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_research(
+    task_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> Response:
+    """Xoá phiên nghiên cứu (kể cả đang chạy) cùng hội thoại hỏi đáp gắn với nó."""
+    task = db.get(ResearchTask, task_id)
+    if task is None or not can_access(user, task.user_id):
+        raise HTTPException(status_code=404, detail="Research task không tồn tại")
+    for conversation in db.query(Conversation).filter(Conversation.research_task_id == task_id).all():
+        db.delete(conversation)
+    db.delete(task)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/{task_id}/pdf")
 def export_research_pdf(
     task_id: str,
     engine: str = "html",
     columns: int = Query(default=2, ge=1, le=2),
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user_or_query_token),
 ) -> Response:
     task = db.get(ResearchTask, task_id)
-    if task is None:
+    if task is None or not can_access(user, task.user_id):
         raise HTTPException(status_code=404, detail="Research task không tồn tại")
     if not task.report:
         raise HTTPException(status_code=409, detail="Research task chưa có báo cáo")

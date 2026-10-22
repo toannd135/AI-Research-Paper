@@ -8,8 +8,9 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import chat, papers, research, sources
+from app.api.routes import auth, chat, papers, research, sources
 from app.core.config import get_settings
+from app.core.database import SessionLocal
 from app.core.logging import setup_logging
 
 setup_logging()
@@ -17,9 +18,20 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
+def _seed_admin() -> None:
+    try:
+        with SessionLocal() as db:
+            auth.ensure_admin(db)
+    except Exception:  # DB chưa sẵn sàng/chưa migrate không được chặn API khởi động
+        logger.exception("Không tạo được tài khoản admin ban đầu (đã chạy alembic upgrade head chưa?)")
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
+    if settings.env != "local" and settings.jwt_secret.startswith("dev-only"):
+        logger.error("JWT_SECRET đang là giá trị mặc định — hãy đặt JWT_SECRET riêng trước khi triển khai")
+    _seed_admin()
     logger.info("paperai API khởi động (env=%s, upload_dir=%s)", settings.env, settings.upload_dir)
     yield
 
@@ -39,6 +51,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(papers.router)
 app.include_router(chat.router)
 app.include_router(research.router)

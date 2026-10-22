@@ -1,12 +1,14 @@
 """GET /sources/search — tìm nguồn học thuật thật từ OpenAlex theo chủ đề nghiên cứu."""
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+
+from app.api.deps import get_current_user
 
 from app.ai.external.openalex_client import OpenAlexError, search_works
 from app.ai.external.openalex_mapper import build_source_search_response
 from app.core.schemas import SourceSearchResponse
 
-router = APIRouter(prefix="/sources", tags=["sources"])
+router = APIRouter(prefix="/sources", tags=["sources"], dependencies=[Depends(get_current_user)])
 
 
 @router.get("/search", response_model=SourceSearchResponse)

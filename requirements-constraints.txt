@@ -149,3 +149,6 @@ yarl==1.25.1
 zstandard==0.25.0
 markdown==3.11.2
 playwright==1.64.0
+
+PyJWT==2.12.1
+bcrypt==5.0.0

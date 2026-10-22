@@ -34,7 +34,9 @@ def client():
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
-    yield TestClient(app)
+    test_client = TestClient(app)
+    test_client.session_factory = TestingSessionLocal
+    yield test_client
     app.dependency_overrides.clear()
 
 
@@ -146,3 +148,29 @@ def test_list_chat_models_reports_availability(mock_get_settings, client):
     mock_get_settings.return_value.openrouter_api_key = ""
     models = {m["id"]: m for m in client.get("/chat/models").json()}
     assert models["openrouter:vendor/primary"]["available"] is False
+
+
+@patch("app.api.routes.chat.build_gateway")
+@patch("app.api.routes.chat.rerank")
+@patch("app.api.routes.chat.search_hybrid")
+def test_conversation_is_restorable_by_research_task(mock_hybrid, mock_rerank, mock_build_gateway, client):
+    mock_hybrid.return_value = _candidates()
+    mock_rerank.return_value = _candidates()
+    mock_build_gateway.return_value = _fake_gateway(text="Câu trả lời.")
+
+    from app.api.models.research_task import ResearchTask
+
+    with client.session_factory() as db:
+        db.add(ResearchTask(id="task-1", question="q", status="done"))
+        db.commit()
+
+    assert client.get("/conversations/by-research/task-1").json()["messages"] == []
+
+    client.post("/chat", json={"question": "Hỏi thêm?", "research_task_id": "task-1"})
+
+    body = client.get("/conversations/by-research/task-1").json()
+    assert [(m["role"], m["content"]) for m in body["messages"]] == [
+        ("user", "Hỏi thêm?"),
+        ("assistant", "Câu trả lời."),
+    ]
+    assert body["messages"][1]["citations"], "trích dẫn phải được lưu cùng câu trả lời"

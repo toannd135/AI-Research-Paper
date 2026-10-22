@@ -11,6 +11,7 @@ class ResearchTask(Base):
     __tablename__ = "research_tasks"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     question: Mapped[str] = mapped_column(Text, nullable=False)
     clarification_answers: Mapped[str | None] = mapped_column(Text, nullable=True)
     refined_question: Mapped[str | None] = mapped_column(Text, nullable=True)

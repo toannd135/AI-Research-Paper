@@ -45,3 +45,6 @@ httpx
 pytest
 pytest-asyncio
 ruff
+
+PyJWT
+bcrypt

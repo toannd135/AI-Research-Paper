@@ -40,7 +40,7 @@ def client():
 @pytest.mark.parametrize("params,columns", [({}, 2), ({"columns": "2"}, 2), ({"columns": "1"}, 1)])
 def test_pdf_export_parses_column_query(client, params, columns):
     db = MagicMock()
-    db.get.return_value = SimpleNamespace(report="# Paper\n\n## 1. Method\nEvidence.", citations=None)
+    db.get.return_value = SimpleNamespace(report="# Paper\n\n## 1. Method\nEvidence.", citations=None, user_id=None)
     app.dependency_overrides[get_db] = lambda: db
     with patch("app.pipeline.export.pdf_renderer.report_to_pdf", return_value=b"%PDF-test") as render:
         response = client.get("/research/test-task/pdf", params=params)
@@ -161,3 +161,13 @@ def test_research_history_paginates_filters_and_preserves_reports(client):
     assert restored["question"] == "Question 2"
     assert restored["refined_question"] == "Refined 2"
     assert restored["report"] == "# Saved report"
+
+
+def test_delete_research_removes_task_even_when_processing(client):
+    session = next(app.dependency_overrides[get_db]())
+    session.add(ResearchTask(id="running-1", question="Q", status="processing"))
+    session.commit()
+
+    assert client.delete("/research/running-1").status_code == 204
+    assert client.get("/research/running-1").status_code == 404
+    assert client.delete("/research/running-1").status_code == 404

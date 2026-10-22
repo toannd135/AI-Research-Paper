@@ -62,6 +62,16 @@ class Settings(BaseSettings):
     hybrid_beta: float = 0.3
     context_token_limit: int = 8000
 
+    # --- Auth ---
+    # Đổi JWT_SECRET ở môi trường thật: `python -c "import secrets; print(secrets.token_urlsafe(48))"`
+    jwt_secret: str = "dev-only-secret-change-me-before-deploy-0123456789"
+    jwt_expire_minutes: int = 60 * 24 * 7
+    # Nếu đặt cả hai, tự tạo tài khoản admin lúc khởi động khi email đó chưa tồn tại.
+    admin_email: str | None = None
+    admin_password: str | None = None
+    # Cho phép tự đăng ký (tài khoản mới luôn có vai trò user).
+    allow_registration: bool = True
+
     # --- Upload ---
     max_upload_mb: int = 50
     upload_dir: str = "data/papers"
