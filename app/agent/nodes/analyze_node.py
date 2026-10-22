@@ -2,6 +2,7 @@
 
 from app.agent.format_sanitizer import sanitize_academic_markdown
 from app.agent.language import language_name
+from app.agent.profiles import audience_profile, field_profile
 from app.agent.state import ResearchState
 from app.ai.context_builder import build_context
 from app.ai.llm_gateway.base import LLMGateway, Message
@@ -30,7 +31,7 @@ _SURVEY_ANALYZE_PROMPT = (
 )
 
 _NOVEL_ANALYZE_PROMPT = (
-    "Bạn là nhà khoa học máy tính và AI researcher độc lập xuất sắc. Dựa trên các công trình và evidence trong context, "
+    "Bạn là {role} độc lập xuất sắc. Dựa trên các công trình và evidence trong context, "
     "hãy thực hiện phân tích và phát triển một bài báo khoa học cải tiến / phương pháp mới hoàn chỉnh (Original Novel Research Paper):\n"
     "1. Phân tích Baseline & Điểm nghẽn (Baseline Analysis & Failure Modes): phân tích kỹ lưỡng điểm yếu, sự hạn chế và thất bại của các phương pháp hiện hành trong context [n].\n"
     "2. Đề xuất Phương pháp / Kiến trúc mới (Proposed Methodology): đặt tên cụ thể cho phương pháp/mô hình mới (Acronym), thiết lập bài toán và công thức toán học chính xác (Mathematical Formulation), mô tả nguyên lý hoạt động của từng thành phần.\n"
@@ -51,12 +52,17 @@ def analyze_node(state: ResearchState, llm: LLMGateway | None = None) -> Researc
     context_text, citations = build_context(state.get("evidence", []))
     mode = state.get("research_mode", "survey")
 
-    system_prompt = _NOVEL_ANALYZE_PROMPT if mode == "novel_research" else _SURVEY_ANALYZE_PROMPT
+    field, audience = field_profile(state), audience_profile(state)
+    system_prompt = (
+        _NOVEL_ANALYZE_PROMPT.replace("{role}", field["role"]) if mode == "novel_research" else _SURVEY_ANALYZE_PROMPT
+    )
 
     mode_label = "Phát triển công trình nghiên cứu cải tiến (Novel Research Paper)" if mode == "novel_research" else "Tổng quan nghiên cứu chuyên sâu (Academic Literature Survey)"
     user_content = (
         f"Chế độ nghiên cứu: {mode_label}\n"
-        f"Câu hỏi nghiên cứu: {state['question']}\n\n"
+        f"Câu hỏi nghiên cứu: {state['question']}\n"
+        f"Lĩnh vực: {field['label']} (metric chuẩn: {field['metrics']})\n"
+        f"Đối tượng đọc: {audience['label']}\n\n"
         f"Context tài liệu đã thu thập:\n{context_text}"
     )
     user_content += (

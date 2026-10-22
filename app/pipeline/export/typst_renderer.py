@@ -17,17 +17,41 @@ from __future__ import annotations
 import json
 import logging
 import re
+import shutil
 import tempfile
 from pathlib import Path
 from typing import Any
 
 import typst
 
+from app.pipeline.figures import resolve_figure_path
+
 logger = logging.getLogger(__name__)
 
 def _escape_typst_references(text: str) -> str:
-    """Keep Markdown at-signs (e.g. Recall@10) as literal text in Typst."""
-    return re.sub(r"(?<!\\)@", r"\\@", text)
+    """Keep Markdown at-signs (e.g. Recall@10) and angle brackets (e.g. p<0.05) as literal text in Typst."""
+    text = re.sub(r"(?<!\\)@", r"\\@", text)
+    # '<' đứng ngay trước chữ/số mở một nhãn Typst chưa đóng: 'p<0.05' làm hỏng cả tài liệu.
+    return re.sub(r"(?<!\\)<(?=\w)", r"\\<", text)
+
+
+_LATEX_HINT_RE = re.compile(r"[\\=^_{]")
+
+
+def _normalize_latex_math_delimiters(md: str) -> str:
+    r"""LLM hay viết \[ ... \] và \( ... \) thay cho $$ ... $$ và $ ... $; đổi sang dạng bộ chuyển đổi hiểu được.
+
+    Chỉ đổi khi nội dung giống LaTeX (có \, =, ^, _, {): '\[1\]' là trích dẫn viết thoát, không phải công thức.
+    """
+
+    def display(m: re.Match) -> str:
+        return f"\n$$ {m.group(1).strip()} $$\n" if _LATEX_HINT_RE.search(m.group(1)) else m.group(0)
+
+    def inline(m: re.Match) -> str:
+        return f"${m.group(1).strip()}$" if _LATEX_HINT_RE.search(m.group(1)) else m.group(0)
+
+    md = re.sub(r"\\\[(.+?)\\\]", display, md, flags=re.DOTALL)
+    return re.sub(r"\\\((.+?)\\\)", inline, md)
 
 
 def _replace_macro_braces(macro_name: str, target_name: str, s: str) -> str:
@@ -107,7 +131,9 @@ def _quote_bare_words(s: str) -> str:
         def repl(m: re.Match) -> str:
             word = m.group(0)
             return word if word in _TYPST_UPPER_SYMBOLS else f'"{word}"'
-        return re.sub(r"(?<![A-Za-z0-9_.\\])[A-Z][A-Za-z0-9]{2,}(?![A-Za-z0-9_.(])", repl, segment)
+        segment = re.sub(r"(?<![A-Za-z0-9_.\\])[A-Z][A-Za-z0-9]{2,}(?![A-Za-z0-9_.(])", repl, segment)
+        # Hai chữ hoa khác nhau (QK, PE) cũng là biến không tồn tại; hai chữ hoa giống nhau (RR, NN, ZZ) là ký hiệu của Typst.
+        return re.sub(r'(?<![A-Za-z0-9_.\\"])([A-Z])(?!\1)([A-Z])(?![A-Za-z0-9.("])', lambda m: f'"{m.group(0)}"', segment)
 
     parts = re.split(r'("[^"]*")', s)
     return "".join(part if part.startswith('"') else fix(part) for part in parts)
@@ -472,6 +498,7 @@ def markdown_to_typst(
     """Convert Academic Markdown into a complete, standalone Typst document."""
     if work_dir is None:
         work_dir = Path(".")
+    report_md = _normalize_latex_math_delimiters(report_md)
 
     # 1. Extract Front Matter
     title_match = re.search(r"^#\s+(.+)$", report_md, re.MULTILINE)
@@ -521,8 +548,8 @@ def markdown_to_typst(
     for i, m_str in enumerate(abs_math_placeholders):
         abstract = abstract.replace(f"ABSMATH{i}END", m_str)
 
-    # Find where Section 1 / Body begins
-    sec1_match = re.search(r"\n##\s+(?:1\.|Introduction)", report_md)
+    # Find where Section 1 / Body begins (Executive Summary của bản cho người đi làm đứng trước Section 1)
+    sec1_match = re.search(r"\n##\s+(?:1\.|Introduction|Executive Summary)", report_md)
     body_md = report_md[sec1_match.start():] if sec1_match else report_md
 
     # 2. Extract block elements to placeholders
@@ -551,15 +578,41 @@ def markdown_to_typst(
             raise ValueError(f"Không render được biểu đồ: {e}") from e
     body_md = re.sub(r"```chart[ \t]*\n(.*?)```", repl_chart, body_md, flags=re.DOTALL)
 
-    # 2b. Mermaid blocks
+    # 2a'. Real images extracted from uploaded PDFs (path đã được postprocess gắn; chỉ nhận file trong thư mục figures)
+    def repl_image(m):
+        try:
+            spec = json.loads(m.group(1).strip())
+        except ValueError:
+            logger.warning("Bỏ khối image không phải JSON")
+            return ""
+        src = resolve_figure_path(spec.get("path")) if isinstance(spec, dict) else None
+        if src is None:
+            logger.warning("Bỏ khối image không có file hợp lệ: %s", spec.get("ref") if isinstance(spec, dict) else spec)
+            return ""
+        fig_counter[0] += 1
+        img_name = f"img_{fig_counter[0]}.png"
+        shutil.copyfile(src, work_dir / img_name)
+        caption = _escape_typst_references(_format_table_inline(str(spec.get("caption", ""))))
+        source = _escape_typst_references(_format_table_inline(str(spec.get("source", ""))))
+        source_part = f' #text(size: 0.85em, style: "italic")[Source: {source}]' if source else ""
+        return save_block(
+            f'#figure(\n  image("{img_name}", width: 90%),\n  caption: [{caption}{source_part}]\n)'
+        )
+    body_md = re.sub(r"```image[ \t]*\n(.*?)```", repl_image, body_md, flags=re.DOTALL)
+
+    # 2b. Mermaid blocks — chú thích lấy từ dòng '**Figure N: ...**' ngay phía trên (nếu có)
     def repl_mermaid(m):
         fig_counter[0] += 1
-        code = m.group(1).strip()
+        code = m.group(2).strip()
         svg_name = f"flow_{fig_counter[0]}.svg"
         svg_path = work_dir / svg_name
         render_mermaid_to_svg(code, svg_path)
-        return save_block(f'#figure(\n  image("{svg_name}", width: 100%),\n  caption: [System Architectural and Evaluation Pipeline Overview.]\n)')
-    body_md = re.sub(r"```mermaid[ \t]*\n(.*?)```", repl_mermaid, body_md, flags=re.DOTALL)
+        caption = _escape_typst_references(_format_table_inline((m.group(1) or "").strip()))
+        return save_block(f'#figure(\n  image("{svg_name}", width: 100%),\n  caption: [{caption}]\n)')
+    body_md = re.sub(
+        r"(?:^[ \t]*\*\*(?:Figure|Fig\.|Hình)\s*\d+\s*[:.]\s*([^\n]*?)\*\*[ \t]*\n+)?```mermaid[ \t]*\n(.*?)```",
+        repl_mermaid, body_md, flags=re.DOTALL | re.MULTILINE,
+    )
 
     # JSON tables are academic tables, not code samples. Render grouped headers and row spans.
     def repl_json_table(m):
@@ -570,9 +623,10 @@ def markdown_to_typst(
             raise ValueError("Bảng JSON có số cột không hợp lệ")
         cells = []
         groups = spec.get("header_groups", [])
+        if groups and sum(int(group["span"]) for group in groups) != len(columns):
+            logger.warning("Bỏ nhóm tiêu đề bảng JSON không khớp %d cột", len(columns))
+            groups = []
         if groups:
-            if sum(int(group["span"]) for group in groups) != len(columns):
-                raise ValueError("Nhóm tiêu đề bảng JSON không khớp số cột")
             for group in groups:
                 label = _format_table_inline(str(group.get("label", "")))
                 cells.append(f'table.cell(colspan: {int(group["span"])})[{label}]')
@@ -702,6 +756,47 @@ def markdown_to_typst(
     return typst_doc
 
 
+_UNKNOWN_VARIABLE_RE = re.compile(r"unknown variable: (\w+)")
+_MATH_SEGMENT_RE = re.compile(r"(?<!\\)\$(.*?)(?<!\\)\$", re.DOTALL)
+MAX_MATH_REPAIRS = 12
+
+
+def _quote_word_in_math(typst_src: str, name: str) -> str:
+    """Đặt tên biến lạ (pos, softmax...) trong dấu nháy ở mọi đoạn toán $...$, bỏ qua chuỗi đã có nháy."""
+    word_re = re.compile(rf'(?<![A-Za-z0-9."\\]){re.escape(name)}(?![A-Za-z0-9."])')  # '_' là chỉ số dưới, không thuộc tên
+
+    def fix_segment(m: re.Match) -> str:
+        parts = re.split(r'("[^"]*")', m.group(1))
+        body = "".join(p if p.startswith('"') else word_re.sub(f'"{name}"', p) for p in parts)
+        return f"${body}$"
+
+    return _MATH_SEGMENT_RE.sub(fix_segment, typst_src)
+
+
+def _compile_with_math_repair(typ_path: Path) -> bytes:
+    """Biên dịch; nếu Typst báo 'unknown variable: X' (LLM viết từ trần trong công thức) thì quote X rồi thử lại.
+
+    Hết lượt sửa hoặc không sửa được thì ném lại lỗi gốc để nơi gọi chuyển sang bộ render dự phòng.
+    """
+    repaired: set[str] = set()
+    for _ in range(MAX_MATH_REPAIRS + 1):
+        try:
+            return typst.compile(typ_path)
+        except typst.TypstError as exc:
+            found = _UNKNOWN_VARIABLE_RE.search(str(exc))
+            if not found or found.group(1) in repaired or len(repaired) >= MAX_MATH_REPAIRS:
+                raise
+            name = found.group(1)
+            src = typ_path.read_text(encoding="utf-8")
+            fixed = _quote_word_in_math(src, name)
+            if fixed == src:
+                raise
+            repaired.add(name)
+            logger.info("Typst: quote biến lạ %r trong công thức và biên dịch lại", name)
+            typ_path.write_text(fixed, encoding="utf-8")
+    raise RuntimeError("unreachable")
+
+
 def render_report_to_pdf(
     report_md: str,
     citations: list[dict[str, Any]] | None = None,
@@ -714,7 +809,7 @@ def render_report_to_pdf(
         typ_path = work_dir / "paper.typ"
         typ_path.write_text(typst_src, encoding="utf-8")
 
-        pdf_bytes = typst.compile(typ_path)
+        pdf_bytes = _compile_with_math_repair(typ_path)
 
         if output_pdf_path:
             out = Path(output_pdf_path)

@@ -22,8 +22,10 @@ from app.agent.evidence.citation_cleaner import clean_and_deduplicate_citations
 from app.agent.evidence.dataset_catalog import get_dataset_grounding_context
 from app.agent.format_sanitizer import sanitize_academic_markdown
 from app.agent.language import language_name
+from app.agent.profiles import adaptation_rules, audience_profile, field_profile, missing_end_sections
 from app.agent.report_postprocess import postprocess_report
 from app.agent.state import ResearchState
+from app.pipeline.figures import load_figures
 from app.ai.llm_gateway.base import LLMGateway, Message
 from app.ai.llm_gateway.default import get_default_agent_gateway
 
@@ -43,6 +45,14 @@ _CHART_BLOCK_RULE = """   - FIGURES: visualize quantitative values that already 
      {"type": "bar", "caption": "What is shown (source [n])", "labels": ["A", "B"], "series": [{"name": "F1 (%)", "values": [90.0, 84.1]}], "y_label": "%"}
      type is one of bar | barh | line | stacked_barh (parts of a whole per row, e.g. win / tie / loss %). Each series has exactly one value per label; use null (never 0) for a missing value. Never invent values; if there is not enough real data, omit the chart.
 """
+
+_IMAGE_BLOCK_RULE = """   - REAL FIGURES: to show a real image from the AVAILABLE FIGURES list, write a ```image fenced block containing JSON:
+     {"ref": "F2", "caption": "What the image shows and why it matters ([n])"}
+     Use only refs from the list, at most once each, placed where the text discusses them; describe only what the original caption supports. Never refer to images that are not in the list.
+"""
+
+# Số hình thật tối đa đưa vào prompt (tránh prompt quá dài với model free).
+MAX_PROMPT_FIGURES = 8
 
 _MERMAID_BLOCK_RULE = """   - MERMAID SYNTAX: start with `graph TD` or `graph LR`; give every node a short ASCII id (A, B1, ...) and wrap each label in double quotes, e.g. A["Retriever [3]"] --> B["Reranker"]; no parentheses, brackets, semicolons, pipes or Unicode math symbols inside labels; no `direction` lines; close every `subgraph` with `end`; labels in the manuscript language; at most ~12 nodes. Put a '**Figure N: Caption**' line directly above the block.
 """
@@ -92,7 +102,30 @@ STRICT PEER-REVIEW PUBLICATION STANDARDS (MANDATORY ACROSS ALL SECTIONS):
         )
     if _JUDGE_TOPIC_RE.search(f"{state.get('question', '')} {state.get('draft', '')}"):
         rules += f"9. BENCHMARK DATASET GROUNDING:\n{get_dataset_grounding_context()}\n"
+    rules += adaptation_rules(state)
+    figures = state.get("figures") or []
+    if figures:
+        listing = "\n".join(
+            f"   - [{f['id']}] from [{f['cite']}], page {f['page']}: {f['caption']}" for f in figures
+        )
+        rules += f"AVAILABLE FIGURES (real images extracted from the cited papers):\n{listing}\n{_IMAGE_BLOCK_RULE}"
     return rules
+
+
+def _collect_figures(citations: list[Any]) -> list[dict]:
+    """Hình thật của các paper nội bộ được trích dẫn, theo thứ tự trích dẫn; id F1..Fn, cite = số [n] đầu tiên."""
+    first_cite: dict[str, int] = {}
+    for i, c in enumerate(citations, start=1):
+        pid = getattr(c, "paper_id", "") or (c.get("paper_id") if isinstance(c, dict) else "")
+        if pid and pid not in first_cite:
+            first_cite[pid] = i
+    figures: list[dict] = []
+    for pid, cite in first_cite.items():
+        for fig in load_figures(pid):
+            if len(figures) >= MAX_PROMPT_FIGURES:
+                return figures
+            figures.append({**fig, "id": f"F{len(figures) + 1}", "cite": cite})
+    return figures
 
 
 # Cấu trúc từng chặng theo chế độ. Tiêu đề viết HOA là marker ổn định cho từng chặng.
@@ -192,6 +225,16 @@ _STAGE_STRUCTURES: dict[str, dict[str, str]] = {
 
 def _structure(mode: str, stage: str) -> tuple[str, str]:
     return _STAGE_STRUCTURES["novel_research" if mode == "novel_research" else "survey"][stage]
+
+
+def _stage_structure(state: ResearchState, mode: str, stage: str) -> tuple[str, str]:
+    """Cấu trúc chặng + mục bổ sung theo lĩnh vực (Section 4) và đối tượng đọc (cuối bài)."""
+    title, structure = _structure(mode, stage)
+    if stage == "stage4" and field_profile(state)["stage4"]:
+        structure += "\n" + field_profile(state)["stage4"]
+    if stage == "stage5" and audience_profile(state)["end"]:
+        structure += "\n\nAFTER THE CONCLUSION, add these unnumbered sections:\n" + audience_profile(state)["end"]
+    return title, structure
 
 
 def _mode_label(mode: str) -> str:
@@ -320,7 +363,8 @@ def _generate_stage_1_front_matter_and_intro(
         "## Abstract\n"
         "(Self-contained 200-280 word abstract: context & motivation, gap in existing work, approach/scope, key findings or highlights supported by the evidence, implications. No citations [n] in the abstract.)\n\n"
         "**Keywords:** k1, k2, k3, k4, k5\n\n"
-        "## 1. Introduction\n"
+        + (audience_profile(state)["front"] + "\n\n" if audience_profile(state)["front"] else "")
+        + "## 1. Introduction\n"
         "### 1.1 Motivation & Background\n"
         "(3-4 full paragraphs on the problem's importance and context, using the evidence [n].)\n"
         "### 1.2 Limitations of Existing Work\n"
@@ -344,7 +388,7 @@ def _generate_stage_2_related_work(
     model_name: str | None,
 ) -> str:
     """Stage 2: Section 2 (Related Work / Taxonomy & Conceptual Framework)."""
-    title, structure = _structure(mode, "stage2")
+    title, structure = _stage_structure(state, mode, "stage2")
     system_prompt = (
         f"You are writing {title} for a top-tier peer-reviewed academic paper.\n"
         "Write in rigorous, fluent academic prose in the manuscript language (~1,400 - 1,600 words).\n\n"
@@ -368,7 +412,7 @@ def _generate_stage_3_methodology(
     model_name: str | None,
 ) -> str:
     """Stage 3: Section 3 (Proposed Methodology / In-Depth Technical Methodologies)."""
-    title, structure = _structure(mode, "stage3")
+    title, structure = _stage_structure(state, mode, "stage3")
     system_prompt = (
         f"You are writing {title} for a top-tier peer-reviewed academic paper.\n"
         "Write in rigorous, fluent academic prose in the manuscript language (~2,000 - 2,500 words).\n"
@@ -393,7 +437,7 @@ def _generate_stage_4_experiments(
     model_name: str | None,
 ) -> str:
     """Stage 4: Section 4 (Experiments & Results / Empirical Benchmark Matrix)."""
-    title, structure = _structure(mode, "stage4")
+    title, structure = _stage_structure(state, mode, "stage4")
     system_prompt = (
         f"You are writing {title} for a top-tier peer-reviewed academic paper.\n"
         "Write in rigorous, fluent academic prose in the manuscript language (~1,800 - 2,300 words).\n"
@@ -418,7 +462,7 @@ def _generate_stage_5_discussion_and_conclusion(
     model_name: str | None,
 ) -> str:
     """Stage 5: Section 5 (Discussion, Limitations) and Section 6 (Conclusion)."""
-    title, structure = _structure(mode, "stage5")
+    title, structure = _stage_structure(state, mode, "stage5")
     system_prompt = (
         f"You are writing {title} for a top-tier peer-reviewed academic paper.\n"
         "Write in rigorous, fluent academic prose in the manuscript language (~1,200 - 1,500 words).\n\n"
@@ -432,10 +476,37 @@ def _generate_stage_5_discussion_and_conclusion(
     return _generate(system_prompt, user_prompt, gateway, model_name)
 
 
+# Phần thân đưa vào lời gọi bổ sung; đủ để rút ý chính và thuật ngữ mà không vượt ngữ cảnh model nhỏ.
+MAX_APPENDIX_CONTEXT_CHARS = 24000
+
+
+def _generate_audience_appendix(
+    state: ResearchState,
+    body: str,
+    missing: list[str],
+    references: str,
+    mode: str,
+    gateway: LLMGateway,
+    model_name: str | None,
+) -> str:
+    """Viết riêng các mục cuối bài theo đối tượng đọc mà Stage 5 bỏ sót (Key Takeaways, Glossary, Practical Implications)."""
+    wanted = [part for part in audience_profile(state)["end"].split("\n\n") if any(h in part for h in missing)]
+    system_prompt = (
+        "You are finishing a peer-reviewed paper. Write ONLY the unnumbered sections listed below, in the manuscript language, "
+        "based strictly on the paper text provided (use its claims, numbers and [n] citations; never add new facts).\n\n"
+        f"{_global_standards(state, mode)}\n\n"
+        f"AVAILABLE CITATIONS:\n{references}\n\n"
+        "SECTIONS TO WRITE (keep these exact '## ' headings, in this order, and output nothing else):\n" + "\n\n".join(wanted)
+    )
+    user_prompt = f"Research Question: {state['question']}\n\nPaper text:\n{body[:MAX_APPENDIX_CONTEXT_CHARS]}"
+    return _generate(system_prompt, user_prompt, gateway, model_name)
+
+
 def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> ResearchState:
     """Entrypoint for the Hierarchical Section-by-Section Synthesis Pipeline."""
     citations = state.get("citations", [])
     references_prompt = _format_references_prompt(citations)
+    state = {**state, "figures": _collect_figures(citations)}
     mode = state.get("research_mode", "survey")
 
     gateway, model_name = get_default_agent_gateway(llm)
@@ -484,10 +555,19 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
     ]
     raw_stitched = "\n\n".join(full_markdown_parts)
 
+    missing = missing_end_sections(state, raw_stitched)
+    if missing:
+        logger.warning("Stage 5 bỏ sót mục theo đối tượng %s: %s — gọi bổ sung", state.get("audience"), missing)
+        appendix = _generate_audience_appendix(state, raw_stitched, missing, references_prompt, mode, gateway, model_name)
+        if appendix and not missing_end_sections(state, raw_stitched + "\n\n" + appendix) == missing:
+            raw_stitched += "\n\n" + appendix
+        else:
+            logger.warning("Lời gọi bổ sung không tạo được mục %s", missing)
+
     # Deduplicate citations, remap numbers, and generate clean IEEE references
     updated_text, clean_references = clean_and_deduplicate_citations(citations, raw_stitched)
     updated_text = postprocess_report(
-        updated_text, state.get("draft", ""), gateway, model_name, state.get("language", "en")
+        updated_text, state.get("draft", ""), gateway, model_name, state.get("language", "en"), state["figures"]
     )
     final_text_with_refs = (
         updated_text

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -234,6 +235,12 @@ class ChatResponse(BaseModel):
 class ResearchRequest(BaseModel):
     question: str = Field(..., min_length=3, max_length=2000, description="Câu hỏi nghiên cứu")
     clarification_answers: dict[str, str] | None = None
+    audience: Literal["lecturer", "student", "professional"] = Field(
+        default="lecturer", description="Đối tượng đọc: giảng viên/nhà nghiên cứu, sinh viên, người đi làm"
+    )
+    field: Literal["computing", "computer_vision", "environment", "medicine", "economics", "education"] | None = Field(
+        default=None, description="Lĩnh vực; bỏ trống để hệ thống tự nhận diện"
+    )
 
 
 class ClarificationQuestion(BaseModel):

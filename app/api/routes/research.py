@@ -80,6 +80,8 @@ def create_research(
         question=payload.question,
         clarification_answers=json.dumps(payload.clarification_answers) if payload.clarification_answers else None,
         refined_question=result["refined_question"],
+        audience=payload.audience,
+        field=payload.field,
         status=ResearchStatus.PENDING.value,
         user_id=user.id,
     )

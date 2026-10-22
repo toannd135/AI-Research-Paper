@@ -1,6 +1,7 @@
 """Node lập kế hoạch nghiên cứu: phân loại intent (survey vs novel_research) và sinh search queries đa chiều."""
 
 from app.agent.json_utils import parse_llm_json
+from app.agent.profiles import FIELD_PROFILES, detect_field, normalize_field
 from app.agent.state import ResearchState
 from app.ai.llm_gateway.base import LLMGateway, Message
 from app.ai.llm_gateway.default import get_default_agent_gateway
@@ -17,7 +18,8 @@ _SYSTEM_PROMPT = (
     "   - [Khía cạnh 4]: Các hướng tiếp cận tiên tiến, công thức toán học hoặc kỹ thuật kết hợp (Advanced/Cross-domain Techniques).\n"
     "   - [Khía cạnh 5]: So sánh định lượng và kết quả thực nghiệm SOTA (Empirical Benchmark Comparisons).\n"
     "Mọi truy vấn tìm kiếm PHẢI viết bằng tiếng Anh (kho bài báo quốc tế), dù câu hỏi dùng ngôn ngữ nào.\n"
-    'Chỉ trả lời định dạng JSON hợp lệ: {"mode": "survey" | "novel_research", "queries": ["...", "..."]}, không thêm text nào khác.'
+    f"3. Xác định lĩnh vực ('field'), một trong: {', '.join(FIELD_PROFILES)}.\n"
+    'Chỉ trả lời định dạng JSON hợp lệ: {"mode": "survey" | "novel_research", "field": "...", "queries": ["...", "..."]}, không thêm text nào khác.'
 )
 
 
@@ -53,14 +55,18 @@ def plan_node(state: ResearchState, llm: LLMGateway | None = None) -> ResearchSt
     parsed = parse_llm_json(response.text)
     queries: list[str] = []
     detected_mode = None
+    detected_field = None
 
     if isinstance(parsed, dict):
         queries = [q for q in parsed.get("queries", []) if isinstance(q, str) and q.strip()]
         detected_mode = parsed.get("mode")
+        detected_field = normalize_field(parsed.get("field")) if isinstance(parsed.get("field"), str) else None
 
     if not queries:
         queries = [question]
 
     mode = detect_research_mode(question, detected_mode)
 
-    return {**state, "search_queries": queries, "research_mode": mode}
+    field = normalize_field(state.get("field")) or detected_field or detect_field(question)
+
+    return {**state, "search_queries": queries, "research_mode": mode, "field": field}

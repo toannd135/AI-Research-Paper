@@ -1,6 +1,7 @@
 """POST /papers/upload, GET /papers, GET /papers/{id}, DELETE /papers/{id}, POST /papers/{id}/reprocess."""
 
 import logging
+import shutil
 import uuid
 from pathlib import Path
 
@@ -14,6 +15,7 @@ from app.api.models.user import ROLE_ADMIN, User
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.schemas import PaperListResponse, PaperStatus, PaperStatusResponse, PaperUploadResponse
+from app.pipeline.figures import figures_dir
 from app.pipeline.tasks import process_paper
 
 logger = logging.getLogger(__name__)
@@ -157,6 +159,7 @@ def delete_paper(
         logger.warning("Không xoá được vector của paper %s trong Qdrant: %s", paper_id, exc)
 
     Path(paper.file_path).unlink(missing_ok=True)
+    shutil.rmtree(figures_dir(paper_id), ignore_errors=True)
     db.delete(paper)
     db.commit()
     logger.info("Đã xoá paper %s", paper_id)

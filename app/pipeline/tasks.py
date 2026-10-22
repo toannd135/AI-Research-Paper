@@ -5,6 +5,7 @@ import logging
 from app.core.database import SessionLocal
 from app.core.schemas import PaperStatus
 from app.pipeline.chunking.semantic_chunker import chunk_pages
+from app.pipeline.figures import extract_figures, figures_dir
 from app.pipeline.parser.pdf_parser import parse_pdf
 from app.pipeline.vector_store.qdrant_client import delete_paper, ensure_collection, upsert_chunks
 from app.workers.celery_app import celery_app
@@ -38,6 +39,13 @@ def process_paper(paper_id: str) -> dict:
             ensure_collection(vector_size=len(vectors[0]))
             delete_paper(paper_id)  # idempotent: lập chỉ mục lại không tạo vector trùng
             upsert_chunks(chunks, vectors)
+
+            # Hình thật kèm chú thích để đưa vào bài báo; lỗi trích hình không làm hỏng việc lập chỉ mục.
+            try:
+                figures = extract_figures(paper.file_path, figures_dir(paper_id), source_title=paper.filename)
+                logger.info("Paper %s: trích %d hình có chú thích", paper_id, len(figures))
+            except Exception:
+                logger.warning("Paper %s: không trích được hình", paper_id, exc_info=True)
 
             paper.status = PaperStatus.DONE.value
             db.commit()
@@ -81,7 +89,7 @@ def run_research(task_id: str) -> dict:
             owner = db.get(User, task.user_id) if task.user_id else None
             set_allowed_paper_ids(allowed_paper_ids_for(db, owner))
             question = task.refined_question or task.question
-            state = run_graph(question)
+            state = run_graph(question, audience=task.audience, field=task.field)
 
             from app.agent.format_sanitizer import sanitize_academic_markdown
 

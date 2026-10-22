@@ -6,6 +6,7 @@
 - Công thức $$...$$ và \\(...\\) → KaTeX.
 """
 
+import base64
 import html
 import io
 import json
@@ -241,6 +242,29 @@ def _render_table_html(spec: dict) -> str:
     return f'<table class="spec">{colgroup}<thead>{head}</thead><tbody>{"".join(body)}</tbody></table>'
 
 
+def _render_image_html(body: str) -> str:
+    """Hình thật (PNG trong thư mục figures) nhúng base64; spec lỗi hoặc file ngoài thư mục thì bỏ."""
+    from app.pipeline.figures import resolve_figure_path
+
+    try:
+        spec = json.loads(body)
+    except ValueError:
+        return ""
+    src = resolve_figure_path(spec.get("path")) if isinstance(spec, dict) else None
+    if src is None:
+        logger.warning("Bỏ khối image không có file hợp lệ")
+        return ""
+    data = base64.b64encode(src.read_bytes()).decode("ascii")
+    caption = html.escape(str(spec.get("caption") or ""))
+    if spec.get("source"):
+        caption += f' <i>Source: {html.escape(str(spec["source"]))}</i>'
+    # data-caption được chèn nguyên vào figcaption (html.escape đã escape dấu nháy) → giữ được thẻ <i>
+    return (
+        f'<figure class="fig photo" data-kind="figure" data-caption="{caption}">'
+        f'<img src="data:image/png;base64,{data}" alt="" style="max-width:100%">__CAPTION__</figure>'
+    )
+
+
 def _extract_blocks(md: str) -> tuple[str, list[str]]:
     """Thay khối mermaid/chart/công thức bằng placeholder để Markdown không làm hỏng nội dung."""
     blocks: list[str] = []
@@ -254,6 +278,8 @@ def _extract_blocks(md: str) -> tuple[str, list[str]]:
         kind, body = match.group(1), match.group(2).strip()
         if kind == "mermaid":
             return keep(f'<figure class="fig" data-kind="figure"><pre class="mermaid">{html.escape(body)}</pre>__CAPTION__</figure>')
+        if kind == "image":
+            return keep(_render_image_html(body))
         if kind not in {"chart", "table"}:
             return keep(f'<pre><code class="language-{html.escape(kind)}">{html.escape(body)}</code></pre>')
         if kind == "table":

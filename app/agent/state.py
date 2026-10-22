@@ -16,4 +16,7 @@ class ResearchState(TypedDict, total=False):
     research_mode: str
     language: str  # mã ISO 639-1 của ngôn ngữ bài báo đầu ra (mặc định theo câu hỏi người dùng)
     baseline_analysis: str | None
+    field: str  # khóa FIELD_PROFILES (app/agent/profiles.py); plan_node tự đoán nếu thiếu
+    audience: str  # lecturer | student | professional
+    figures: list[dict]  # hình thật trích từ PDF đã upload, id F1..Fn (synthesize_node)
     report: str

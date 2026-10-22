@@ -10,6 +10,7 @@ from app.agent.nodes.fallback import FALLBACK_MESSAGE
 from app.agent.nodes.plan_node import plan_node
 from app.agent.nodes.search_node import search_node
 from app.agent.nodes.synthesize_node import synthesize_node
+from app.agent.profiles import normalize_audience, normalize_field
 from app.agent.state import ResearchState
 from app.ai.llm_gateway.base import LLMGateway
 from app.core.schemas import PaperRef
@@ -48,10 +49,23 @@ def build_graph(llm: LLMGateway | None = None):
 MANUSCRIPT_LANGUAGE = "en"
 
 
-def run_graph(question: str, llm: LLMGateway | None = None, language: str | None = None) -> ResearchState:
+def run_graph(
+    question: str,
+    llm: LLMGateway | None = None,
+    language: str | None = None,
+    audience: str | None = None,
+    field: str | None = None,
+) -> ResearchState:
     """Entrypoint chạy Research Agent graph theo workflow đầy đủ."""
     app = build_graph(llm=llm)
-    initial_state: ResearchState = {"question": question, "iterations": 0, "language": language or MANUSCRIPT_LANGUAGE}
+    initial_state: ResearchState = {
+        "question": question,
+        "iterations": 0,
+        "language": language or MANUSCRIPT_LANGUAGE,
+        "audience": normalize_audience(audience),
+    }
+    if normalize_field(field):
+        initial_state["field"] = normalize_field(field)
     return app.invoke(initial_state)
 
 

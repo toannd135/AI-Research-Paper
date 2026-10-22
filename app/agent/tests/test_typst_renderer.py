@@ -269,3 +269,35 @@ def test_long_display_equation_is_broken_and_compiles():
     assert _break_long_equation(short) == short
     report = "# Long equation\n\n## 1. Method\n\n$$ s = [" + items + "] $$\n"
     assert render_report_to_pdf(report).startswith(b"%PDF-")
+
+
+def test_two_letter_uppercase_names_are_quoted_but_blackboard_symbols_are_not():
+    assert latex_to_typst_math(r"QK^{\top}") == '"QK"^(top)'
+    assert latex_to_typst_math(r"PE_{pos}") == '"PE"_("pos")'
+    out = latex_to_typst_math(r"x \in \mathbb{R}")
+    assert "RR" in out and '"RR"' not in out
+
+
+def test_unknown_bare_words_in_math_are_quoted_and_compile():
+    report = (
+        "# T\n\n## Abstract\nA.\n\n**Keywords:** k\n\n## 1. Introduction\n"
+        "Encoding uses $\\mathrm{pos}$ and $x = pos + softmax(y) + argmax_i z_i$ in prose.\n\n"
+        "$$ s = softmax(pos \\cdot W) $$\n"
+    )
+    assert render_report_to_pdf(report).startswith(b"%PDF-")
+
+
+def test_latex_bracket_math_and_angle_brackets_compile():
+    report = (
+        "# T\n\n## Abstract\nSignificant when p<0.05 overall.\n\n**Keywords:** k\n\n## 1. Introduction\n"
+        "The model is\n\\[\ny = \\alpha + \\beta x\n\\]\nand inline \\(x_i\\) holds. Effects are significant (p<0.01) and 0<x.\n\n"
+        "| Study | Result |\n|---|---|\n| A | **Yes (p<0.05)** |\n"
+    )
+    assert render_report_to_pdf(report).startswith(b"%PDF-")
+
+
+def test_escaped_citation_brackets_are_not_treated_as_math():
+    from app.pipeline.export.typst_renderer import _normalize_latex_math_delimiters
+
+    assert _normalize_latex_math_delimiters(r"see \[1\] and \[3, 4\]") == r"see \[1\] and \[3, 4\]"
+    assert "$$ y = x^2 $$" in _normalize_latex_math_delimiters("\\[ y = x^2 \\]")

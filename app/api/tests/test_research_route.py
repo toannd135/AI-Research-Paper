@@ -171,3 +171,15 @@ def test_delete_research_removes_task_even_when_processing(client):
     assert client.delete("/research/running-1").status_code == 204
     assert client.get("/research/running-1").status_code == 404
     assert client.delete("/research/running-1").status_code == 404
+
+
+@patch("app.api.routes.research.run_research")
+@patch("app.api.routes.research.clarify")
+def test_create_research_accepts_audience_and_field(mock_clarify, mock_run_research, client):
+    mock_clarify.return_value = {"status": "ready", "refined_question": "Ô nhiễm PM2.5 tại Hà Nội"}
+
+    ok = client.post("/research/", json={"question": "PM2.5 Hà Nội", "audience": "student", "field": "environment"})
+    assert ok.status_code == 200
+
+    bad = client.post("/research/", json={"question": "PM2.5 Hà Nội", "audience": "kid"})
+    assert bad.status_code == 422

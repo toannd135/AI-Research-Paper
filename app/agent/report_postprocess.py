@@ -13,7 +13,7 @@ from app.ai.llm_gateway.base import LLMGateway, Message
 
 logger = logging.getLogger(__name__)
 
-_FENCE_RE = re.compile(r"```(mermaid|table|chart)[ \t]*\n(.*?)```", re.DOTALL)
+_FENCE_RE = re.compile(r"```(mermaid|table|chart|image)[ \t]*\n(.*?)```", re.DOTALL)
 _NUM_RE = re.compile(r"\d+(?:\.\d+)?")
 _CITE_RE = re.compile(r"\[\d+(?:[,\s–-]+\d+)*\]")
 _MISSING = "–"
@@ -132,7 +132,19 @@ def scrub_table_spec(body: str, draft: str) -> str | None:
     if numeric_cells == 0:
         return None
     spec["rows"] = clean_rows
+    groups = spec.get("header_groups")
+    if groups is not None and not _groups_match_columns(groups, n_cols):
+        # LLM hay cộng sai span: bỏ nhóm tiêu đề, bảng vẫn dùng được (renderer sẽ không phải từ chối cả bài).
+        logger.warning("Bỏ header_groups không khớp %d cột của bảng %r", n_cols, str(spec.get("caption", ""))[:60])
+        spec.pop("header_groups")
     return json.dumps(spec, ensure_ascii=False)
+
+
+def _groups_match_columns(groups, n_cols: int) -> bool:
+    try:
+        return sum(int(g["span"]) for g in groups) == n_cols
+    except (KeyError, TypeError, ValueError):
+        return False
 
 
 def scrub_chart_spec(body: str, draft: str) -> str | None:
@@ -157,6 +169,23 @@ def scrub_chart_spec(body: str, draft: str) -> str | None:
 
 
 # --------------------------------------------------------------------------- ledger → fallback chart
+def scrub_image_spec(body: str, figures: list[dict] | None) -> str | None:
+    """Chỉ giữ ảnh có ref nằm trong danh sách hình thật; gắn đường dẫn và nguồn từ metadata (không tin JSON của LLM)."""
+    try:
+        spec = json.loads(body)
+    except ValueError:
+        return None
+    by_id = {f["id"]: f for f in figures or []}
+    ref = str(spec.get("ref", "")).strip() if isinstance(spec, dict) else ""
+    fig = by_id.get(ref)
+    if fig is None:
+        logger.warning("Bỏ khối image ref=%r: không có trong AVAILABLE FIGURES %s", ref, sorted(by_id))
+        return None
+    source = f"{fig.get('source_title') or fig['paper_id']}, p. {fig['page']}"
+    caption = str(spec.get("caption") or "").strip() or fig["caption"]
+    return json.dumps({"ref": fig["id"], "caption": caption, "path": fig["path"], "source": source}, ensure_ascii=False)
+
+
 def _ledger_rows(draft: str) -> list[dict[str, str]]:
     m = re.search(r"Quantitative Evidence Ledger(.*)", draft, re.I | re.DOTALL)
     if not m:
@@ -241,9 +270,15 @@ def translate_foreign_paragraphs(text: str, target: str, gateway: LLMGateway | N
 
 # --------------------------------------------------------------------------- entrypoint
 def postprocess_report(
-    report: str, draft: str, gateway: LLMGateway | None, model_name: str | None, language: str = "en"
+    report: str,
+    draft: str,
+    gateway: LLMGateway | None,
+    model_name: str | None,
+    language: str = "en",
+    figures: list[dict] | None = None,
 ) -> str:
-    """Kiểm chứng/sửa mọi khối mermaid, table, chart; dịch đoạn lẫn Việt; chèn biểu đồ ledger nếu thiếu."""
+    """Kiểm chứng/sửa mọi khối mermaid, table, chart, image; dịch đoạn lẫn Việt; chèn biểu đồ ledger nếu thiếu."""
+    used_figures: set[str] = set()
 
     def _fix(m: re.Match) -> str:
         kind, body = m.group(1), m.group(2)
@@ -251,6 +286,14 @@ def postprocess_report(
             fixed = fix_mermaid_block(body, gateway, model_name)
         elif kind == "table":
             fixed = scrub_table_spec(body, draft)
+        elif kind == "image":
+            fixed = scrub_image_spec(body, figures)
+            if fixed is not None:
+                ref = json.loads(fixed)["ref"]
+                if ref in used_figures:
+                    logger.warning("Bỏ khối image trùng ref=%s", ref)
+                    fixed = None
+                used_figures.add(ref)
         else:
             fixed = scrub_chart_spec(body, draft)
         if fixed is None:

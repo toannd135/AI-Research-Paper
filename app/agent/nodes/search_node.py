@@ -1,3 +1,4 @@
+from app.agent.profiles import field_profile
 from app.agent.state import ResearchState
 
 
@@ -10,20 +11,16 @@ def is_reference_list_chunk(chunk) -> bool:
     return text_lower.startswith(("references\n", "bibliography\n"))
 
 
-def is_domain_relevant(chunk, question: str) -> bool:
+def is_domain_relevant(chunk, question: str, field: str | None = None) -> bool:
     """Lọc bỏ các bài báo hoàn toàn lệch miền nghiên cứu do OpenAlex trả về từ khóa chung.
 
-    Ví dụ: Khi nghiên cứu RAG/NLP, gạt bỏ bài về cháy rừng (wildfire), nông nghiệp (crop yield), pin mặt trời.
+    Danh sách lệch miền lấy theo hồ sơ lĩnh vực: đề tài CS/NLP gạt bài cháy rừng, nông nghiệp...;
+    đề tài môi trường, y tế... không bị lọc theo các từ đó.
     """
     text_lower = f"{chunk.paper_id} {chunk.text}".lower()
     q_lower = question.lower()
 
-    off_domain_indicators = [
-        "wildfire", "forest fire", "fire fighting", "fire detection",
-        "crop yield", "soil moisture", "plant pathology", "agricultural",
-        "solar cell", "photovoltaic", "power inverter", "traffic flow",
-        "dermatology lesion", "bone fracture detection"
-    ]
+    off_domain_indicators = field_profile({"field": field})["off_domain"]
     return not any(indicator in text_lower and indicator not in q_lower for indicator in off_domain_indicators)
 
 
@@ -42,7 +39,7 @@ def search_node(state: ResearchState) -> ResearchState:
     # 2. Truy xuất tài liệu học thuật liên quan từ Internet (OpenAlex)
     external_evidence = retrieve_external_evidence(queries, count_per_query=8, max_total=30)
     # Lọc bỏ các bài báo bị lệch miền nghiên cứu (off-domain)
-    relevant_external = [sc for sc in external_evidence if is_domain_relevant(sc.chunk, state["question"])]
+    relevant_external = [sc for sc in external_evidence if is_domain_relevant(sc.chunk, state["question"], state.get("field"))]
     filtered_external = relevant_external if relevant_external else external_evidence
 
     # 3. Hợp nhất bằng chứng: loại bỏ trùng lặp, không bị phụ thuộc duy nhất vào CSDL nội bộ
