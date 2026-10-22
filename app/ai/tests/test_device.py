@@ -145,3 +145,26 @@ def test_forced_cpu_overrides_auto_detection(monkeypatch):
 
     device_mod.force_cpu()
     assert device_mod.resolve_device("auto") == "cpu"
+
+
+def test_load_once_loads_a_single_time_under_concurrency():
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+
+    from app.ai.device import load_once
+
+    calls = []
+
+    @load_once
+    def slow_load():
+        calls.append(1)
+        time.sleep(0.2)
+        return object()
+
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        models = list(pool.map(lambda _: slow_load(), range(5)))
+    assert len(calls) == 1
+    assert len({id(m) for m in models}) == 1
+    slow_load.cache_clear()
+    slow_load()
+    assert len(calls) == 2

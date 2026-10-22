@@ -1,11 +1,10 @@
 """embed_batch(): BGE-M3 qua sentence-transformers, cache Redis theo hash nội dung."""
 
 import logging
-from functools import lru_cache
 
 from sentence_transformers import SentenceTransformer
 
-from app.ai.device import load_with_fallback, resolve_device, run_with_oom_fallback
+from app.ai.device import load_once, load_with_fallback, resolve_device, run_with_oom_fallback
 from app.ai.embedding import cache
 from app.core.config import get_settings
 
@@ -14,7 +13,7 @@ logger = logging.getLogger(__name__)
 _ENCODE_BATCH_SIZE = 16
 
 
-@lru_cache
+@load_once
 def _load_model() -> SentenceTransformer:
     settings = get_settings()
     device = resolve_device(settings.embedding_device)

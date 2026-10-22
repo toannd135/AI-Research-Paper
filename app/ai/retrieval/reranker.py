@@ -1,18 +1,17 @@
 """BGE-Reranker / cross-encoder."""
 
 import logging
-from functools import lru_cache
 
 from sentence_transformers import CrossEncoder
 
-from app.ai.device import load_with_fallback, resolve_device, run_with_oom_fallback
+from app.ai.device import load_once, load_with_fallback, resolve_device, run_with_oom_fallback
 from app.core.config import get_settings
 from app.core.schemas import ScoredChunk
 
 logger = logging.getLogger(__name__)
 
 
-@lru_cache
+@load_once
 def _load_model() -> CrossEncoder:
     settings = get_settings()
     # Reranker nạp SAU embedding nên VRAM còn lại đã hụt đi phần của BGE-M3; resolve_device()

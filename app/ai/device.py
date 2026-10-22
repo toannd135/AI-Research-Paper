@@ -14,6 +14,7 @@ từng gây `torch.OutOfMemoryError` (xem docs/task.md). Nên ngoài việc dò 
 from __future__ import annotations
 
 import logging
+import threading
 from collections.abc import Callable
 from typing import TypeVar
 
@@ -154,3 +155,28 @@ def load_with_fallback(load: Callable[[str], T], device: str, label: str) -> tup
         force_cpu()
         free_gpu_memory()
         return load("cpu"), "cpu"
+
+
+def load_once(load: Callable[[], T]) -> Callable[[], T]:
+    """Như lru_cache cho hàm không tham số, nhưng chỉ MỘT luồng nạp model khi nhiều luồng gọi cùng lúc.
+
+    `lru_cache` không chặn nhiều luồng cùng lọt vào nhánh miss: retrieve_evidence chạy 5 sub-query
+    song song nên từng nạp BGE-M3 5 lần (hết VRAM rồi 5 bản trên CPU, ~10 GiB RAM).
+    """
+    lock = threading.Lock()
+    holder: list[T] = []
+
+    def get() -> T:
+        if holder:
+            return holder[0]
+        with lock:
+            if not holder:
+                holder.append(load())
+            return holder[0]
+
+    def cache_clear() -> None:
+        with lock:
+            holder.clear()
+
+    get.cache_clear = cache_clear  # type: ignore[attr-defined]
+    return get
