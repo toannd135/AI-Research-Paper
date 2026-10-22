@@ -12,6 +12,7 @@ from app.api.routes import auth, chat, papers, research, sources
 from app.core.config import get_settings
 from app.core.database import SessionLocal
 from app.core.logging import setup_logging
+from app.pipeline.seed import import_existing_papers
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -26,12 +27,23 @@ def _seed_admin() -> None:
         logger.exception("Không tạo được tài khoản admin ban đầu (đã chạy alembic upgrade head chưa?)")
 
 
+def _import_papers() -> None:
+    if not settings.auto_import_papers:
+        return
+    try:
+        with SessionLocal() as db:
+            import_existing_papers(db)
+    except Exception:  # không để lỗi nhập dữ liệu chặn API khởi động
+        logger.exception("Không nhập được PDF có sẵn trong %s", settings.upload_dir)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
     if settings.env != "local" and settings.jwt_secret.startswith("dev-only"):
         logger.error("JWT_SECRET đang là giá trị mặc định — hãy đặt JWT_SECRET riêng trước khi triển khai")
     _seed_admin()
+    _import_papers()
     logger.info("paperai API khởi động (env=%s, upload_dir=%s)", settings.env, settings.upload_dir)
     yield
 

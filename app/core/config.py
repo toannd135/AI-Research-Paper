@@ -75,6 +75,8 @@ class Settings(BaseSettings):
     # --- Upload ---
     max_upload_mb: int = 50
     upload_dir: str = "data/papers"
+    # Lúc khởi động, PDF nằm trong upload_dir mà chưa có record DB sẽ được nhập và đưa vào pipeline.
+    auto_import_papers: bool = True
 
     # --- External sources ---
     open_alex_api_url: str = "https://api.openalex.org"
