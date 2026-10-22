@@ -57,6 +57,10 @@ def _auth_response(user: User) -> AuthResponse:
     return AuthResponse(access_token=create_access_token(user.id, user.role), user=_out(user))
 
 
+DEV_ADMIN_EMAIL = "admin@gmail.com"
+DEV_ADMIN_PASSWORD = "admin"
+
+
 def _find_by_email(db: Session, email: str) -> User | None:
     return db.scalar(select(User).where(User.email == email.strip().lower()))
 
@@ -64,20 +68,25 @@ def _find_by_email(db: Session, email: str) -> User | None:
 def ensure_admin(db: Session) -> None:
     """Tạo admin ban đầu từ ADMIN_EMAIL/ADMIN_PASSWORD nếu chưa có."""
     settings = get_settings()
-    if not settings.admin_email or not settings.admin_password:
+    email, password = settings.admin_email, settings.admin_password
+    if not email and not password and settings.env == "local":
+        # Máy dev: pull code về là đăng nhập được ngay. Môi trường khác bắt buộc đặt ADMIN_EMAIL/ADMIN_PASSWORD.
+        email, password = DEV_ADMIN_EMAIL, DEV_ADMIN_PASSWORD
+        logger.warning("ENV=local và chưa đặt ADMIN_EMAIL/ADMIN_PASSWORD: dùng admin mặc định %s", email)
+    if not email or not password:
         return
-    if _find_by_email(db, settings.admin_email) is not None:
+    if _find_by_email(db, email) is not None:
         return
     db.add(
         User(
-            email=settings.admin_email.strip().lower(),
+            email=email.strip().lower(),
             full_name="Administrator",
-            password_hash=hash_password(settings.admin_password),
+            password_hash=hash_password(password),
             role=ROLE_ADMIN,
         )
     )
     db.commit()
-    logger.info("Đã tạo tài khoản admin %s", settings.admin_email)
+    logger.info("Đã tạo tài khoản admin %s", email)
 
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)

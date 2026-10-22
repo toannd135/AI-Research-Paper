@@ -13,6 +13,7 @@
   set page(
     paper: "a4",
     margin: (x: 1.8cm, top: 2.2cm, bottom: 2.2cm),
+    columns: 2,
     header: context {
       if here().page() > 1 {
         align(center)[
@@ -31,6 +32,8 @@
     }
   )
 
+  set columns(gutter: 18pt)
+
   // Typography settings
   set text(
     font: ("Times New Roman", "DejaVu Serif", "Noto Serif", "serif"),
@@ -47,9 +50,19 @@
 
   // Math equations setup
   set math.equation(numbering: "(1)")
+  // Công thức khối vẫn quá rộng sau khi ngắt dòng thì thu nhỏ cho vừa cột (tối thiểu 70%).
   show math.equation.where(block: true): it => {
     v(0.4em)
-    it
+    layout(size => context {
+      let natural = measure(math.equation(block: false, it.body)).width
+      let avail = size.width - 2.4em.to-absolute()
+      if natural > avail {
+        set text(size: text.size * calc.max(0.7, avail / natural))
+        it
+      } else {
+        it
+      }
+    })
     v(0.4em)
   }
 
@@ -76,6 +89,10 @@
   }
 
   // Figures and Tables styling
+  set table(inset: (x: 3pt, y: 4pt))
+  show table: set text(size: 7.5pt, hyphenate: true)
+  show table: set par(justify: false, first-line-indent: 0pt, leading: 0.5em)
+  set figure(gap: 0.8em)
   show figure.where(kind: table): set figure.caption(position: top)
   show figure.caption: it => [
     #text(size: 8.5pt, font: ("Arial", "Helvetica", "Noto Sans", "sans-serif"))[
@@ -83,6 +100,7 @@
     ]
   ]
 
+  place(top + center, scope: "parent", float: true, clearance: 1.2em, {
   // --- FRONT MATTER (Full-width Single Column) ---
   align(center)[
     // Title
@@ -131,9 +149,8 @@
       ]
     ]
   ]
+  })
 
   // --- MAIN BODY (Academic Two Columns) ---
-  columns(2, gutter: 18pt)[
-    #body
-  ]
+  body
 }

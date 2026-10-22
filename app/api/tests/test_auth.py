@@ -123,3 +123,29 @@ def test_disabled_user_cannot_log_in(client):
     client.patch(f"/auth/users/{target['id']}", json={"is_active": False}, headers=admin)
     login = client.post("/auth/login", json={"email": "u@example.com", "password": "matkhau-123"})
     assert login.status_code == 403
+
+
+def test_ensure_admin_uses_dev_default_only_in_local(monkeypatch):
+    from app.api.routes import auth as auth_routes
+
+    created: list[str] = []
+
+    class FakeDb:
+        def add(self, user):
+            created.append(user.email)
+
+        def commit(self):
+            pass
+
+    def fake_settings(env):
+        return type("S", (), {"admin_email": None, "admin_password": None, "env": env})()
+
+    monkeypatch.setattr(auth_routes, "_find_by_email", lambda db, email: None)
+    monkeypatch.setattr(auth_routes, "get_settings", lambda: fake_settings("local"))
+    auth_routes.ensure_admin(FakeDb())
+    assert created == ["admin@gmail.com"]
+
+    created.clear()
+    monkeypatch.setattr(auth_routes, "get_settings", lambda: fake_settings("production"))
+    auth_routes.ensure_admin(FakeDb())
+    assert created == []

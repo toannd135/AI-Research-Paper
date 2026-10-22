@@ -95,6 +95,62 @@ def _replace_latex_fractions(s: str) -> str:
     return "".join(parts)
 
 
+_TYPST_UPPER_SYMBOLS = {
+    "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta", "Iota", "Kappa",
+    "Lambda", "Xi", "Omicron", "Sigma", "Upsilon", "Phi", "Chi", "Psi", "Omega",
+}
+
+
+def _quote_bare_words(s: str) -> str:
+    """Quote capitalised words like MSI/TME that LLMs write bare in math; Typst reads them as variables."""
+    def fix(segment: str) -> str:
+        def repl(m: re.Match) -> str:
+            word = m.group(0)
+            return word if word in _TYPST_UPPER_SYMBOLS else f'"{word}"'
+        return re.sub(r"(?<![A-Za-z0-9_.\\])[A-Z][A-Za-z0-9]{2,}(?![A-Za-z0-9_.(])", repl, segment)
+
+    parts = re.split(r'("[^"]*")', s)
+    return "".join(part if part.startswith('"') else fix(part) for part in parts)
+
+
+LONG_EQUATION_CHARS = 70
+
+
+def _break_long_equation(math: str) -> str:
+    """Ngắt dòng công thức khối quá dài ở dấu phẩy (trong ngoặc) hoặc toán tử cấp ngoài cùng.
+
+    Typst không tự xuống dòng trong công thức, nên công thức dài tràn khỏi cột. Dòng mới chèn bằng `\\`.
+    """
+    if "\n" in math or len(math) <= LONG_EQUATION_CHARS:
+        return math
+    # Nhóm ngoặc kết thúc bằng ^top (chuyển vị) mà bị ngắt giữa chừng sẽ làm số mũ lệch dòng: chỉ ngắt ngoài ngoặc.
+    max_comma_depth = 0 if re.search(r"[\])]\^(?:top|T)\s*\.?\s*$", math) else 1
+    out: list[str] = []
+    depth = 0
+    in_quote = False
+    since_break = 0
+    i = 0
+    while i < len(math):
+        ch = math[i]
+        out.append(ch)
+        since_break += 1
+        if ch == '"':
+            in_quote = not in_quote
+        elif not in_quote:
+            if ch in "([{":
+                depth += 1
+            elif ch in ")]}":
+                depth = max(0, depth - 1)
+            elif since_break >= LONG_EQUATION_CHARS and i + 1 < len(math) and math[i + 1] == " ":
+                nxt = math[i + 2 : i + 3]
+                if (ch == "," and depth <= max_comma_depth) or (depth == 0 and ch in "+-=" and nxt != ""):
+                    out.append(" \\\n")
+                    since_break = 0
+                    i += 1  # bỏ khoảng trắng sau điểm ngắt
+        i += 1
+    return "".join(out)
+
+
 def latex_to_typst_math(s: str) -> str:
     """Translate LaTeX math expressions into native Typst math syntax."""
     s = s.strip()
@@ -108,6 +164,7 @@ def latex_to_typst_math(s: str) -> str:
     s = re.sub(r"(\\[a-zA-Z]+)(\\[a-zA-Z]+)", r"\1 \2", s)
     s = re.sub(r"\\implies(?![a-zA-Z])", " => ", s)
     s = re.sub(r"\\iff(?![a-zA-Z])", " <=> ", s)
+    s = re.sub(r"\\leftrightarrow(?![a-zA-Z])", "<->", s)
 
     # 1. Delimiters \left and \right (Typst scales automatically)
     s = re.sub(r"\\left\s*([(\[{|.])", lambda m: "" if m.group(1) == "." else m.group(1), s)
@@ -165,8 +222,8 @@ def latex_to_typst_math(s: str) -> str:
     s = re.sub(r"\\operatorname\{([^}]+)\}", r'"\1"', s)
 
     # 6. Multi-letter word subscripts: _{budget} -> _("budget")
-    s = re.sub(r"_\{([a-zA-Z]{2,})\}", r'_("\1")', s)
-    s = re.sub(r"\^\{([a-zA-Z]{2,})\}", r'^("\1")', s)
+    s = re.sub(r"_\{((?=(?:[0-9]*[a-zA-Z]){2})[a-zA-Z0-9]+)\}", r'_("\1")', s)
+    s = re.sub(r"\^\{((?=(?:[0-9]*[a-zA-Z]){2})[a-zA-Z0-9]+)\}", r'^("\1")', s)
 
     # Subscripts & Superscripts with braces: _{...} -> _(...)
     for _ in range(3):
@@ -259,6 +316,16 @@ def latex_to_typst_math(s: str) -> str:
     # Newlines in equations: \\ -> \
     s = re.sub(r"\\\\\s*", "\\\n", s)
 
+    # Residual LaTeX macros that Typst math does not understand
+    s = re.sub(r"\\(?:[Bb]ig{1,2}[lrm]?|[Bb]iggg?[lrm]?)(?![a-zA-Z])\s*", "", s)
+    s = re.sub(r"\\arg(?![a-zA-Z])", 'op("arg")', s)
+    s = re.sub(r"\\(tanh|sinh|cosh|tan|sup|inf|det|dim|ker|lim|Pr)(?![a-zA-Z])", r"\1", s)
+    s = re.sub(r"\\mapsto(?![a-zA-Z])", "|->", s)
+    s = re.sub(r"\\ll(?![a-zA-Z])", "<<", s)
+    s = re.sub(r"\\gg(?![a-zA-Z])", ">>", s)
+    s = re.sub(r"\\langle(?![a-zA-Z])", "chevron.l ", s)
+    s = re.sub(r"\\rangle(?![a-zA-Z])", " chevron.r", s)
+
     # Clean redundant spaces
     s = re.sub(r"[ \t]+", " ", s)
 
@@ -269,7 +336,11 @@ def latex_to_typst_math(s: str) -> str:
         return f"{num} {letters}"
     s = re.sub(r"(\b\d+)([a-zA-Z]{2,})\b", _split_vars, s)
 
-    return s.strip()
+    s = _quote_bare_words(s.strip())
+    # Math that begins with ^/_ (e.g. "mm$^2$" in prose) has no base; give it an empty one.
+    if s.startswith(("^", "_")):
+        s = '""' + s
+    return s
 
 
 def _format_table_inline(text: str) -> str:
@@ -294,6 +365,14 @@ def _format_table_inline(text: str) -> str:
     for i, m_str in enumerate(math_holders):
         text = text.replace(f"TBLMATH{i}END", m_str)
     return text
+
+
+WIDE_TABLE_COLUMNS = 4
+
+
+def _figure_placement(num_cols: int) -> str:
+    """Bảng từ 4 cột trở lên trải full-width trên cả hai cột để chữ không bị ép/chồng."""
+    return 'placement: auto, scope: "parent", ' if num_cols >= WIDE_TABLE_COLUMNS else ""
 
 
 def parse_markdown_table_to_typst(tbl_str: str, caption: str = "") -> str:
@@ -357,7 +436,7 @@ def parse_markdown_table_to_typst(tbl_str: str, caption: str = "") -> str:
     else:
         cap_clause = ""
     return f"""#figure(
-  table(
+  {_figure_placement(num_cols)}table(
     columns: {cols_spec},
     stroke: none,
     table.hline(stroke: 1.2pt),
@@ -518,7 +597,7 @@ def markdown_to_typst(
         caption = _format_table_inline(str(spec.get("caption", "")))
         content = ",\n".join(cells)
         return save_block(
-            f'#figure(table(columns: {len(columns)}, stroke: none, table.hline(stroke: 1.2pt),\n'
+            f'#figure({_figure_placement(len(columns))}table(columns: {len(columns)}, stroke: none, table.hline(stroke: 1.2pt),\n'
             f'{content}, table.hline(stroke: 1.2pt)), caption: [{caption}])'
         )
     body_md = re.sub(r"```table[ \t]*\n(.*?)```", repl_json_table, body_md, flags=re.DOTALL)
@@ -534,7 +613,7 @@ def markdown_to_typst(
     eq_counter = [0]
     def repl_disp_math(m):
         eq_counter[0] += 1
-        math_typ = latex_to_typst_math(m.group(1))
+        math_typ = _break_long_equation(latex_to_typst_math(m.group(1)))
         return save_block(f"$ {math_typ} $ <eq:{eq_counter[0]}>")
     body_md = re.sub(r"\$\$(.+?)\$\$", repl_disp_math, body_md, flags=re.DOTALL)
 

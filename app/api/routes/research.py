@@ -25,7 +25,8 @@ from app.core.schemas import (
 )
 from app.pipeline.tasks import run_research
 
-router = APIRouter(prefix="/research", tags=["research"], dependencies=[Depends(get_current_user)])
+# Không đặt get_current_user ở cấp router: route /pdf nhận token qua ?access_token= (mở tab mới, không có header).
+router = APIRouter(prefix="/research", tags=["research"])
 
 
 @router.get("/", include_in_schema=False)

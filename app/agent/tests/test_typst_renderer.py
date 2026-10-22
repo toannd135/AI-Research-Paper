@@ -237,3 +237,35 @@ The proposed method consistently outperforms static baselines.
         assert len(pdf_bytes) > 1000
         assert pdf_bytes.startswith(b"%PDF-")
         assert pdf_out.exists()
+
+
+def test_llm_latex_leftovers_compile_in_typst():
+    report = (
+        "# LaTeX leftovers\n\n## 1. Method\n\n"
+        r"Density (cells/mm$^2$) with $MSI \to TME$, $\hat{\rho}_{CD45RO}$, $g \leftrightarrow h$, $a \ll b$."
+        "\n\n"
+        r"$$ \pi^* = \arg\min_{\pi} \langle \pi, M \rangle, \quad s = \Big[ \tanh(x) \Big]^\top $$"
+        "\n"
+    )
+    assert render_report_to_pdf(report).startswith(b"%PDF-")
+
+
+def test_wide_tables_span_both_columns_and_narrow_ones_do_not():
+    wide = "| A | B | C | D |\n|---|---|---|---|\n| 1 | 2 | 3 | 4 |"
+    narrow = "| A | B |\n|---|---|\n| 1 | 2 |"
+    assert 'scope: "parent"' in parse_markdown_table_to_typst(wide, "Wide")
+    assert 'scope: "parent"' not in parse_markdown_table_to_typst(narrow, "Narrow")
+    report = "# Wide table\n\n## 1. Results\n\n" + wide + "\n"
+    assert render_report_to_pdf(report).startswith(b"%PDF-")
+
+
+def test_long_display_equation_is_broken_and_compiles():
+    from app.pipeline.export.typst_renderer import _break_long_equation
+
+    items = ", ".join(rf"\text{{Mean}}(x_{i})" for i in range(12))
+    broken = _break_long_equation(f"s = [{items}]")
+    assert "\\\n" in broken
+    short = "a = b + c"
+    assert _break_long_equation(short) == short
+    report = "# Long equation\n\n## 1. Method\n\n$$ s = [" + items + "] $$\n"
+    assert render_report_to_pdf(report).startswith(b"%PDF-")
