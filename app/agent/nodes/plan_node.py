@@ -2,6 +2,14 @@
 
 from app.agent.json_utils import parse_llm_json
 from app.agent.profiles import FIELD_PROFILES, detect_field, normalize_field
+from app.agent.research_model import (
+    CONTRIBUTION_TYPES,
+    METHODOLOGIES,
+    PAPER_TYPES,
+    contribution_from_mode,
+    normalize_choice,
+    normalize_contribution,
+)
 from app.agent.state import ResearchState
 from app.ai.llm_gateway.base import LLMGateway, Message
 from app.ai.llm_gateway.default import get_default_agent_gateway
@@ -19,7 +27,13 @@ _SYSTEM_PROMPT = (
     "   - [Khía cạnh 5]: So sánh định lượng và kết quả thực nghiệm SOTA (Empirical Benchmark Comparisons).\n"
     "Mọi truy vấn tìm kiếm PHẢI viết bằng tiếng Anh (kho bài báo quốc tế), dù câu hỏi dùng ngôn ngữ nào.\n"
     f"3. Xác định lĩnh vực ('field'), một trong: {', '.join(FIELD_PROFILES)}.\n"
-    'Chỉ trả lời định dạng JSON hợp lệ: {"mode": "survey" | "novel_research", "field": "...", "queries": ["...", "..."]}, không thêm text nào khác.'
+    "4. Phân loại đóng góp khoa học ('contribution_type'), một trong: "
+    "'new_method' (đề xuất mô hình/phương pháp mới), 'improvement' (cải tiến phương pháp có sẵn: nhanh hơn, nhẹ hơn, chính xác hơn), "
+    "'comparison' (so sánh nhiều mô hình/phương pháp trên cùng dataset), 'system' (xây dựng/triển khai hệ thống thực tế), "
+    "'survey' (tổng quan, khảo sát). Kèm 'methodology' (một trong: " + ", ".join(METHODOLOGIES) + "), "
+    "'paper_type' (một trong: " + ", ".join(PAPER_TYPES) + ") và 'topic' (chủ đề ngắn gọn bằng tiếng Anh).\n"
+    'Chỉ trả lời định dạng JSON hợp lệ: {"mode": "survey" | "novel_research", "field": "...", "contribution_type": "...", '
+    '"methodology": "...", "paper_type": "...", "topic": "...", "queries": ["...", "..."]}, không thêm text nào khác.'
 )
 
 
@@ -56,6 +70,7 @@ def plan_node(state: ResearchState, llm: LLMGateway | None = None) -> ResearchSt
     queries: list[str] = []
     detected_mode = None
     detected_field = None
+    parsed_dict: dict = parsed if isinstance(parsed, dict) else {}
 
     if isinstance(parsed, dict):
         queries = [q for q in parsed.get("queries", []) if isinstance(q, str) and q.strip()]
@@ -67,8 +82,25 @@ def plan_node(state: ResearchState, llm: LLMGateway | None = None) -> ResearchSt
 
         queries = [to_english_search_query(question, gateway, model_name)]
 
-    mode = detect_research_mode(question, detected_mode)
+    # Người dùng chọn contribution_type thì ưu tiên; nếu không dùng kết quả LLM, rồi mới suy ra từ mode.
+    contribution = normalize_contribution(state.get("contribution_type")) or normalize_contribution(parsed_dict.get("contribution_type"))
+    if contribution:
+        mode = CONTRIBUTION_TYPES[contribution]["mode"]
+    else:
+        mode = detect_research_mode(question, detected_mode)
+        contribution = contribution_from_mode(mode)
+    profile = CONTRIBUTION_TYPES[contribution]
 
     field = normalize_field(state.get("field")) or detected_field or detect_field(question)
+    topic = parsed_dict.get("topic") if isinstance(parsed_dict.get("topic"), str) and parsed_dict["topic"].strip() else question
 
-    return {**state, "search_queries": queries, "research_mode": mode, "field": field}
+    return {
+        **state,
+        "search_queries": queries,
+        "research_mode": mode,
+        "field": field,
+        "contribution_type": contribution,
+        "methodology": normalize_choice(parsed_dict.get("methodology"), METHODOLOGIES, profile["methodology"]),
+        "paper_type": normalize_choice(parsed_dict.get("paper_type"), PAPER_TYPES, profile["paper_type"]),
+        "topic": topic.strip(),
+    }

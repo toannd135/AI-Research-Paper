@@ -1,6 +1,7 @@
 """Bước làm rõ đề bài — 1 lời gọi LLM đồng bộ trước khi vào graph nghiên cứu."""
 
 from app.agent.json_utils import parse_llm_json
+from app.agent.language import ENGLISH_ONLY_RULE
 from app.ai.llm_gateway.base import LLMGateway, Message
 from app.ai.llm_gateway.default import get_default_agent_gateway
 
@@ -15,7 +16,9 @@ _SYSTEM_PROMPT = (
     '{"status": "needs_clarification", '
     '"questions": [{"text": "...", "suggestions": ["...", "..."]}]}\n'
     "hoặc\n"
-    '{"status": "ready", "refined_question": "..."}'
+    '{"status": "ready", "refined_question": "..."}\n\n'
+    "Mọi text trong JSON (questions, suggestions, refined_question) phải bằng tiếng Anh dù câu hỏi gốc viết bằng ngôn ngữ nào.\n"
+    + ENGLISH_ONLY_RULE
 )
 
 

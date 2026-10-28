@@ -20,3 +20,10 @@ class ResearchState(TypedDict, total=False):
     audience: str  # lecturer | student | professional
     figures: list[dict]  # hình thật trích từ PDF đã upload, id F1..Fn (synthesize_node)
     report: str
+    contribution_type: str  # khóa CONTRIBUTION_TYPES (app/agent/research_model.py); plan_node tự đoán nếu thiếu
+    methodology: str
+    paper_type: str
+    topic: str
+    target_venue: str | None
+    user_results: str | None  # kết quả thực nghiệm người dùng tự cung cấp (tùy chọn)
+    research_model: dict  # Research Knowledge Model đã kiểm chứng (nodes/model_node.py)

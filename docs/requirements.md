@@ -15,6 +15,7 @@ Người dùng (giảng viên/sinh viên/người đi làm) đặt câu hỏi ng
 | R7 | Research Knowledge Model | claim gắn evidence; claim không có bằng chứng bị đánh dấu (`claim_validator`) |
 | R8 | Xuất bản | PDF (Chromium 2 cột, 1 cột; Typst), LaTeX, BibTeX |
 | R9 | Auth & phân quyền | JWT; user chỉ thấy dữ liệu của mình; admin quản lý user |
+| R10 | Tiếng Anh là chuẩn đầu ra | Dù client hỏi bằng ngôn ngữ nào, câu trả lời chat, câu hỏi làm rõ, refined_question và báo cáo đều bằng tiếng Anh (`ENGLISH_ONLY_RULE` trong `app/agent/language.py`); test `test_language.py` |
 
 ## Phi chức năng
 - Research task chạy nền, không chặn request; chịu được worker restart (`acks_late`).

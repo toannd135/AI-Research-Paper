@@ -8,6 +8,13 @@ from __future__ import annotations
 
 import re
 
+# Ngôn ngữ chuẩn của hệ thống: bất kể người dùng hỏi bằng tiếng gì, câu trả lời/báo cáo/câu hỏi làm rõ đều bằng tiếng Anh.
+STANDARD_LANGUAGE = "en"
+ENGLISH_ONLY_RULE = (
+    "OUTPUT LANGUAGE: Always write in English, whatever language the user's question is written in. "
+    "Understand the question in any language, but never answer in another language."
+)
+
 LANGUAGE_NAMES = {
     "en": "English", "vi": "Vietnamese", "fr": "French", "es": "Spanish", "de": "German",
     "pt": "Portuguese", "it": "Italian", "id": "Indonesian", "ru": "Russian", "zh": "Chinese",

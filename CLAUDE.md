@@ -37,7 +37,7 @@ cd frontend && npm run check                # typecheck + lint + build; npm run 
 - `frontend` là submodule: sửa trong `frontend/src`, báo người dùng khi cần commit riêng.
 - Không viết lại tệp không liên quan; thay đổi nhỏ nhất đủ dùng. Không thêm dependency khi chưa hỏi.
 - Test không gọi LLM/mạng thật: dùng fake gateway (`build_graph(llm=...)`).
-- Ngôn ngữ: UI/prompt/log/comment người dùng nhìn thấy bằng tiếng Việt; tên code bằng tiếng Anh.
+- Ngôn ngữ: comment/log/thông báo lỗi bằng tiếng Việt; tên code bằng tiếng Anh. ĐẦU RA CỦA HỆ THỐNG (chat, câu hỏi làm rõ, báo cáo) luôn tiếng Anh dù client dùng tiếng gì — prompt mới gọi LLM phải kèm `ENGLISH_ONLY_RULE` (`app/agent/language.py`).
 
 ## Bản đồ mã
 `app/core` config/schemas/db · `app/ai` embedding+retrieval+LLM gateway · `app/pipeline` parser/chunk/vector/export/celery tasks ·

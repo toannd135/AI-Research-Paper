@@ -24,7 +24,9 @@ plan -> search -> analyze -> critique --(thiếu evidence)--> analyze
 - search: RAG nội bộ (`tools/search_papers`, `retrieve_evidence`) + OpenAlex (`tools/search_external_papers`, lọc miền theo field).
 - analyze/critique: trích finding, chấm đủ/thiếu.
 - model: dựng Research Knowledge Model (gaps, questions, claims, experiments) — `model_node.py`.
-- synthesize: viết paper; hậu xử lý `report_postprocess.py`, `format_sanitizer.py`; kiểm chứng `evidence/` (citation_validator, hallucination_detector, claim_validator, report_structure).
+- synthesize: viết paper; hậu xử lý `report_postprocess.py`, `format_sanitizer.py`; kiểm chứng `evidence/` (citation_validator, hallucination_detector, claim_validator, stats, claim_scan, report_structure).
+  - `stats.py`: Welch t-test + Cohen's d trên số liệu từng lần chạy (`experiments`) của người dùng; không đủ ≥2 lần chạy thì chỉ cảnh báo, khác biệt không có ý nghĩa thì claim thành `unsupported`.
+  - `claim_scan.py`: sau khi ghép bài, quét câu khẳng định cho claim `unsupported`/`hypothesis` và nhờ LLM hạ giọng; câu không sửa được ghi vào `research_model.validation.leaked_claims`.
 - State: `app/agent/state.py` (`ResearchState`). Inject LLM giả khi test: `build_graph(llm=fake)`.
 
 ## Luồng 3: chat với paper

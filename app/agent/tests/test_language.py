@@ -27,3 +27,13 @@ def test_is_foreign_paragraph():
     assert is_foreign_paragraph(en, "vi")
     assert not is_foreign_paragraph(en, "en")
     assert not is_foreign_paragraph("Short text.", "vi")
+
+
+def test_english_only_rule_is_in_chat_and_clarify_prompts():
+    from app.agent.clarify import _SYSTEM_PROMPT as clarify_prompt
+    from app.agent.language import ENGLISH_ONLY_RULE, STANDARD_LANGUAGE
+    from app.api.routes.chat import _SYSTEM_PROMPT as chat_prompt
+
+    assert STANDARD_LANGUAGE == "en"
+    assert ENGLISH_ONLY_RULE in chat_prompt
+    assert ENGLISH_ONLY_RULE in clarify_prompt

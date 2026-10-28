@@ -82,6 +82,9 @@ def create_research(
         refined_question=result["refined_question"],
         audience=payload.audience,
         field=payload.field,
+        contribution_type=payload.contribution_type,
+        target_venue=payload.target_venue,
+        user_results=payload.user_results,
         status=ResearchStatus.PENDING.value,
         user_id=user.id,
     )
@@ -113,6 +116,7 @@ def get_research(
         status=ResearchStatus(task.status),
         report=task.report,
         citations=citations,
+        research_model=json.loads(task.research_model) if task.research_model else None,
         error=task.error,
         created_at=task.created_at,
     )

@@ -1,4 +1,4 @@
-"""LangGraph StateGraph định nghĩa flow research: plan -> search -> analyze -> critique -> (loop | synthesize)."""
+"""LangGraph StateGraph định nghĩa flow research: plan -> search -> analyze -> critique -> (loop | model -> synthesize)."""
 
 from __future__ import annotations
 
@@ -7,10 +7,12 @@ from langgraph.graph import END, StateGraph
 from app.agent.nodes.analyze_node import analyze_node
 from app.agent.nodes.critique_node import critique_node
 from app.agent.nodes.fallback import FALLBACK_MESSAGE
+from app.agent.nodes.model_node import model_node
 from app.agent.nodes.plan_node import plan_node
 from app.agent.nodes.search_node import search_node
 from app.agent.nodes.synthesize_node import InsufficientEvidenceError, synthesize_node
 from app.agent.profiles import normalize_audience, normalize_field
+from app.agent.research_model import normalize_contribution
 from app.agent.state import ResearchState
 from app.ai.llm_gateway.base import LLMGateway
 from app.core.schemas import PaperRef
@@ -31,6 +33,7 @@ def build_graph(llm: LLMGateway | None = None):
     graph.add_node("search", search_node)
     graph.add_node("analyze", lambda state: analyze_node(state, llm=llm))
     graph.add_node("critique", lambda state: critique_node(state, llm=llm))
+    graph.add_node("model", lambda state: model_node(state, llm=llm))
     graph.add_node("synthesize", lambda state: synthesize_node(state, llm=llm))
 
     graph.set_entry_point("plan")
@@ -38,8 +41,9 @@ def build_graph(llm: LLMGateway | None = None):
     graph.add_edge("search", "analyze")
     graph.add_edge("analyze", "critique")
     graph.add_conditional_edges(
-        "critique", _route_after_critique, {"analyze": "analyze", "synthesize": "synthesize"}
+        "critique", _route_after_critique, {"analyze": "analyze", "synthesize": "model"}
     )
+    graph.add_edge("model", "synthesize")
     graph.add_edge("synthesize", END)
 
     return graph.compile()
@@ -55,6 +59,9 @@ def run_graph(
     language: str | None = None,
     audience: str | None = None,
     field: str | None = None,
+    contribution_type: str | None = None,
+    target_venue: str | None = None,
+    user_results: str | None = None,
 ) -> ResearchState:
     """Entrypoint chạy Research Agent graph theo workflow đầy đủ."""
     app = build_graph(llm=llm)
@@ -66,6 +73,12 @@ def run_graph(
     }
     if normalize_field(field):
         initial_state["field"] = normalize_field(field)
+    if normalize_contribution(contribution_type):
+        initial_state["contribution_type"] = normalize_contribution(contribution_type)
+    if target_venue:
+        initial_state["target_venue"] = target_venue
+    if user_results:
+        initial_state["user_results"] = user_results
     return app.invoke(initial_state)
 
 

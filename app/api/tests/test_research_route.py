@@ -183,3 +183,21 @@ def test_create_research_accepts_audience_and_field(mock_clarify, mock_run_resea
 
     bad = client.post("/research/", json={"question": "PM2.5 Hà Nội", "audience": "kid"})
     assert bad.status_code == 422
+
+
+@patch("app.api.routes.research.run_research")
+@patch("app.api.routes.research.clarify")
+def test_create_research_stores_contribution_venue_results_and_returns_model(mock_clarify, mock_run_research, client):
+    mock_clarify.return_value = {"status": "ready", "refined_question": "DDoS detection"}
+
+    created = client.post(
+        "/research/",
+        json={"question": "DDoS detection K8s", "contribution_type": "improvement", "target_venue": "IEEE ICC", "user_results": "p95 12ms vs 30ms"},
+    )
+    assert created.status_code == 200
+
+    got = client.get(f"/research/{created.json()['id']}")
+    assert got.status_code == 200 and got.json()["research_model"] is None
+
+    bad = client.post("/research/", json={"question": "DDoS detection K8s", "contribution_type": "magic"})
+    assert bad.status_code == 422

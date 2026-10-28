@@ -241,6 +241,13 @@ class ResearchRequest(BaseModel):
     field: Literal["computing", "computer_vision", "environment", "medicine", "economics", "education"] | None = Field(
         default=None, description="Lĩnh vực; bỏ trống để hệ thống tự nhận diện"
     )
+    contribution_type: Literal["new_method", "improvement", "comparison", "system", "survey"] | None = Field(
+        default=None, description="Loại đóng góp khoa học; bỏ trống để hệ thống tự phân loại"
+    )
+    target_venue: str | None = Field(default=None, max_length=120, description="Hội nghị/tạp chí dự định gửi bài")
+    user_results: str | None = Field(
+        default=None, max_length=8000, description="Kết quả thực nghiệm người dùng đã có (baseline, metric, dataset, số liệu)"
+    )
 
 
 class ClarificationQuestion(BaseModel):
@@ -260,6 +267,7 @@ class ResearchTaskResponse(BaseModel):
     status: ResearchStatus
     report: str | None = None
     citations: list[Citation] = Field(default_factory=list)
+    research_model: dict | None = None
     error: str | None = None
     created_at: datetime
 

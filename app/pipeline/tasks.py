@@ -89,7 +89,14 @@ def run_research(task_id: str) -> dict:
             owner = db.get(User, task.user_id) if task.user_id else None
             set_allowed_paper_ids(allowed_paper_ids_for(db, owner))
             question = task.refined_question or task.question
-            state = run_graph(question, audience=task.audience, field=task.field)
+            state = run_graph(
+                question,
+                audience=task.audience,
+                field=task.field,
+                contribution_type=task.contribution_type,
+                target_venue=task.target_venue,
+                user_results=task.user_results,
+            )
 
             from app.agent.format_sanitizer import sanitize_academic_markdown
 
@@ -100,6 +107,8 @@ def run_research(task_id: str) -> dict:
                 return {"task_id": task_id, "status": "deleted"}
             task.report = sanitize_academic_markdown(state.get("report", ""))
             task.citations = json.dumps([c.model_dump() for c in state.get("citations", [])])
+            task.contribution_type = state.get("contribution_type")
+            task.research_model = json.dumps(state["research_model"]) if state.get("research_model") else None
             task.status = ResearchStatus.DONE.value
             db.commit()
             logger.info("Research task %s hoàn tất: report %d ký tự", task_id, len(task.report or ""))

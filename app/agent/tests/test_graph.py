@@ -19,6 +19,9 @@ class _FakeGateway:
         if "lập kế hoạch tìm kiếm" in system:
             return LLMResponse(text='{"queries": ["q1"]}', model="fake")
 
+        if "Research Knowledge Model" in system:
+            return LLMResponse(text="{}", model="fake")
+
         if "fact-checker" in system:
             self.hallucination_calls += 1
             result = next(self._hallucination_results)

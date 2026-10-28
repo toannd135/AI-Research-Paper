@@ -5,6 +5,7 @@ import json
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.agent.language import ENGLISH_ONLY_RULE
 from app.ai.context_builder import build_context
 from app.ai.llm_gateway.base import LLMGatewayError
 from app.ai.llm_gateway.base import Message as LLMMessage
@@ -17,11 +18,11 @@ from app.ai.llm_gateway.registry import (
 from app.ai.retrieval.hybrid import search_hybrid
 from app.ai.retrieval.reranker import rerank
 from app.api.deps import can_access, get_current_user
+from app.api.models.conversation import Conversation
+from app.api.models.conversation import Message as MessageModel
 from app.api.models.paper import Paper
 from app.api.models.research_task import ResearchTask
 from app.api.models.user import ROLE_ADMIN, User
-from app.api.models.conversation import Conversation
-from app.api.models.conversation import Message as MessageModel
 from app.core.database import get_db
 from app.core.schemas import ChatRequest, ChatResponse
 from app.core.scope import allowed_paper_ids_for, filter_chunks
@@ -30,7 +31,8 @@ router = APIRouter(tags=["chat"], dependencies=[Depends(get_current_user)])
 
 _SYSTEM_PROMPT = (
     "Bạn là trợ lý nghiên cứu khoa học. Chỉ trả lời dựa trên context được cung cấp, "
-    "trích dẫn nguồn bằng ký hiệu [n] tương ứng. Nếu context không đủ để trả lời, hãy nói rõ là không đủ thông tin."
+    "trích dẫn nguồn bằng ký hiệu [n] tương ứng. Nếu context không đủ để trả lời, hãy nói rõ là không đủ thông tin.\n\n"
+    + ENGLISH_ONLY_RULE
 )
 
 

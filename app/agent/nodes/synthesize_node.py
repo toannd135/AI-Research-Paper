@@ -19,6 +19,7 @@ import re
 from datetime import date
 from typing import Any
 
+from app.agent.evidence.claim_scan import find_leaked_claims, soften_leaked_claims
 from app.agent.evidence.citation_cleaner import clean_and_deduplicate_citations
 from app.agent.evidence.dataset_catalog import get_dataset_grounding_context
 from app.agent.evidence.report_structure import finalize_structure, source_diversity_warning, strip_dangling_citations
@@ -26,6 +27,7 @@ from app.agent.format_sanitizer import sanitize_academic_markdown
 from app.agent.language import language_name
 from app.agent.profiles import adaptation_rules, audience_profile, field_profile, missing_end_sections
 from app.agent.report_postprocess import postprocess_report
+from app.agent.research_model import contribution_guidance, model_brief
 from app.agent.state import ResearchState
 from app.pipeline.figures import load_figures
 from app.ai.llm_gateway.base import LLMGateway, Message
@@ -242,6 +244,8 @@ def _structure(mode: str, stage: str) -> tuple[str, str]:
 def _stage_structure(state: ResearchState, mode: str, stage: str) -> tuple[str, str]:
     """Cấu trúc chặng + mục bổ sung theo lĩnh vực (Section 4) và đối tượng đọc (cuối bài)."""
     title, structure = _structure(mode, stage)
+    if stage in ("stage3", "stage4") and contribution_guidance(state):
+        structure += "\n" + contribution_guidance(state)
     if stage == "stage4" and field_profile(state)["stage4"]:
         structure += "\n" + field_profile(state)["stage4"]
     if stage == "stage5" and audience_profile(state)["end"]:
@@ -269,11 +273,25 @@ def _generate(
     return response.text.strip()
 
 
+def _research_context(state: ResearchState) -> str:
+    """Research Knowledge Model, kết quả người dùng cung cấp và venue đích, đưa vào prompt của mọi chặng."""
+    parts = [model_brief(state.get("research_model"))]
+    if state.get("user_results"):
+        parts.append(
+            "USER-PROVIDED EXPERIMENT RESULTS (the only measured results of the proposed work; report them faithfully, do not alter or extend them):\n"
+            f"{state['user_results']}"
+        )
+    if state.get("target_venue"):
+        parts.append(f"TARGET VENUE: {state['target_venue']} — follow its usual conventions for structure and length.")
+    return "".join(f"{p}\n\n" for p in parts if p)
+
+
 def _user_prompt(state: ResearchState, instruction: str) -> str:
     return (
         f"Research Question: {state['question']}\n\n"
         f"Manuscript language: {_lang_label(state)}\n\n"
         f"Draft Basis:\n{state.get('draft', '')}\n\n"
+        f"{_research_context(state)}"
         f"{instruction}"
     )
 
@@ -345,6 +363,7 @@ def _generate_stage_0_blueprint(
         f"Research Mode: {_mode_label(mode)}\n"
         f"Research Question: {state['question']}\n\n"
         f"Baseline Draft:\n{state.get('draft', '')}\n\n"
+        f"{_research_context(state)}"
         f"Available Citations:\n{references}"
     )
     return _generate(system_prompt, user_prompt, gateway, model_name)
@@ -600,6 +619,14 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
     if warning:
         logger.warning("Chất lượng nguồn: %s", warning)
     updated_text = finalize_structure(updated_text)
+    research_model = state.get("research_model")
+    if research_model and research_model.get("claims"):
+        leaks = find_leaked_claims(updated_text, research_model["claims"])
+        if leaks:
+            logger.warning("Báo cáo khẳng định %d câu cho claim chưa được chứng minh — hạ giọng", len(leaks))
+            updated_text, unresolved = soften_leaked_claims(updated_text, leaks, gateway, model_name)
+            validation = {**research_model.get("validation", {}), "leaked_claims": unresolved}
+            state = {**state, "research_model": {**research_model, "validation": validation}}
     final_text_with_refs = updated_text
     if clean_references:
         final_text_with_refs += "\n\n## References\n\n" + "\n".join(clean_references)
