@@ -44,3 +44,19 @@ def test_plan_node_detects_novel_research_from_keywords_fallback():
     state = plan_node({"question": "Cải tiến kiến trúc RAG hiện tại để giảm hallucination"}, llm=llm)
 
     assert state["research_mode"] == "novel_research"
+
+
+def test_plan_node_comparison_without_user_results_uses_survey_mode():
+    llm = _fake_llm('{"mode": "novel_research", "queries": ["q1"]}')
+
+    state = plan_node({"question": "Brain tumor segmentation", "contribution_type": "comparison"}, llm=llm)
+
+    assert state["research_mode"] == "survey"
+
+
+def test_plan_node_comparison_with_user_results_keeps_novel_research_mode():
+    llm = _fake_llm('{"queries": ["q1"]}')
+
+    state = plan_node({"question": "Brain tumor segmentation", "contribution_type": "comparison", "user_results": "Dice 0.9"}, llm=llm)
+
+    assert state["research_mode"] == "novel_research"

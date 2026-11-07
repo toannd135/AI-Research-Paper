@@ -20,7 +20,7 @@ from datetime import date
 from typing import Any
 
 from app.agent.evidence.claim_scan import find_leaked_claims, soften_leaked_claims
-from app.agent.evidence.citation_cleaner import clean_and_deduplicate_citations
+from app.agent.evidence.citation_cleaner import _local_catalog, clean_and_deduplicate_citations
 from app.agent.evidence.dataset_catalog import get_dataset_grounding_context
 from app.agent.evidence.report_structure import finalize_structure, source_diversity_warning, strip_dangling_citations
 from app.agent.format_sanitizer import sanitize_academic_markdown
@@ -170,7 +170,7 @@ _STAGE_STRUCTURES: dict[str, dict[str, str]] = {
             "### 4.2 Comprehensive Benchmark Comparison Table\n"
             "- One quantitative comparison table as a ```table JSON block (method [n], paradigm, dataset, metrics) using results reported in the cited sources; group methods by paradigm with header_groups/merged first column when helpful.\n"
             "### 4.3 Quantitative Findings & Trade-off Analysis\n"
-            "- Interpret the table; include 1-2 ```chart blocks built only from reported numbers; discuss trade-offs (accuracy vs. latency/cost/interpretability, etc.) and the heterogeneity of the reported evidence.",
+            "- Interpret the table; include 2-3 ```chart blocks built only from reported numbers, each showing a different metric or setting (e.g. per-class scores, robustness under a harder setting, error/distance metrics); never repeat the same series twice; discuss trade-offs (accuracy vs. latency/cost/interpretability, etc.) and the heterogeneity of the reported evidence.",
         ),
         "stage5": (
             "Sections 5 and 6 (DISCUSSION AND CONCLUSION)",
@@ -216,7 +216,7 @@ _STAGE_STRUCTURES: dict[str, dict[str, str]] = {
             "### 4.2 Baselines & Experimental Setup\n"
             "- Baselines [n] and the configuration as a Markdown table.\n"
             "### 4.3 Quantitative Benchmark Comparison\n"
-            "- A ```table JSON block comparing published baseline results [n] with the proposed method (marked '*Not Exp.*' unless supported); optionally one ```chart of real baseline numbers.\n"
+            "- A ```table JSON block comparing published baseline results [n] with the proposed method (marked '*Not Exp.*' unless supported); 1-2 ```chart blocks of real baseline numbers (different metrics or settings).\n"
             "### 4.4 Ablation Study Design\n"
             "- Ablation variants and what each tests (a ```table block with '*Not Exp.*' for unrun results).\n"
             "### 4.5 Qualitative Analysis\n"
@@ -318,7 +318,8 @@ def _format_references_prompt(citations: list[Any]) -> str:
         section = getattr(c, "section", None) or (c.get("section") if isinstance(c, dict) else None)
         snippet = getattr(c, "text_snippet", "") or (c.get("text_snippet") if isinstance(c, dict) else "")
 
-        ref_line = f"[{i}] {pid}"
+        local = _local_catalog().get(str(pid))
+        ref_line = f"[{i}] {pid}" if not local else f"[{i}] {local.get('title')} ({local.get('year')})"
         if page:
             ref_line += f", Page: {page}"
         if section:

@@ -81,6 +81,10 @@ class Settings(BaseSettings):
     # --- External sources ---
     open_alex_api_url: str = "https://api.openalex.org"
     open_alex_api_key: str | None = None
+    # False: chỉ dùng kho PDF nội bộ (vd. bài tải tay từ Google Scholar), không gọi OpenAlex.
+    external_search_enabled: bool = True
+    # Chế độ chỉ-nội-bộ: số chunk tối đa mỗi paper đưa vào evidence, để context phủ được nhiều bài.
+    local_max_chunks_per_paper: int = 2
 
     # --- PDF export ---
     mermaid_ink_enabled: bool = True

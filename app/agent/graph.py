@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import logging
+import time
+
 from langgraph.graph import END, StateGraph
 
 from app.agent.nodes.analyze_node import analyze_node
@@ -26,15 +29,30 @@ def _route_after_critique(state: ResearchState) -> str:
     return "synthesize"
 
 
+logger = logging.getLogger(__name__)
+
+
+def _timed(name: str, fn):
+    """Bọc node để log thời gian chạy, phục vụ tìm bước chậm."""
+
+    def wrapper(state):
+        start = time.perf_counter()
+        result = fn(state)
+        logger.info("Node %s chạy %.1fs", name, time.perf_counter() - start)
+        return result
+
+    return wrapper
+
+
 def build_graph(llm: LLMGateway | None = None):
     """Build + compile graph. `llm` cho phép inject fake gateway khi test."""
     graph = StateGraph(ResearchState)
-    graph.add_node("plan", lambda state: plan_node(state, llm=llm))
-    graph.add_node("search", search_node)
-    graph.add_node("analyze", lambda state: analyze_node(state, llm=llm))
-    graph.add_node("critique", lambda state: critique_node(state, llm=llm))
-    graph.add_node("model", lambda state: model_node(state, llm=llm))
-    graph.add_node("synthesize", lambda state: synthesize_node(state, llm=llm))
+    graph.add_node("plan", _timed("plan", lambda state: plan_node(state, llm=llm)))
+    graph.add_node("search", _timed("search", search_node))
+    graph.add_node("analyze", _timed("analyze", lambda state: analyze_node(state, llm=llm)))
+    graph.add_node("critique", _timed("critique", lambda state: critique_node(state, llm=llm)))
+    graph.add_node("model", _timed("model", lambda state: model_node(state, llm=llm)))
+    graph.add_node("synthesize", _timed("synthesize", lambda state: synthesize_node(state, llm=llm)))
 
     graph.set_entry_point("plan")
     graph.add_edge("plan", "search")

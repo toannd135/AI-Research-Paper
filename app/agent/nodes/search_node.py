@@ -1,5 +1,11 @@
+import logging
+import time
+
 from app.agent.profiles import field_profile
 from app.agent.state import ResearchState
+from app.core.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 def is_reference_list_chunk(chunk) -> bool:
@@ -29,6 +35,10 @@ def search_node(state: ResearchState) -> ResearchState:
     from app.agent.tools.search_external_papers import retrieve_external_evidence
 
     queries = state.get("search_queries") or [state["question"]]
+    settings = get_settings()
+
+    if not settings.external_search_enabled:
+        return {**state, "evidence": _local_only_evidence(queries, settings.local_max_chunks_per_paper)}
 
     # 1. Tìm kiếm evidence trên CSDL nội bộ (Qdrant)
     internal_evidence = retrieve_evidence(queries)
@@ -58,3 +68,29 @@ def search_node(state: ResearchState) -> ResearchState:
 
     combined.sort(key=lambda s: s.score, reverse=True)
     return {**state, "evidence": combined}
+
+
+def _local_only_evidence(queries: list[str], max_per_paper: int) -> list:
+    """Chỉ lấy evidence từ kho nội bộ, mở rộng tập ứng viên và giới hạn số chunk mỗi paper
+    để context (cắt theo token) phủ được nhiều bài thay vì dồn vào vài bài điểm cao."""
+    from app.agent.tools.search_papers import search_papers
+
+    # Chạy tuần tự: rerank trên CPU song song nhiều query chỉ tranh nhau nhân, không nhanh hơn
+    best: dict[str, object] = {}
+    for query in queries:
+        start = time.perf_counter()
+        for sc in search_papers(query, top_k=15, candidate_k=30):
+            if sc.chunk.id not in best or sc.score > best[sc.chunk.id].score:
+                best[sc.chunk.id] = sc
+        logger.info("Search local '%s' chạy %.1fs", query[:60], time.perf_counter() - start)
+    evidence = sorted(best.values(), key=lambda s: s.score, reverse=True)
+    clean = [sc for sc in evidence if not is_reference_list_chunk(sc.chunk)] or evidence
+
+    per_paper: dict[str, int] = {}
+    selected = []
+    for sc in clean:  # đã sort theo score giảm dần
+        count = per_paper.get(sc.chunk.paper_id, 0)
+        if count < max_per_paper:
+            per_paper[sc.chunk.paper_id] = count + 1
+            selected.append(sc)
+    return selected

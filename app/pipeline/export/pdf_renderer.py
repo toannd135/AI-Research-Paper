@@ -324,9 +324,17 @@ def _number_figures_and_tables(body: str) -> str:
     last_heading = ""
     out: list[str] = []
     # LLM hay tự viết "**Table 1: ...**" ngay trên bảng → dùng làm caption thay vì lặp lại.
+    # Caption chỉ nằm trong MỘT đoạn <p>: không cho khớp vượt </p>, nếu không sẽ nuốt cả heading/bảng phía sau.
+    caption = r"<p>(?:<(?:strong|em)>)*Table\s*\d+\s*[:.]\s*((?:(?!</p>).)*?)(?:</(?:strong|em)>)*</p>"
+
+    def _cap(text: str) -> str:
+        return html.escape(html.unescape(re.sub(r"<[^>]+>", "", text).strip()))
+
+    body = re.sub(caption + r"\s*<table>", lambda m: f'<table data-caption="{_cap(m.group(1))}">', body, flags=re.DOTALL)
+    # LLM cũng hay đặt "**Table N: ...**" ngay DƯỚI bảng → chuyển lên làm caption của bảng đó.
     body = re.sub(
-        r"<p>(?:<(?:strong|em)>)*Table\s*\d+\s*[:.]\s*(.*?)(?:</(?:strong|em)>)*</p>\s*<table>",
-        lambda m: f'<table data-caption="{html.escape(html.unescape(re.sub(r"<[^>]+>", "", m.group(1)).strip()))}">',
+        r"<table>((?:(?!</table>).)*)</table>\s*" + caption,
+        lambda m: f'<table data-caption="{_cap(m.group(2))}">{m.group(1)}</table>',
         body,
         flags=re.DOTALL,
     )
@@ -408,6 +416,14 @@ def _layout_columns(body: str, columns: int) -> str:
     return body[:pos] + f'<main class="paper-body columns-{columns}">' + body[pos:] + '</main>'
 
 
+def _split_reference_lines(md: str) -> str:
+    """Mỗi mục "[n] ..." trong References thành một đoạn riêng; Markdown gộp các dòng liền nhau thành một đoạn."""
+    head, sep, refs = md.partition("\n## References")
+    if not sep:
+        return md
+    return head + sep + re.sub(r"\n(?=\[\d+\])", "\n\n", refs)
+
+
 def report_to_html(report_md: str, *, columns: int = 2) -> str:
     from app.agent.format_sanitizer import sanitize_padded_inline_math
 
@@ -416,7 +432,7 @@ def report_to_html(report_md: str, *, columns: int = 2) -> str:
     parser = markdown.Markdown(extensions=["tables", "fenced_code", "sane_lists"])
     # LLM hay thụt lề đoạn văn sau công thức → Markdown hiểu nhầm là khối code. Code thật dùng ``` nên tắt indented code.
     parser.parser.blockprocessors.deregister("code")
-    body = parser.convert(md)
+    body = parser.convert(_split_reference_lines(md))
     body = _PLACEHOLDER_RE.sub(lambda m: blocks[int(m.group(1))], body)
     body = re.sub(r"PAPERAIINLINE(\d+)END", lambda m: blocks[int(m.group(1))], body)
     body = _layout_front_matter(_number_figures_and_tables(body))

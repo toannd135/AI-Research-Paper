@@ -192,23 +192,62 @@ def _groups_match_columns(groups, n_cols: int) -> bool:
 
 
 def scrub_chart_spec(body: str, draft: str) -> str | None:
+    """Giữ biểu đồ nếu có ít nhất 2 giá trị có thật trong draft; giá trị không có căn cứ bị bỏ (null/loại điểm).
+
+    Hỗ trợ mọi type mà renderer vẽ được: bar/barh/line/stacked_barh (labels + values), xyline/scatter (x, y),
+    histogram/boxplot/cdf (samples), heatmap (matrix). Trục x của xyline/scatter (epoch, tham số…) không cần căn cứ.
+    """
     try:
         spec = json.loads(body)
-        labels, series = spec["labels"], spec["series"]
-    except (ValueError, KeyError, TypeError):
+    except ValueError:
+        return None
+    if not isinstance(spec, dict):
         return None
     known = _draft_numbers(draft)
-    kept, real = [], 0
-    for s in series:
-        vals = s.get("values", [])
-        if len(vals) != len(labels):
-            continue
-        vals = [v if isinstance(v, (int, float)) and float(v) in known else None for v in vals]
-        real += sum(v is not None for v in vals)
-        kept.append({**s, "values": vals})
-    if not kept or real < 2:
+
+    def grounded(v) -> bool:
+        return isinstance(v, (int, float)) and not isinstance(v, bool) and float(v) in known
+
+    kind = spec.get("type", "bar")
+    real = 0
+    if kind == "heatmap":
+        matrix = spec.get("matrix")
+        if not isinstance(matrix, list) or not all(isinstance(r, list) for r in matrix):
+            return None
+        spec["matrix"] = [[v if grounded(v) else None for v in row] for row in matrix]
+        real = sum(v is not None for row in spec["matrix"] for v in row)
+    else:
+        series = spec.get("series")
+        if not isinstance(series, list):
+            return None
+        kept = []
+        for s in series:
+            if not isinstance(s, dict):
+                continue
+            if kind in ("xyline", "scatter"):
+                pts = [(x, y) for x, y in zip(s.get("x", []), s.get("y", []), strict=False) if grounded(y)]
+                if pts:
+                    kept.append({**s, "x": [x for x, _ in pts], "y": [y for _, y in pts]})
+                    kept[-1].pop("errors", None)  # error bar không còn khớp sau khi bỏ điểm
+                    real += len(pts)
+            elif kind in ("histogram", "boxplot", "cdf"):
+                samples = [v for v in s.get("samples", []) if grounded(v)]
+                if samples:
+                    kept.append({**s, "samples": samples})
+                    real += len(samples)
+            else:
+                labels = spec.get("labels")
+                vals = s.get("values", [])
+                if not isinstance(labels, list) or len(vals) != len(labels):
+                    continue
+                vals = [v if grounded(v) else None for v in vals]
+                real += sum(v is not None for v in vals)
+                kept.append({**s, "values": vals})
+        if not kept:
+            return None
+        spec["series"] = kept
+    if real < 2:
         return None
-    spec["series"] = kept
     return json.dumps(spec, ensure_ascii=False)
 
 

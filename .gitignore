@@ -21,3 +21,12 @@ uploads/
 .vscode/
 frontend
 node_modules/
+
+# Kết quả xuất ra & tệp sinh tự động
+output/
+*.pdf
+!docs/samples/*.pdf
+!quick_paper.pdf
+*.log
+celerybeat-schedule*
+dump.rdb

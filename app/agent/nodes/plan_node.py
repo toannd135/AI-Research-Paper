@@ -86,6 +86,10 @@ def plan_node(state: ResearchState, llm: LLMGateway | None = None) -> ResearchSt
     contribution = normalize_contribution(state.get("contribution_type")) or normalize_contribution(parsed_dict.get("contribution_type"))
     if contribution:
         mode = CONTRIBUTION_TYPES[contribution]["mode"]
+        # So sánh mà không có số liệu tự chạy → chỉ tổng hợp kết quả đã công bố: khung survey,
+        # tránh khung "đề xuất phương pháp" sinh ra phương pháp không có thực nghiệm.
+        if contribution == "comparison" and not state.get("user_results"):
+            mode = "survey"
     else:
         mode = detect_research_mode(question, detected_mode)
         contribution = contribution_from_mode(mode)

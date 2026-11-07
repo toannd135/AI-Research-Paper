@@ -18,7 +18,8 @@ def _load_model() -> CrossEncoder:
     # đo lại bộ nhớ trống tại thời điểm này nên có thể chọn CPU dù embedding đang ở GPU.
     device = resolve_device(settings.embedding_device)
     model, used = load_with_fallback(
-        lambda d: CrossEncoder(settings.reranker_model, device=d), device, "Reranker"
+        # Giới hạn 512 token: chunk có thể dài vài nghìn ký tự, attention tăng theo bình phương độ dài
+        lambda d: CrossEncoder(settings.reranker_model, device=d, max_length=512), device, "Reranker"
     )
     logger.info("Đã nạp reranker %s trên %s", settings.reranker_model, used)
     return model

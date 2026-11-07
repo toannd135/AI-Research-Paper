@@ -81,3 +81,18 @@ def test_postprocess_keeps_target_language_and_translates_english_into_it():
     fake = _Fake("Đoạn này đã được dịch hoàn toàn sang tiếng Việt để bài báo thống nhất về ngôn ngữ cho người đọc.")
     out = postprocess_report(report, "", fake, None, "vi")
     assert "entirely in English" not in out and "đã được dịch" in out and fake.calls == 1
+
+
+def test_scrub_chart_spec_keeps_grounded_scientific_charts():
+    draft = "loss 0.9 0.5 0.3 and dice 90.1 85.2"
+    xy = json.loads(scrub_chart_spec(json.dumps({"type": "xyline", "series": [{"name": "T", "x": [1, 2, 3, 4], "y": [0.9, 0.5, 0.3, 0.1]}]}), draft))
+    assert xy["series"][0]["y"] == [0.9, 0.5, 0.3]  # 0.1 không có căn cứ → bỏ điểm
+    assert xy["series"][0]["x"] == [1, 2, 3]
+    heat = json.loads(scrub_chart_spec(json.dumps({"type": "heatmap", "x_labels": ["a", "b"], "y_labels": ["c"], "matrix": [[90.1, 85.2]]}), draft))
+    assert heat["matrix"] == [[90.1, 85.2]]
+    box = json.loads(scrub_chart_spec(json.dumps({"type": "boxplot", "series": [{"name": "s", "samples": [0.9, 0.5, 7.7]}]}), draft))
+    assert box["series"][0]["samples"] == [0.9, 0.5]
+
+
+def test_scrub_chart_spec_drops_scientific_chart_without_grounded_values():
+    assert scrub_chart_spec(json.dumps({"type": "xyline", "series": [{"name": "T", "x": [1, 2], "y": [0.77, 0.66]}]}), "0.9") is None

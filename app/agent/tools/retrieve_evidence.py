@@ -7,7 +7,7 @@ from app.agent.tools.search_papers import search_papers
 from app.core.schemas import ScoredChunk
 
 
-def retrieve_evidence(queries: list[str], top_k_per_query: int = 6) -> list[ScoredChunk]:
+def retrieve_evidence(queries: list[str], top_k_per_query: int = 6, candidate_k: int = 20) -> list[ScoredChunk]:
     """Chạy search_papers cho từng sub-query SONG SONG (mỗi sub-query độc lập với nhau — mỗi cái
     tự làm hybrid search + rerank riêng), dedup theo chunk.id (giữ điểm cao nhất), sort theo score
     giảm dần. plan_node thường sinh 3-5 sub-query; chạy tuần tự trước đây nhân latency của 1 lần
@@ -16,7 +16,7 @@ def retrieve_evidence(queries: list[str], top_k_per_query: int = 6) -> list[Scor
     if not queries:
         return []
 
-    search = partial(search_papers, top_k=top_k_per_query)
+    search = partial(search_papers, top_k=top_k_per_query, candidate_k=candidate_k)
     with ThreadPoolExecutor(max_workers=min(len(queries), 5)) as executor:
         results_per_query = list(executor.map(search, queries))
 

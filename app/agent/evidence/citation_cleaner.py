@@ -10,8 +10,29 @@ Chức năng:
 
 from __future__ import annotations
 
+import json
+import logging
 import re
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
+
+from app.core.config import get_settings
+
+logger = logging.getLogger(__name__)
+
+
+@lru_cache(maxsize=1)
+def _local_catalog() -> dict[str, dict[str, str]]:
+    """Metadata của PDF nội bộ (`<upload_dir>/catalog.json`, khóa = paper_id); rỗng nếu không có."""
+    path = Path(get_settings().upload_dir) / "catalog.json"
+    if not path.is_file():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        logger.exception("Không đọc được catalog %s", path)
+        return {}
 
 
 def _normalize_title(title: str) -> str:
@@ -22,6 +43,18 @@ def _normalize_title(title: str) -> str:
 
 def _extract_citation_metadata(paper_id: str, snippet: str = "") -> dict[str, str]:
     """Trích xuất authors, title, year, venue từ chuỗi paper_id hoặc snippet."""
+    # Paper nội bộ có metadata trong catalog: dùng nguyên, không đoán từ snippet
+    local = _local_catalog().get(paper_id.strip())
+    if local:
+        authors = [a.strip() for a in local.get("authors", "").split(",") if a.strip()]
+        return {
+            "title": local.get("title", paper_id)[:180],
+            "authors": f"{authors[0]} et al." if len(authors) > 2 else " and ".join(authors) or "Anonymous",
+            "year": local.get("year", ""),
+            "venue": local.get("venue", ""),
+            "doi": local.get("doi", ""),
+        }
+
     # Mẫu 1: "Title: X Authors: Y (Year) Venue/DOI: Z"
     combined = f"{paper_id} {snippet}"
 
