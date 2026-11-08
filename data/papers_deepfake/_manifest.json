@@ -1,0 +1,212 @@
+[
+ {
+  "file": "The_Creation_and_Detection_of_Deepfakes.pdf",
+  "title": "The Creation and Detection of Deepfakes",
+  "year": 2021,
+  "cited": 1090,
+  "doi": "https://doi.org/10.1145/3425780"
+ },
+ {
+  "file": "Deepfakes_generation_and_detection_state_of_the_art_open_challenges_countermeasu.pdf",
+  "title": "Deepfakes generation and detection: state-of-the-art, open challenges, countermeasures, and way forward",
+  "year": 2022,
+  "cited": 656,
+  "doi": "https://doi.org/10.1007/s10489-022-03766-z"
+ },
+ {
+  "file": "DeepFake_Detection_Based_on_Discrepancies_Between_Faces_and_Their_Context.pdf",
+  "title": "DeepFake Detection Based on Discrepancies Between Faces and Their Context",
+  "year": 2021,
+  "cited": 380,
+  "doi": "https://doi.org/10.1109/tpami.2021.3093446"
+ },
+ {
+  "file": "ASVspoof_2021_Towards_Spoofed_and_Deepfake_Speech_Detection_in_the_Wild.pdf",
+  "title": "ASVspoof 2021: Towards Spoofed and Deepfake Speech Detection in the Wild",
+  "year": 2023,
+  "cited": 378,
+  "doi": "https://doi.org/10.1109/taslp.2023.3285283"
+ },
+ {
+  "file": "FakeAVCeleb_A_Novel_Audio_Video_Multimodal_Deepfake_Dataset.pdf",
+  "title": "FakeAVCeleb: A Novel Audio-Video Multimodal Deepfake Dataset",
+  "year": 2021,
+  "cited": 284,
+  "doi": "https://doi.org/10.48550/arxiv.2108.05080"
+ },
+ {
+  "file": "A_Novel_Deep_Learning_Approach_for_Deepfake_Image_Detection.pdf",
+  "title": "A Novel Deep Learning Approach for Deepfake Image Detection",
+  "year": 2022,
+  "cited": 250,
+  "doi": "https://doi.org/10.3390/app12199820"
+ },
+ {
+  "file": "Audio_Deepfake_Detection_A_Survey.pdf",
+  "title": "Audio Deepfake Detection: A Survey",
+  "year": 2023,
+  "cited": 173,
+  "doi": "https://doi.org/10.48550/arxiv.2308.14970"
+ },
+ {
+  "file": "Deepfakes_Detection_Techniques_Using_Deep_Learning_A_Survey.pdf",
+  "title": "Deepfakes Detection Techniques Using Deep Learning: A Survey",
+  "year": 2021,
+  "cited": 164,
+  "doi": "https://doi.org/10.4236/jcc.2021.95003"
+ },
+ {
+  "file": "WaveFake_A_Data_Set_to_Facilitate_Audio_Deepfake_Detection.pdf",
+  "title": "WaveFake: A Data Set to Facilitate Audio Deepfake Detection",
+  "year": 2021,
+  "cited": 152,
+  "doi": "https://doi.org/10.48550/arxiv.2111.02813"
+ },
+ {
+  "file": "Deepfake_Detection_A_Comprehensive_Survey_from_the_Reliability_Perspective.pdf",
+  "title": "Deepfake Detection: A Comprehensive Survey from the Reliability Perspective",
+  "year": 2024,
+  "cited": 146,
+  "doi": "https://doi.org/10.1145/3699710"
+ },
+ {
+  "file": "Deepfake_Attacks_Generation_Detection_Datasets_Challenges_and_Research_Direction.pdf",
+  "title": "Deepfake Attacks: Generation, Detection, Datasets, Challenges, and Research Directions",
+  "year": 2023,
+  "cited": 137,
+  "doi": "https://doi.org/10.3390/computers12100216"
+ },
+ {
+  "file": "A_Survey_on_Speech_Deepfake_Detection.pdf",
+  "title": "A Survey on Speech Deepfake Detection",
+  "year": 2025,
+  "cited": 132,
+  "doi": "https://doi.org/10.1145/3714458"
+ },
+ {
+  "file": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf",
+  "title": "A Comprehensive Review of DeepFake Detection Using Advanced Machine Learning and Fusion Methods",
+  "year": 2023,
+  "cited": 120,
+  "doi": "https://doi.org/10.3390/electronics13010095"
+ },
+ {
+  "file": "A_Robust_Approach_to_Multimodal_Deepfake_Detection.pdf",
+  "title": "A Robust Approach to Multimodal Deepfake Detection",
+  "year": 2023,
+  "cited": 113,
+  "doi": "https://doi.org/10.3390/jimaging9060122"
+ },
+ {
+  "file": "Towards_the_Detection_of_Diffusion_Model_Deepfakes.pdf",
+  "title": "Towards the Detection of Diffusion Model Deepfakes",
+  "year": 2022,
+  "cited": 108,
+  "doi": "https://doi.org/10.48550/arxiv.2210.14571"
+ },
+ {
+  "file": "Deepfake_Eval_2024_A_Multi_Modal_In_the_Wild_Benchmark_of_Deepfakes_Circulated_i.pdf",
+  "title": "Deepfake-Eval-2024: A Multi-Modal In-the-Wild Benchmark of Deepfakes Circulated in 2024",
+  "year": 2025,
+  "cited": 100,
+  "doi": "https://doi.org/10.48550/arxiv.2503.02857"
+ },
+ {
+  "file": "DFDT_An_End_to_End_DeepFake_Detection_Framework_Using_Vision_Transformer.pdf",
+  "title": "DFDT: An End-to-End DeepFake Detection Framework Using Vision Transformer",
+  "year": 2022,
+  "cited": 98,
+  "doi": "https://doi.org/10.3390/app12062953"
+ },
+ {
+  "file": "FakeShield_Explainable_Image_Forgery_Detection_and_Localization_via_Multi_modal.pdf",
+  "title": "FakeShield: Explainable Image Forgery Detection and Localization via Multi-modal Large Language Models",
+  "year": 2024,
+  "cited": 96,
+  "doi": "https://doi.org/10.48550/arxiv.2410.02761"
+ },
+ {
+  "file": "The_Face_Deepfake_Detection_Challenge.pdf",
+  "title": "The Face Deepfake Detection Challenge",
+  "year": 2022,
+  "cited": 93,
+  "doi": "https://doi.org/10.3390/jimaging8100263"
+ },
+ {
+  "file": "A_Contemporary_Survey_on_Deepfake_Detection_Datasets_Algorithms_and_Challenges.pdf",
+  "title": "A Contemporary Survey on Deepfake Detection: Datasets, Algorithms, and Challenges",
+  "year": 2024,
+  "cited": 89,
+  "doi": "https://doi.org/10.3390/electronics13030585"
+ },
+ {
+  "file": "Deepfake_Detection_Scheme_Based_on_Vision_Transformer_and_Distillation.pdf",
+  "title": "Deepfake Detection Scheme Based on Vision Transformer and Distillation",
+  "year": 2021,
+  "cited": 88,
+  "doi": "https://doi.org/10.48550/arxiv.2104.01353"
+ },
+ {
+  "file": "DF40_Toward_Next_Generation_Deepfake_Detection.pdf",
+  "title": "DF40: Toward Next-Generation Deepfake Detection",
+  "year": 2024,
+  "cited": 78,
+  "doi": "https://doi.org/10.48550/arxiv.2406.13495"
+ },
+ {
+  "file": "Real_Time_Deepfake_Detection_in_the_Real_World.pdf",
+  "title": "Real-Time Deepfake Detection in the Real-World",
+  "year": 2024,
+  "cited": 76,
+  "doi": "https://doi.org/10.48550/arxiv.2406.09398"
+ },
+ {
+  "file": "FFAA_Multimodal_Large_Language_Model_based_Explainable_Open_World_Face_Forgery_A.pdf",
+  "title": "FFAA: Multimodal Large Language Model based Explainable Open-World Face Forgery Analysis Assistant",
+  "year": 2024,
+  "cited": 70,
+  "doi": "https://doi.org/10.48550/arxiv.2408.10072"
+ },
+ {
+  "file": "Detection_of_Deepfake_Media_Using_a_Hybrid_CNN_RNN_Model_and_Particle_Swarm_Opti.pdf",
+  "title": "Detection of Deepfake Media Using a Hybrid CNN–RNN Model and Particle Swarm Optimization (PSO) Algorithm",
+  "year": 2024,
+  "cited": 68,
+  "doi": "https://doi.org/10.3390/computers13040099"
+ },
+ {
+  "file": "AVT_2_DWF_Improving_Deepfake_Detection_With_Audio_Visual_Fusion_and_Dynamic_Weig.pdf",
+  "title": "AVT$^{2}$-DWF: Improving Deepfake Detection With Audio-Visual Fusion and Dynamic Weighting Strategies",
+  "year": 2024,
+  "cited": 60,
+  "doi": "https://doi.org/10.1109/lsp.2024.3433596"
+ },
+ {
+  "file": "Robustness_and_Generalizability_of_Deepfake_Detection_A_Study_with_Diffusion_Mod.pdf",
+  "title": "Robustness and Generalizability of Deepfake Detection: A Study with Diffusion Models",
+  "year": 2023,
+  "cited": 58,
+  "doi": "https://doi.org/10.48550/arxiv.2309.02218"
+ },
+ {
+  "file": "DeepFake_Adapter_Dual_Level_Adapter_for_DeepFake_Detection.pdf",
+  "title": "DeepFake-Adapter: Dual-Level Adapter for DeepFake Detection",
+  "year": 2025,
+  "cited": 58,
+  "doi": "https://doi.org/10.1007/s11263-024-02274-6"
+ },
+ {
+  "file": "FakeBench_Probing_Explainable_Fake_Image_Detection_via_Large_Multimodal_Models.pdf",
+  "title": "FakeBench: Probing Explainable Fake Image Detection via Large Multimodal Models",
+  "year": 2025,
+  "cited": 57,
+  "doi": "https://doi.org/10.1109/tifs.2025.3597211"
+ },
+ {
+  "file": "AntifakePrompt_Prompt_Tuned_Vision_Language_Models_are_Fake_Image_Detectors.pdf",
+  "title": "AntifakePrompt: Prompt-Tuned Vision-Language Models are Fake Image Detectors",
+  "year": 2023,
+  "cited": 54,
+  "doi": "https://doi.org/10.48550/arxiv.2310.17419"
+ }
+]
