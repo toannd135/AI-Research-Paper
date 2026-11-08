@@ -497,11 +497,12 @@ _TEMPLATE = """<!doctype html>
   .tbl > .caption { break-after: avoid; }
   .caption, figcaption { font-size: 9pt; text-align: center; margin: 4pt 0; }
   table { width: 100%; border-collapse: collapse; font-size: 8pt; line-height: 1.35;
-          border-top: 1.2pt solid #111; border-bottom: 1.2pt solid #111; table-layout: fixed; overflow-wrap: anywhere; }
+          border-top: 1.2pt solid #111; border-bottom: 1.2pt solid #111; table-layout: auto; overflow-wrap: break-word; word-break: normal; hyphens: manual; }
   thead { display: table-header-group; }
   tr { break-inside: avoid; }
   table.wide { font-size: 7pt; }
-  thead th { border-bottom: .6pt solid #111; text-align: left; padding: 4pt 4pt; vertical-align: bottom; }
+  thead th { border-bottom: .6pt solid #111; text-align: left; padding: 4pt 4pt; vertical-align: bottom; hyphens: manual; }
+  td.num, th.num { white-space: nowrap; }
   td { padding: 3pt 4pt; vertical-align: top; text-align: left; }
   tbody tr:nth-child(even) td { background: #f5f5f5; }
   figure.fig { margin: 12pt 0; text-align: center; break-inside: avoid; }

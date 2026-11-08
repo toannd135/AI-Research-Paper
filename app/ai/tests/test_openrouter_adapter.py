@@ -44,6 +44,24 @@ def test_openrouter_generate_returns_text(mock_httpx_cls):
 
 
 @patch("app.ai.llm_gateway.openrouter_adapter.httpx.Client")
+def test_openrouter_models_array_capped_at_three(mock_httpx_cls):
+    mock_res = MagicMock()
+    mock_res.status_code = 200
+    mock_res.json.return_value = {"model": "m-main", "choices": [{"message": {"content": "ok"}}]}
+    mock_client = MagicMock()
+    mock_client.post.return_value = mock_res
+    mock_httpx_cls.return_value.__enter__.return_value = mock_client
+
+    from app.ai.llm_gateway.openrouter_adapter import OpenRouterAdapter
+
+    adapter = OpenRouterAdapter(api_key="sk-or-fake-key", fallback_models=["a", "b", "c"])
+    adapter.generate([Message(role="user", content="Hi")], "m-main")
+
+    sent = mock_client.post.call_args.kwargs["json"]["models"]
+    assert sent == ["m-main", "a", "b"]
+
+
+@patch("app.ai.llm_gateway.openrouter_adapter.httpx.Client")
 def test_openrouter_upstream_error_raises_gateway_error(mock_httpx_cls):
     mock_res = MagicMock()
     mock_res.status_code = 200

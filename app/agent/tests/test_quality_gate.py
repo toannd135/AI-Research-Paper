@@ -5,14 +5,16 @@ from dataclasses import replace
 from types import SimpleNamespace
 
 from app.agent.evidence import quant_check as q
-from app.agent.evidence.quality_gate import run_quality_gate
+from app.agent.evidence.consistency_check import check_review_claims
+from app.agent.evidence.display_check import check_figure_captions
+from app.agent.evidence.quality_gate import merge_structure_issues, run_quality_gate
 from app.agent.evidence.reference_check import (
+    CATALOG_MATCHED,
     CONFLICT,
     INVALID,
     PARTIALLY_VERIFIED,
     UNVERIFIED,
-    CATALOG_MATCHED,
-    VERIFIED,
+    classify_publication,
     verify_references,
 )
 from app.agent.evidence.traceability import NO_CITATION, TRACED, UNTRACED, extract_numeric_claims, trace_claims
@@ -127,3 +129,66 @@ def test_quality_gate_blocks_untraced_numbers_and_bad_references():
     assert not failed["passed"] and any("không tìm thấy" in b for b in failed["blocking"])
     broken = run_quality_gate(state, good, {**catalog, "p1": {"title": "T1", "authors": "A", "year": "2021", "doi": "bad"}})
     assert not broken["passed"] and any("INVALID" in b for b in broken["blocking"])
+
+
+_RQ_DOC = (
+    "## 1. Introduction\n### 1.3 Research Gaps and Research Questions\n"
+    "**RQ1.** Which backbone architectures dominate glioma segmentation today?\n"
+    "**RQ2.** How are the four modalities fused in published segmentation networks?\n\n"
+    "## 2. Review Methodology\n### 2.1 Research Questions\n"
+    "**RQ1.** Which backbone architectures dominate glioma segmentation today?\n"
+    "**RQ2.** What are the open threats to validity in published segmentation studies?\n"
+)
+_GATE_STATE = {"citations": [SimpleNamespace(paper_id="p1")], "evidence": []}
+_GATE_CATALOG = {"p1": {"title": "T1", "authors": "A", "year": "2021", "venue": "MICCAI"}}
+
+
+def test_gate_blocks_rq_defined_differently_between_sections():
+    report = run_quality_gate(_GATE_STATE, _RQ_DOC + "See [1].", _GATE_CATALOG)
+    assert not report["passed"] and any("RQ2" in b for b in report["blocking"])
+    assert report["research_questions"]["problems"]
+
+
+def test_gate_blocks_claim_of_systematic_review_but_not_its_negation():
+    bad = "We conducted a systematic review following PRISMA guidelines [1]."
+    good = "This is a narrative review, not a systematic review, and no PRISMA flow was performed [1]."
+    assert check_review_claims(bad)
+    assert check_review_claims(good) == []
+    failed = run_quality_gate(_GATE_STATE, bad, _GATE_CATALOG)
+    assert not failed["passed"] and any("tổng quan" in b for b in failed["blocking"])
+    assert run_quality_gate(_GATE_STATE, good, _GATE_CATALOG)["review_claims"]["problems"] == []
+
+
+def test_merge_structure_issues_flips_passed_only_for_blocking():
+    base = {"passed": True, "blocking": [], "warnings": ["w"]}
+    assert merge_structure_issues(base, [], ["x"])["passed"] is True
+    merged = merge_structure_issues(base, ["Table [7] treo"], [])
+    assert merged["passed"] is False and merged["blocking"] == ["Table [7] treo"] and base["blocking"] == []
+    assert merge_structure_issues(None, ["b"], []) is None
+
+
+def test_figure_caption_checks():
+    text = (
+        "**Figure 2: Qualitative Visual Comparison**\n\n```image\n{\"ref\": \"F2\", \"caption\": \"Segmentation result of one case\"}\n```\n\n"
+        "**Figure 3: Qualitative Visual Comparison**\n\n"
+        "**Figure 4: Cascaded CNN output on a BraTS 2015 LGG case, green edema and red non-enhancing core [7]**\n"
+    )
+    warnings = check_figure_captions(text)
+    assert sum("chung chung" in w for w in warnings) == 2
+    assert any("trùng nhau" in w for w in warnings)
+    assert any("giấy phép" in w for w in warnings)
+    good = '**Figure 1: Cascaded CNN output on a BraTS 2015 LGG case, green edema, red core [7]**\n\n```image\n{"caption": "Cascaded CNN output on a BraTS 2015 LGG case [7], reproduced from that paper"}\n```'
+    assert check_figure_captions(good) == []
+
+
+def test_reference_publication_classification_and_gate_warnings():
+    assert classify_publication({"venue": "arXiv preprint arXiv:1709.00382"}) == "preprint"
+    assert classify_publication({"venue": "MICCAI 2020"}) == "published"
+    assert classify_publication({"url": "https://arxiv.org/abs/1"}) == "preprint"
+    assert classify_publication({"doi": "10.1016/j.media.2016.05.004"}) == "published"
+    assert classify_publication(None) == "unknown"
+    catalog = {"p1": {"title": "T1", "authors": "A", "year": "2021", "venue": "arXiv preprint"}, "p2": {"title": "T2", "authors": "B", "year": "2022"}}
+    state = {"citations": [SimpleNamespace(paper_id="p1"), SimpleNamespace(paper_id="p2")], "evidence": []}
+    report = run_quality_gate(state, "A [1] and B [2].", catalog)
+    assert report["references"]["publication"]["preprint"] == 1
+    assert any("preprint" in w for w in report["warnings"]) and any("thiếu metadata" in w for w in report["warnings"])

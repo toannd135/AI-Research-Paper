@@ -6,7 +6,14 @@ from app.agent.evidence.consistency_check import check_consistency
 from app.agent.evidence.external_verify import external_verify
 from app.agent.evidence.extractor import BATCH_SIZE, extract_results, records_from_dicts, records_to_dicts
 from app.agent.evidence.ledger import NR, render_ledger, replace_ledger
-from app.agent.evidence.quant_analysis import build_quant_blocks, inject_quant_blocks
+from app.agent.evidence.quant_analysis import (
+    build_quant_blocks,
+    evidence_limits,
+    inject_quant_blocks,
+    missing_modality_table,
+    modality_degradation_chart,
+    modality_matrix_stats,
+)
 from app.agent.evidence.quant_check import ResultRecord
 from app.agent.evidence.reference_check import CATALOG_MATCHED, CONFLICT, VERIFIED
 from app.agent.evidence.traceability import extract_numeric_claims
@@ -187,3 +194,62 @@ def test_extract_runs_every_batch_and_retries_on_error(monkeypatch):
     bad = _AlwaysFail()
     assert ex.extract_results(many, bad) == []
     assert bad.calls == 2 * ex.MAX_ATTEMPTS  # mọi lô đều được thử đủ số lần, không dừng giữa chừng
+
+
+def _mrec(model, mods, value, paper="pA", region="WT", metric="Dice", split="validation"):
+    return ResultRecord(paper_id=paper, model=model, dataset="BraTS", dataset_version="2018", split=split, region=region, metric=metric,
+                        value=value, unit="percent", modality=tuple(mods), source_page=3)
+
+
+FULL = ["T1", "T1ce", "T2", "FLAIR"]
+MISSING_RECORDS = [
+    _mrec("HeMIS", FULL, 80.0),
+    _mrec("HeMIS", ["T1", "T2", "FLAIR"], 76.5),
+    _mrec("HeMIS", ["T1ce", "FLAIR"], 74.0),
+    _mrec("HeMIS", ["FLAIR"], 62.0),
+    _mrec("Other", ["T1", "FLAIR"], 70.0, paper="pB"),
+    _mrec("Other", ["FLAIR"], 60.0, paper="pB"),
+]
+P2N = {"pA": 1, "pB": 2}
+
+
+def test_missing_modality_table_deltas_only_where_full_reported():
+    table = json.loads(re.search(r"```table\n(.*)\n```", missing_modality_table(MISSING_RECORDS, P2N), re.S).group(1))
+    assert table["derived"] is True
+    rows = {(r[0], r[3]): r for r in table["rows"]}
+    assert rows[("HeMIS [1]", "T1+T2+FLAIR")][5] == "-3.50"  # 76.5 - 80.0
+    assert rows[("HeMIS [1]", "T1c+FLAIR")][5] == "-6.00"  # T1ce chuẩn hóa thành T1c
+    assert rows[("HeMIS [1]", "Full (T1, T1c, T2, FLAIR)")][5] == "0.00"
+    assert rows[("Other [2]", "FLAIR")][5] == "n/r"  # nguồn không báo full -> không suy diễn
+
+
+def test_modality_chart_plots_only_reported_values_without_null():
+    block = modality_degradation_chart(MISSING_RECORDS, P2N)
+    spec = json.loads(re.search(r"```chart\n(.*)\n```", block, re.S).group(1))
+    assert spec["type"] == "bar" and spec["labels"][0].startswith("Full")
+    assert spec["series"][0]["name"] == "HeMIS [1]"
+    assert spec["series"][0]["values"] == [80.0, 76.5, 74.0, 62.0]  # chỉ giá trị đã báo cáo
+    assert all(v is not None for s in spec["series"] for v in s["values"])
+
+
+def test_modality_blocks_absent_when_no_modality_records():
+    plain = [_mrec("X", [], 70.0), _mrec("Y", [], 71.0)]
+    assert missing_modality_table(plain, P2N) is None and modality_degradation_chart(plain, P2N) is None
+    assert modality_matrix_stats(plain, P2N)["groups"] == 0
+
+
+def test_unknown_modality_name_is_not_guessed():
+    recs = [_mrec("Z", ["T1", "weird"], 50.0), _mrec("Z", ["T1"], 40.0)]
+    assert missing_modality_table(recs, P2N) is None
+
+
+def test_evidence_limits_states_real_gaps():
+    none_text = evidence_limits([_mrec("X", [], 70.0)], P2N, 2)
+    assert "no per-modality" in none_text and "no standard deviation" in none_text
+    some_text = evidence_limits(MISSING_RECORDS, P2N, 2)
+    assert "Missing-modality results were extracted for 2 method/setting groups (1 also report full-modality results" in some_text
+
+
+def test_build_quant_blocks_includes_modality_blocks():
+    blocks = build_quant_blocks(MISSING_RECORDS, P2N)
+    assert any("Available modalities" in b for b in blocks) and any("versus available MRI modalities" in b for b in blocks)

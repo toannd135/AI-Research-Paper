@@ -1,6 +1,9 @@
 from app.agent.evidence.report_structure import (
+    check_cross_references,
     finalize_structure,
+    finalize_structure_report,
     renumber_captions,
+    renumber_captions_report,
     renumber_sections,
     source_diversity_warning,
     strip_dangling_citations,
@@ -23,7 +26,7 @@ def test_renumber_captions_dedupes_and_remaps_unique_refs():
     text = "**Table 1: A**\n\n**Table 2: B**\n\nSee Table 2.\n\n**Figure 1: X**\n\n**Figure 1: Y**\n\nSee Figure 1."
     out = renumber_captions(text)
     assert "**Figure 2: Y**" in out
-    assert "See Figure 1." in out  # mơ hồ → giữ nguyên
+    assert "See Figure 2." in out  # mơ hồ → gán theo caption gần nhất (không còn giữ số cũ)
     assert "See Table 2." in out
 
 
@@ -71,3 +74,41 @@ def test_synthesize_blocks_when_no_citations():
 
     with pytest.raises(InsufficientEvidenceError):
         synthesize_node({"question": "q", "citations": []})
+
+
+def test_ambiguous_ref_resolved_by_sentence_overlap():
+    text = (
+        "**Table 4: Fusion strategies by combination stage**\n\n"
+        "**Table 4: Quantitative comparison of published Dice results**\n\n"
+        "The quantitative comparison of Dice results in Table 4 is not comparable across datasets.\n\n"
+        "Fusion strategies by combination stage are listed in Table 4."
+    )
+    out, low = renumber_captions_report(text)
+    assert "**Table 1: Fusion strategies" in out and "**Table 2: Quantitative comparison" in out
+    assert "Dice results in Table 2 is not" in out
+    assert "combination stage are listed in Table 1." in out
+    assert low == []
+
+
+def test_ambiguous_ref_without_overlap_is_reported_low_confidence():
+    text = "**Figure 1: Alpha pipeline**\n\n**Figure 1: Omega curves**\n\nSee Figure 1 above."
+    _, low = renumber_captions_report(text)
+    assert low and "Figure 1" in low[0]
+
+
+def test_cross_references_dangling_is_reported():
+    text = "**Table 1: A**\n\n**Table 2: B**\n\nResults in Table 5 and Table 2.\n\nSee Figure 3."
+    problems = check_cross_references(text)
+    assert any("Table [5]" in p for p in problems)
+    assert any("Figure [3]" in p for p in problems)
+
+
+def test_cross_references_ignores_source_paper_tables_and_fences():
+    text = "**Table 1: A**\n\nAs in Table 9 of [7] and Table 2 in the original paper.\n\n```table\n{\"caption\": \"see Table 8\"}\n```"
+    assert check_cross_references(text) == []
+
+
+def test_finalize_structure_report_returns_all_three():
+    fixed, dangling, low = finalize_structure_report("**Table 3: A**\n\nSee Table 3 and Table 6.")
+    assert "**Table 1: A**" in fixed and "Table 1 and Table 6" in fixed
+    assert dangling and not low

@@ -115,6 +115,51 @@ def _extract_citation_metadata(paper_id: str, snippet: str = "") -> dict[str, st
     }
 
 
+_CITE_CLUSTER_RE = re.compile(r"\[\d+\](?:(?:,\s*)?\[\d+\])+")
+_BLOCK_RE = re.compile(r"(```(?:table)[ \t]*\n)(.*?)(```)", re.DOTALL)
+_FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
+
+
+def _collapse_cluster(m: re.Match) -> str:
+    numbers = list(dict.fromkeys(re.findall(r"\d+", m.group(0))))
+    return ", ".join(f"[{n}]" for n in numbers)
+
+
+def _collapse_in_json(value: Any) -> Any:
+    if isinstance(value, str):
+        return _CITE_CLUSTER_RE.sub(_collapse_cluster, value)
+    if isinstance(value, list):
+        return [_collapse_in_json(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _collapse_in_json(v) for k, v in value.items()}
+    return value
+
+
+def collapse_duplicate_citations(text: str) -> str:
+    """Gộp trích dẫn liền kề trùng nhau sau khi đánh số lại ('[1], [1]' -> '[1]'); giữ thứ tự xuất hiện đầu tiên.
+
+    Chỉ sửa văn bản thường và chuỗi trong khối ```table (JSON); khối code/chart/mermaid giữ nguyên
+    vì '[1], [2]' ở đó có thể là mảng dữ liệu.
+    """
+
+    def _table(m: re.Match) -> str:
+        try:
+            spec = json.loads(m.group(2))
+        except ValueError:
+            return m.group(0)
+        return f"{m.group(1)}{json.dumps(_collapse_in_json(spec), ensure_ascii=False)}\n{m.group(3)}"
+
+    out: list[str] = []
+    pos = 0
+    for fence in _FENCE_RE.finditer(text):
+        out.append(_CITE_CLUSTER_RE.sub(_collapse_cluster, text[pos : fence.start()]))
+        block = fence.group(0)
+        out.append(_BLOCK_RE.sub(_table, block) if block.startswith("```table") else block)
+        pos = fence.end()
+    out.append(_CITE_CLUSTER_RE.sub(_collapse_cluster, text[pos:]))
+    return "".join(out)
+
+
 def clean_and_deduplicate_citations(
     citations: list[Any],
     text: str,
@@ -169,6 +214,7 @@ def clean_and_deduplicate_citations(
         return f"[{new_idx}]" if new_idx is not None else match.group(0)
 
     updated_text = re.sub(r"\[(\d+)\]", _repl_citation, text)
+    updated_text = collapse_duplicate_citations(updated_text)
 
     # 5. Sinh danh sách tham khảo theo định dạng chuẩn IEEE
     formatted_references = []

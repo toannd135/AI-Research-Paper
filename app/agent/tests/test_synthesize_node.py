@@ -169,3 +169,69 @@ def test_synthesize_node_hierarchical_execution():
 
     # Verify that all 6 stages were invoked
     assert gateway.call_count == 6
+
+
+class _RqGateway(LLMGateway):
+    """Fake: mỗi chặng ghi RQ KHÁC nhau như LLM thật; kiểm tra RQ chuẩn được tiêm vào prompt và ép vào bản cuối."""
+
+    def __init__(self):
+        self.prompts: list[str] = []
+
+    def generate(self, messages: list[Message], model_name: str | None = None) -> LLMResponse:
+        system = messages[0].content
+        self.prompts.append(system)
+        if "Research Blueprint" in system:
+            return LLMResponse(
+                text=(
+                    "1. TITLE: Fusion Survey\n7. RESEARCH QUESTIONS\n"
+                    "RQ1. Which backbone architectures dominate brain tumor segmentation today?\n"
+                    "RQ2. At which stage are the four MRI modalities fused in published networks?\n"
+                    "RQ3. How is robustness to missing modalities achieved in the literature?\n"
+                ),
+                model="fake",
+            )
+        if "Front Matter and Section 1" in system:
+            return LLMResponse(
+                text=(
+                    "# Fusion Survey\n\n## Abstract\nText.\n\n**Keywords:** a, b\n\n## 1. Introduction\n"
+                    "### 1.3 Research Gaps and Research Questions\n"
+                    "**RQ1.** What are the dominant architectures used for glioma segmentation?\n"
+                    "**RQ2.** Where do the modalities get fused according to published work?\n"
+                    "**RQ3.** Which threats to validity affect the reported benchmark numbers?\n"
+                ),
+                model="fake",
+            )
+        if "REVIEW METHODOLOGY" in system:
+            return LLMResponse(
+                text=(
+                    "## 2. Review Methodology\n### 2.1 Research Questions\n"
+                    "**RQ1.** Which dominant backbone designs exist for tumour segmentation of glioma?\n"
+                    "**RQ2.** Which stage of fusion do published works choose and why exactly?\n"
+                    "**RQ3.** Which comparisons across the reported results are really valid today?\n"
+                ),
+                model="fake",
+            )
+        return LLMResponse(text="## 7. Conclusion\nWe answer RQ1, RQ2 and RQ3.\n" if "DISCUSSION AND CONCLUSION" in system else "Body [1].\n", model="fake")
+
+
+def test_synthesize_uses_single_canonical_rq_set():
+    from app.agent.evidence.rq_sync import check_rq_definitions, section_rqs
+
+    llm = _RqGateway()
+    state = {
+        "question": "Fusion for brain tumor segmentation",
+        "draft": "draft",
+        "citations": [Citation(chunk_id="c1", paper_id="p1", page=1, text_snippet="x")],
+        "research_mode": "survey",
+    }
+    out = synthesize_node(state, llm=llm)
+    canon = [
+        "Which backbone architectures dominate brain tumor segmentation today?",
+        "At which stage are the four MRI modalities fused in published networks?",
+        "How is robustness to missing modalities achieved in the literature?",
+    ]
+    assert all("CANONICAL RESEARCH QUESTIONS" in p for p in llm.prompts[1:]), "mọi chặng sau blueprint phải nhận RQ chuẩn"
+    assert any("7. RESEARCH QUESTIONS" in p for p in llm.prompts[:1])
+    secs = section_rqs(out["report"])
+    assert len(secs) == 2 and all([b for _, b in v] == canon for v in secs.values())
+    assert check_rq_definitions(out["report"]) == []

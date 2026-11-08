@@ -15,6 +15,7 @@ DEFAULT_FALLBACK_MODELS = [
     "qwen/qwen3.8-27b:free",
 ]
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+MAX_MODELS_PER_REQUEST = 3
 
 
 class OpenRouterAdapter(LLMGateway):
@@ -44,6 +45,8 @@ class OpenRouterAdapter(LLMGateway):
         for m in self._fallback_models:
             if m not in model_candidates:
                 model_candidates.append(m)
+        # OpenRouter từ chối mảng "models" dài hơn 3 phần tử (HTTP 400).
+        model_candidates = model_candidates[:MAX_MODELS_PER_REQUEST]
 
         url = f"{self._base_url}/chat/completions"
         headers = {

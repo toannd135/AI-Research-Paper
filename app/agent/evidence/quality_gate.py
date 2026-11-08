@@ -10,10 +10,18 @@ import re
 from pathlib import Path
 from typing import Any
 
-from app.agent.evidence.consistency_check import check_consistency
+from app.agent.evidence.consistency_check import check_consistency, check_review_claims
 from app.agent.evidence.display_check import check_display_items
 from app.agent.evidence.quant_check import check_chart_block
-from app.agent.evidence.reference_check import CONFLICT, INVALID, UNVERIFIED, verify_references
+from app.agent.evidence.reference_check import (
+    CONFLICT,
+    INVALID,
+    PARTIALLY_VERIFIED,
+    PREPRINT,
+    UNVERIFIED,
+    verify_references,
+)
+from app.agent.evidence.rq_sync import check_rq_definitions
 from app.agent.evidence.traceability import (
     NO_CITATION,
     TRACED,
@@ -75,6 +83,16 @@ def run_quality_gate(state: dict[str, Any], text: str, catalog: dict[str, dict[s
             "trong bảng/biểu đồ — không được dùng làm bảng kết quả"
         )
     blocking += [f"so sánh không tương đương: {p}" for p in chart_problems]
+    rq_problems = check_rq_definitions(text)
+    blocking += [f"RQ không nhất quán: {p}" for p in rq_problems]
+    incomplete = [r for r in references["references"] if r["status"] == PARTIALLY_VERIFIED]
+    if incomplete:
+        warnings.append(f"{len(incomplete)}/{len(references['references'])} reference thiếu metadata ({', '.join(sorted({m for r in incomplete for m in r['missing']}))}) — cần bổ sung/đối chiếu nguồn")
+    preprints = references["publication"].get(PREPRINT, 0)
+    if preprints:
+        warnings.append(f"{preprints}/{len(references['references'])} reference là preprint/arXiv, chưa chắc đã bình duyệt — ghi rõ khi dùng làm bằng chứng")
+    review_claims = check_review_claims(text)
+    blocking += [f"tuyên bố sai về quy trình tổng quan: {p}" for p in review_claims]
     if len(cited_numbers) < 2:
         warnings.append("bài cite ít hơn 2 nguồn")
     from app.agent.research_model import contribution_profile
@@ -95,6 +113,16 @@ def run_quality_gate(state: dict[str, Any], text: str, catalog: dict[str, dict[s
             "traced_sample": [r for r in evidence_records if r["status"] == TRACED][:_MAX_LISTED],
         },
         "comparability": {"chart_problems": chart_problems},
+        "research_questions": {"problems": rq_problems},
+        "review_claims": {"problems": review_claims},
         "display_items": display,
         "consistency": consistency,
     }
+
+
+def merge_structure_issues(report: dict[str, Any] | None, blocking: list[str], warnings: list[str]) -> dict[str, Any] | None:
+    """Gộp lỗi cấu trúc phát hiện SAU khi đánh số lại bảng/hình (gate chính chạy trước bước đó) vào validation_report."""
+    if report is None or not (blocking or warnings):
+        return report
+    merged_blocking = [*report["blocking"], *blocking]
+    return {**report, "blocking": merged_blocking, "warnings": [*report["warnings"], *warnings], "passed": not merged_blocking}

@@ -134,3 +134,17 @@ def _check_formulas(text: str) -> list[str]:
 def check_consistency(text: str) -> list[str]:
     secs = _sections(text)
     return _check_rq(secs) + _check_names_and_datasets(text) + _check_abstract(secs, text) + _check_numbering(text) + _check_formulas(text)
+
+
+_REVIEW_CLAIM_RE = re.compile(r"systematic (?:literature )?review|systematic mapping|\bPRISMA\b", re.IGNORECASE)
+_NEGATION_RE = re.compile(r"\b(?:not|no|never|neither|nor|without|isn't|wasn't|weren't|didn't|doesn't|rather than|instead of|non-systematic|unlike)\b", re.IGNORECASE)
+
+
+def check_review_claims(text: str) -> list[str]:
+    """Câu khẳng định đây là systematic review/PRISMA mà không có phủ định: PaperAI chỉ làm narrative review trên kho PDF nội bộ."""
+    body = _FENCE_RE.sub("", text.split("\n## References", 1)[0])
+    problems: list[str] = []
+    for sentence in re.split(r"(?<=[.!?])\s+|\n+", body):
+        if _REVIEW_CLAIM_RE.search(sentence) and not _NEGATION_RE.search(sentence):
+            problems.append(f"'{sentence.strip()[:120]}'")
+    return problems[:5]

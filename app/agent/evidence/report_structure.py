@@ -58,41 +58,72 @@ def renumber_sections(text: str) -> str:
     return "".join(out)
 
 
-def renumber_captions(text: str) -> str:
-    """Đánh số lại '**Table N:' / '**Figure N:' tuần tự và cập nhật tham chiếu trong văn bản khi không mơ hồ.
+_REF_RE = re.compile(r"\b(Table|Figure)\s+(\d+)\b")
+_WORD_RE = re.compile(r"[a-z0-9]{4,}")
+_STOP = frozenset(
+    {"table", "figure", "with", "that", "this", "from", "which", "their", "these", "those", "between", "across", "within", "each", "into", "than", "over", "under", "when", "where", "while", "using", "based"}
+)
 
-    Số cũ xuất hiện ở đúng 1 chú thích thì mọi 'Table N' trong thân được đổi theo; số cũ trùng nhiều chú thích
-    (ví dụ hai 'Figure 1') thì giữ nguyên tham chiếu vì không biết trỏ đến cái nào.
+
+def _tokens(s: str) -> set[str]:
+    return {w for w in _WORD_RE.findall(s.lower()) if w not in _STOP}
+
+
+def renumber_captions_report(text: str) -> tuple[str, list[str]]:
+    """Đánh số lại '**Table N:' / '**Figure N:' tuần tự và cập nhật tham chiếu trong thân bài.
+
+    Số cũ chỉ xuất hiện ở 1 chú thích thì mọi 'Table N' được đổi theo. Số cũ trùng nhiều chú thích (do các chặng sinh độc lập,
+    ví dụ hai 'Table 4') thì chọn chú thích hợp nhất theo mức trùng từ giữa câu chứa tham chiếu và chú thích, hòa thì lấy chú thích
+    gần nhất trong văn bản. Trả về (văn bản mới, danh sách tham chiếu gán chỉ dựa vào vị trí — độ tin cậy thấp).
     """
+    captions: list[dict] = []
     counters = {"Table": 0, "Figure": 0}
-    old_counts: dict[tuple[str, int], int] = Counter()
     for m in _CAPTION_RE.finditer(text):
-        old_counts[(m.group(2), int(m.group(3)))] += 1
+        kind = m.group(2)
+        counters[kind] += 1
+        line_end = text.find("\n", m.start())
+        captions.append(
+            {"kind": kind, "old": int(m.group(3)), "new": counters[kind], "pos": m.start(), "tokens": _tokens(text[m.start() : line_end if line_end != -1 else len(text)])}
+        )
+    by_old: dict[tuple[str, int], list[dict]] = {}
+    for c in captions:
+        by_old.setdefault((c["kind"], c["old"]), []).append(c)
 
-    remap: dict[tuple[str, int], int] = {}
+    new_numbers = iter(captions)
 
     def _cap(m: re.Match) -> str:
-        kind, old = m.group(2), int(m.group(3))
-        counters[kind] += 1
-        if old_counts[(kind, old)] == 1:
-            remap[(kind, old)] = counters[kind]
-        return f"{m.group(1)}{kind} {counters[kind]}{m.group(4)}"
+        c = next(new_numbers)
+        return f"{m.group(1)}{c['kind']} {c['new']}{m.group(4)}"
 
-    text = _CAPTION_RE.sub(_cap, text)
-
-    def _ref(m: re.Match) -> str:
-        kind, old = m.group(1), int(m.group(2))
-        new = remap.get((kind, old))
-        return f"{kind} {new}" if new is not None else m.group(0)
-
-    # Chỉ đổi tham chiếu nằm ngoài dòng chú thích vừa đánh số (chú thích bắt đầu bằng '**').
-    out_lines = []
+    low_confidence: list[str] = []
+    out_lines: list[str] = []
+    offset = 0
     for line in text.split("\n"):
-        if line.startswith("**Table ") or line.startswith("**Figure "):
+        if line.startswith(("**Table ", "**Figure ")):
             out_lines.append(line)
         else:
-            out_lines.append(re.sub(r"\b(Table|Figure)\s+(\d+)\b", _ref, line))
-    return "\n".join(out_lines)
+            sentence_tokens = _tokens(line)
+
+            def _ref(m: re.Match, base: int = offset, tokens: set[str] = sentence_tokens) -> str:
+                kind, old = m.group(1), int(m.group(2))
+                candidates = by_old.get((kind, old), [])
+                if not candidates:
+                    return m.group(0)
+                if len(candidates) == 1:
+                    return f"{kind} {candidates[0]['new']}"
+                here = base + m.start()
+                best = max(candidates, key=lambda c: (len(tokens & c["tokens"]), -abs(c["pos"] - here)))
+                if not tokens & best["tokens"]:
+                    low_confidence.append(f"{kind} {old} -> {kind} {best['new']}")
+                return f"{kind} {best['new']}"
+
+            out_lines.append(_REF_RE.sub(_ref, line))
+        offset += len(line) + 1
+    return _CAPTION_RE.sub(_cap, "\n".join(out_lines)), low_confidence
+
+
+def renumber_captions(text: str) -> str:
+    return renumber_captions_report(text)[0]
 
 
 def strip_dangling_citations(text: str, n_refs: int) -> tuple[str, list[int]]:
@@ -135,6 +166,30 @@ def source_diversity_warning(text: str, n_refs: int) -> str | None:
     return None
 
 
+# 'Table 2 of [7]' là bảng trong paper nguồn, không phải bảng của bài này.
+_SOURCE_REF_RE = re.compile(r"\b(Table|Figure)\s+(\d+)(?=\s+(?:of|in|from)\s+(?:\[\d+\]|the original))")
+
+
+def check_cross_references(text: str) -> list[str]:
+    """Lỗi chặn: tham chiếu 'Table N'/'Figure N' trong thân bài vượt quá số chú thích thực có (tham chiếu treo)."""
+    counts = Counter(m.group(2) for m in _CAPTION_RE.finditer(text))
+    body_lines = [ln for ln in _FENCE_RE.sub("", text).split("\n") if not ln.startswith(("**Table ", "**Figure "))]
+    body = _SOURCE_REF_RE.sub("", "\n".join(body_lines))
+    problems: list[str] = []
+    for kind in ("Table", "Figure"):
+        total = counts.get(kind, 0)
+        dangling = sorted({int(n) for k, n in _REF_RE.findall(body) if k == kind and int(n) > total})
+        if dangling:
+            problems.append(f"{kind} {dangling} được nhắc trong thân bài nhưng bài chỉ có {total} {kind.lower()} có chú thích")
+    return problems
+
+
+def finalize_structure_report(text: str) -> tuple[str, list[str], list[str]]:
+    """Đánh số lại mục, bảng, hình sau khi ghép. Trả về (văn bản, lỗi tham chiếu treo, tham chiếu gán theo vị trí)."""
+    fixed, low_confidence = renumber_captions_report(renumber_sections(text))
+    return fixed, check_cross_references(fixed), low_confidence
+
+
 def finalize_structure(text: str) -> str:
     """Đánh số lại mục, bảng, hình sau khi ghép."""
-    return renumber_captions(renumber_sections(text))
+    return finalize_structure_report(text)[0]

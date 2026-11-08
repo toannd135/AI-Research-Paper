@@ -1,6 +1,6 @@
 """Unit tests for citation cleaner and dataset catalog."""
 
-from app.agent.evidence.citation_cleaner import clean_and_deduplicate_citations
+from app.agent.evidence.citation_cleaner import clean_and_deduplicate_citations, collapse_duplicate_citations
 from app.agent.evidence.dataset_catalog import KNOWN_DATASETS, get_dataset_grounding_context
 from app.core.schemas import Citation
 
@@ -44,3 +44,24 @@ def test_clean_and_deduplicate_citations():
     assert "Hawon Jeong et al." in clean_refs[0]
     assert "Page: 1" not in clean_refs[0]
     assert "Snippet" not in clean_refs[0]
+
+
+def test_collapse_duplicate_citations_in_text():
+    assert collapse_duplicate_citations("as shown in [1], [1] and [2][2], [3], [1].") == "as shown in [1] and [2], [3], [1]."
+    assert collapse_duplicate_citations("only [1] and [2].") == "only [1] and [2]."
+
+
+def test_collapse_keeps_code_blocks_but_fixes_table_cells():
+    text = '```chart\n{"values": [[1], [1]]}\n```\n\n```table\n{"rows": [["HeMIS [7], [7]", "0.8"]]}\n```'
+    out = collapse_duplicate_citations(text)
+    assert '[[1], [1]]' in out
+    assert "HeMIS [7]\"" in out and "[7], [7]" not in out
+
+
+def test_remap_merging_two_chunks_of_one_paper_yields_single_marker():
+    citations = [
+        Citation(paper_id="Title: Alpha Net Authors: A One et al. (2020)", chunk_id="c1", text_snippet="s1"),
+        Citation(paper_id="Title: Alpha Net Authors: A One et al. (2020)", chunk_id="c2", text_snippet="s2"),
+    ]
+    updated, _ = clean_and_deduplicate_citations(citations, "Dice improves [1], [2] on BraTS.")
+    assert "[1], [1]" not in updated and "[1]" in updated

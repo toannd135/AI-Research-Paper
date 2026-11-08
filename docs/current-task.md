@@ -2,27 +2,31 @@
 
 > Cập nhật tệp này MỖI KHI đổi task. Claude đọc nó trước khi code. Trống/lỗi thời -> hỏi người dùng.
 
-## Task: Research Knowledge Model (nhánh `vinh-diagram`)
-Mô hình hóa dự án nghiên cứu thành dữ liệu có cấu trúc (gaps, questions, claims, experiments) thay vì chỉ văn bản; mỗi claim được kiểm chứng với evidence.
+## Task: Sửa lỗi chất lượng survey theo nhận xét bản `survey_e329b04d.pdf` (nhánh `feature/normalization`)
+Bản trước (Research Knowledge Model) đã commit; task này sửa 4 nhóm lỗi người dùng chọn:
+- **3.1** RQ phải có MỘT nguồn duy nhất, dùng giống nhau ở Introduction, Methodology, Discussion, Conclusion.
+- **3.3** Kiểm tra nhất quán tài liệu: tham chiếu Table/Figure đúng số thật, không còn trích dẫn lặp `[1], [1]`, tiêu đề cột bảng không bị tách chữ.
+- **3.4 + 3.5** Methodology chỉ nêu quy trình thật (không PRISMA/systematic nếu không làm); caption figure cụ thể, ghi nguồn + giấy phép; biểu đồ suy giảm khi mất modality (chỉ khi có số).
+- **3.2 + 3.6** Ma trận missing-modality, ΔDice/ΔHD95 chỉ tính từ số trích được; thiếu dữ liệu (ma trận, std/CI) thì ghi rõ là hạn chế, KHÔNG bịa. References: phân loại preprint/đã xuất bản, thiếu venue/DOI.
 
-## Trạng thái (từ git, chưa commit)
-- Có: `app/agent/research_model.py` (taxonomy contribution/methodology/paper type), `nodes/model_node.py`, `evidence/claim_validator.py`, `test_research_model.py`, migration `0008_research_model.py`, cột `research_tasks.research_model`, field `research_model` trong `ResearchTaskResponse`, node `model` trong graph (critique -> model -> synthesize).
-- Sửa: `plan_node`, `synthesize_node`, `state.py`, `tasks.py`, `routes/research.py`, `schemas.py`.
+Quyết định đã hỏi người dùng: thiếu dữ liệu -> ghi rõ hạn chế (không chặn export vì thiếu ma trận).
 
 ## Phạm vi được phép đổi
-`app/agent/**`, `app/api/models/research_task.py`, `app/api/routes/research.py`, `app/core/schemas.py`, `app/pipeline/tasks.py`, `migrations/versions/0008_*`, test tương ứng, và doc liên quan.
+`app/agent/**` (synthesize_node, evidence/*), `app/pipeline/export/pdf_renderer.py` (CSS bảng), test tương ứng, doc liên quan.
 
 ## Không đổi
-Pipeline nạp paper, retrieval, LLM gateway, auth, frontend (trừ khi được yêu cầu riêng), migration 0001–0007.
+Pipeline nạp paper, retrieval, LLM gateway, auth, frontend, DB/migration, `.env`.
 
 ## Tiêu chí hoàn thành
-- [ ] `pytest app/agent app/api -q` pass; `ruff check app tests` sạch
-- [ ] `alembic upgrade head` (DB dev) rồi `downgrade -1` + `upgrade head` chạy được
-- [ ] Task cũ (research_model = NULL) vẫn đọc được qua `GET /research/{id}`
-- [ ] Graph vẫn chạy khi `model_node` lỗi/LLM trả JSON sai (suy giảm, không sập task)
-- [ ] claim không có evidence bị đánh dấu trong report/research_model
-- [ ] `docs/api-contracts.md`, `docs/database-schema.md`, `docs/architecture.md` khớp code
-- [ ] Ghi `docs/handoff/research-model.md` khi xong mốc
+- [x] Blueprint sinh RQ chuẩn; Introduction, 2.1 và Conclusion dùng đúng nguyên văn; RQ lệch giữa Intro và 2.1 -> lỗi chặn
+- [x] Tham chiếu `Table N`/`Figure N` mơ hồ được gán theo ngữ cảnh; tham chiếu treo -> lỗi chặn
+- [x] `[1], [1]` được gộp thành `[1]`; tiêu đề cột bảng không bị bẻ giữa từ
+- [x] Bài tự nhận "systematic review"/PRISMA khi không làm -> lỗi chặn; caption figure chung chung/trùng -> cảnh báo
+- [x] Ma trận missing-modality + ΔDice sinh từ `ResultRecord.modality`; khi thiếu, prompt nhận "EVIDENCE LIMITS" đúng số thật
+- [x] validation_report có thống kê preprint / thiếu venue-DOI của References
+- [x] `pytest app/agent app/pipeline app/ai -q` pass (không gọi LLM/mạng thật); `ruff check` sạch trên các tệp mới/đã sửa (46 lỗi lint có sẵn ở tệp khác, không thuộc task này)
+- [ ] Chạy lại survey thật và đối chiếu kết quả (chờ người dùng restart worker)
+- [x] Doc `architecture.md` khớp; ghi `docs/handoff/survey-quality-fixes.md`
 
 ## Câu hỏi mở
 (điền khi gặp; hỏi người dùng thay vì đoán)

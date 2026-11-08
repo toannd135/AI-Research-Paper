@@ -82,3 +82,16 @@ DOI đúng nhưng title sai · citation không hỗ trợ claim · Dice WT gán 
 - **P3 Consistency** — `consistency_check.py` (WARNING, không chặn): RQ Intro↔Conclusion, tên method theo [n] giữa các bảng, biến thể tên dataset, số trong Abstract có trong thân bài, đánh số Table/Figure, cân bằng công thức `$`/`{}`.
 - **P4 Quant analysis** — `quant_analysis.py`: bảng Δ so với tốt nhất trong nhóm COMPARABLE (HD95 thấp hơn là tốt), Δ ablation (cùng paper+setting, có `variant`), scatter Dice–Params; khối `derived:true` được traceability bỏ qua. Chỉ sinh khi đủ điều kiện.
 - **P5 Publication** — `VERIFIED`→`CATALOG_MATCHED` (VERIFIED chỉ khi Crossref khớp DOI+tiêu đề, `external_verify.py`, tắt mặc định `REFERENCE_EXTERNAL_VERIFY=false`, fetcher tiêm được để test không dùng mạng); kiểm tra độ dài Abstract 150–220 từ. Kiểm tra "ngôn ngữ khoa học" giữ nguyên bước dịch/làm sạch hiện có (không thêm mới).
+
+## Sửa chất lượng survey theo nhận xét `survey_e329b04d.pdf` (task hiện tại)
+| # | Việc | Tệp | Kiểm chứng |
+|---|---|---|---|
+| 1 | RQ một nguồn: blueprint sinh RQ chuẩn, tiêm vào chặng 1/2/5, `rq_sync` ép nguyên văn + check lệch Intro↔2.1 (chặn) | `evidence/rq_sync.py`, `synthesize_node.py`, `consistency_check.py`, `quality_gate.py` | `pytest app/agent/tests/test_rq_sync.py` |
+| 2 | Tham chiếu Table/Figure mơ hồ gán theo ngữ cảnh; tham chiếu treo = chặn | `evidence/report_structure.py`, `display_check.py`, `quality_gate.py` | `pytest app/agent/tests/test_report_structure.py` |
+| 3 | Gộp `[1], [1]`; CSS tiêu đề cột không bẻ giữa từ | `evidence/citation_cleaner.py`, `pipeline/export/pdf_renderer.py` | test cleaner + `pytest app/pipeline -q` |
+| 4 | Ma trận missing-modality, Δ so với full, biểu đồ suy giảm; `evidence_limits` | `evidence/quant_analysis.py` | `pytest app/agent/tests/test_evidence_pipeline.py` |
+| 5 | Methodology trung thực (check systematic/PRISMA), caption figure, tham số retrieval trong REVIEW FACTS, EVIDENCE LIMITS vào prompt | `synthesize_node.py`, `consistency_check.py`, `display_check.py` | test check + test prompt |
+| 6 | Thống kê preprint / thiếu venue-DOI trong validation_report | `evidence/reference_check.py`, `quality_gate.py` | `pytest app/agent/tests/test_reference_check.py` |
+| 7 | Doc + handoff | `docs/architecture.md`, `docs/handoff/` | đối chiếu thủ công |
+
+Rủi ro: ép RQ bằng regex có thể ghi đè sai nếu số dòng RQ khác chuẩn -> chỉ ép khi số RQ khớp, ngược lại để nguyên và gate báo lỗi. Không bịa số để lấp ma trận.

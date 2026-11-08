@@ -19,20 +19,26 @@ import re
 from datetime import date
 from typing import Any
 
-from app.agent.evidence.claim_scan import find_leaked_claims, soften_leaked_claims
 from app.agent.evidence.citation_cleaner import _local_catalog, clean_and_deduplicate_citations
+from app.agent.evidence.claim_scan import find_leaked_claims, soften_leaked_claims
 from app.agent.evidence.dataset_catalog import get_dataset_grounding_context
-from app.agent.evidence.report_structure import finalize_structure, source_diversity_warning, strip_dangling_citations
+from app.agent.evidence.quality_gate import merge_structure_issues
+from app.agent.evidence.report_structure import (
+    finalize_structure_report,
+    source_diversity_warning,
+    strip_dangling_citations,
+)
+from app.agent.evidence.rq_sync import canonical_rqs, enforce_rqs, rq_block, section_rqs
 from app.agent.format_sanitizer import sanitize_academic_markdown
 from app.agent.language import language_name
 from app.agent.profiles import adaptation_rules, audience_profile, field_profile, missing_end_sections
 from app.agent.report_postprocess import postprocess_report
 from app.agent.research_model import contribution_guidance, model_brief
 from app.agent.state import ResearchState
-from app.core.config import get_settings
-from app.pipeline.figures import load_figures
 from app.ai.llm_gateway.base import LLMGateway, Message
 from app.ai.llm_gateway.default import get_default_agent_gateway
+from app.core.config import get_settings
+from app.pipeline.figures import load_figures
 
 logger = logging.getLogger(__name__)
 
@@ -194,9 +200,9 @@ _STAGE_STRUCTURES: dict[str, dict[str, str]] = {
             "- Describe ONLY the process that was really carried out, using the REVIEW FACTS: the corpus is a curated repository of PDFs, retrieval is hybrid search over it with the listed queries, and the papers cited are those that the retrieval returned. "
             "Never invent databases (IEEE Xplore, PubMed, Scopus...), search dates, hit counts, screening numbers or a PRISMA flow that did not happen; say plainly that this is a narrative review of a curated corpus, not a systematic review, and state this as a limitation.\n"
             "### 2.1 Research Questions\n"
-            "- 3-5 numbered questions (RQ1...RQ4) that the later sections answer, e.g. architectural paradigms, handling of missing inputs/modalities, comparability of reported results, obstacles to deployment (adapt to the topic).\n"
+            "- List the CANONICAL RESEARCH QUESTIONS from the design plan VERBATIM, one per line as '**RQ1.** ...', with the same numbers and wording as in Section 1.3 (never a different set). If the design plan lists none, write 3-4 numbered questions (RQ1...) that the later sections answer, e.g. architectural paradigms, handling of missing inputs/modalities, comparability of reported results.\n"
             "### 2.2 Corpus, Search Strategy and Selection Criteria\n"
-            "- The REVIEW FACTS (corpus size, queries, number of papers retrieved/cited, search date); explicit inclusion and exclusion criteria stated as the criteria applied by this review (e.g. published method or benchmark paper on the topic; excluded: papers off the topic or without reported methods).\n"
+            "- The REVIEW FACTS (corpus size, queries, number of papers retrieved/cited, search date); the inclusion rule and quality assessment EXACTLY as given in the REVIEW FACTS (do not add criteria, screening stages or a reviewer count that are not listed there), plus the retrieval configuration.\n"
             "### 2.3 Data Extraction and Quality Assessment\n"
             "- The fields extracted from each paper (architecture, dataset and version, input modalities, metrics, reported values, stated limitations) and how evidence quality is judged (peer-reviewed vs preprint, benchmark vs private data, reported variance). Include a small Markdown table '**Table 1: Data extraction scheme**' only if it adds information.\n"
             "### 2.4 Comparison with Existing Surveys\n"
@@ -225,7 +231,8 @@ _STAGE_STRUCTURES: dict[str, dict[str, str]] = {
             "- One ```table JSON block (method [n], paradigm, dataset+version, sub-region/class, metric, value) with results reported in the cited sources; group methods by paradigm. "
             "COMPARABILITY RULE: values are directly comparable only under the same dataset version, split, sub-region/class (e.g. whole tumor, tumor core and enhancing tumor are three different quantities) and metric definition; keep such quantities in separate columns or tables, never average or rank across them, and mark rows from a different setting. Where conditions differ, say the results are not directly comparable.\n"
             "### 5.3 Qualitative Visual Comparison\n"
-            "- At most one or two real images from AVAILABLE FIGURES, each caption naming the source [n] and noting it is reproduced from that paper (reuse is subject to the original licence).\n"
+            "- At most one or two real images from AVAILABLE FIGURES. Each caption must be SPECIFIC (what is shown: method, dataset, case, what the colours/panels mean) and name the source [n], noting it is reproduced from that paper (reuse is subject to the original licence); never reuse a generic caption such as 'Qualitative Visual Comparison'. "
+            "Follow the images with ONE analytic paragraph that discusses all of them together (what they show about boundary quality, small structures or failure cases, with [n]); do not describe them one by one without comparing them.\n"
             "### 5.4 Performance Trade-offs\n"
             "- Accuracy vs. latency/cost/interpretability and similar trade-offs, from reported evidence only; aim for 3 ```chart blocks of 3 DIFFERENT chart types WHEN the evidence has enough real, comparable numbers (otherwise include fewer; never invent or pad data just to reach a count), chosen from bar | barh | line/xyline | heatmap | stacked_barh | scatter | boxplot (e.g. one barh ranking of a single metric, one grouped bar across regions, one heatmap of methods x regions, or a line over the number of available modalities when the sources report it), each restricted to ONE comparable setting (same dataset version, same region, same metric) and each plotting only numbers that appear in the evidence with their [n]. Split the evidence into separate charts, e.g. Dice for whole tumor, Dice for tumor core, Dice for enhancing tumor on the same dataset version, or HD95 on its own; one chart per region/metric. Never plot values from incomparable settings on one axis, never mix Dice with HD95 or with parameter counts, never use null, \"relative\"/normalized/estimated values or numbers read from an image; a method with no reported value for that setting is simply left out of that chart (each chart needs >=3 methods).\n"
             "### 5.5 Cross-study Evidence Analysis\n"
@@ -238,11 +245,11 @@ _STAGE_STRUCTURES: dict[str, dict[str, str]] = {
             "- Include a Markdown table '**Table 4: Strengths, limitations and unresolved challenges**' per method family.\n"
             "### 6.2 Generalization, Robustness & Clinical/Deployment Concerns\n"
             "### 6.3 Limitations of this Review\n"
-            "- Corpus-based narrative review, not exhaustive; possible selection bias; no independent re-run of the published methods.\n"
+            "- Corpus-based narrative review, not exhaustive; possible selection bias; no independent re-run of the published methods. Also state every item listed under EVIDENCE LIMITS (point estimates without variance or significance tests; missing per-modality results) as a concrete limitation, and say which comparisons it prevents.\n"
             "### 6.4 Open Research Directions\n"
             "- At least 4 concrete, distinct directions grounded in the evidence; say which research question (RQ) each one follows from.\n\n"
             "## 7. Conclusion\n"
-            "- Answer each research question in one or two sentences, then give the outlook; no new claims.",
+            "- Answer EVERY canonical research question (RQ1, RQ2, ...) in one or two sentences each, in order and labelled with its RQ number, then give the outlook; no new claims.",
         ),
     },
     "novel_research": {
@@ -350,13 +357,34 @@ def _review_facts(state: ResearchState, mode: str) -> str:
         f"- Corpus size: {corpus} papers in the repository catalog; {len(cited)} distinct papers were retrieved as evidence for this manuscript.\n"
         f"- Search queries used (hybrid dense+sparse retrieval with reranking): {queries}.\n"
         f"- Search date: {date.today().isoformat()}.\n"
-        "- No independent title/abstract screening or PRISMA flow was performed beyond retrieval relevance.\n"
+        f"- Retrieval configuration: embedding model {settings.embedding_model}, reranker {settings.reranker_model}, hybrid score weights "
+        f"dense {settings.hybrid_alpha} / sparse {settings.hybrid_beta}, at most {settings.local_max_chunks_per_paper} chunks per paper kept as evidence.\n"
+        "- Inclusion rule actually applied: a paper is included if it is in the repository and was returned by the retrieval for at least one query. "
+        "No other inclusion or exclusion criterion, and no manual screening, was applied; do not state any other criterion.\n"
+        "- Quality assessment actually applied: automatic checks only (each reported value must appear verbatim in the cited PDF passage; comparability of "
+        "dataset version, split, region and metric). No per-study risk-of-bias score and no independent second reviewer.\n"
+        "- No independent title/abstract screening or PRISMA flow was performed beyond retrieval relevance. "
+        "Never call this a systematic review and never mention PRISMA except to say that it was not applied.\n"
     )
+
+
+def _evidence_limits_text(state: ResearchState) -> str:
+    """Giới hạn thật của số liệu đã trích (ma trận missing-modality, độ biến thiên); rỗng khi chưa chạy bước trích xuất."""
+    if state.get("results") is None or state.get("research_mode", "survey") == "novel_research":
+        return ""
+    from app.agent.evidence.extractor import records_from_dicts
+    from app.agent.evidence.quant_analysis import evidence_limits
+
+    citations = state.get("citations", [])
+    paper_to_n: dict[str, int] = {}
+    for n, cit in enumerate(citations, start=1):
+        paper_to_n.setdefault(cit.paper_id, n)
+    return evidence_limits(records_from_dicts(state["results"]), paper_to_n, len(paper_to_n))
 
 
 def _research_context(state: ResearchState) -> str:
     """Research Knowledge Model, kết quả người dùng cung cấp và venue đích, đưa vào prompt của mọi chặng."""
-    parts = [model_brief(state.get("research_model")), _review_facts(state, state.get("research_mode", "survey"))]
+    parts = [model_brief(state.get("research_model")), _review_facts(state, state.get("research_mode", "survey")), _evidence_limits_text(state)]
     if state.get("user_results"):
         parts.append(
             "USER-PROVIDED EXPERIMENT RESULTS (the only measured results of the proposed work; report them faithfully, do not alter or extend them):\n"
@@ -440,6 +468,12 @@ def _generate_stage_0_blueprint(
             "5. EVIDENCE MAP: which citation numbers [n] support which baseline or claim.\n"
         )
         + "6. CORE CONTRIBUTIONS: 3-4 distinct, verifiable contributions."
+        + (
+            "\n7. RESEARCH QUESTIONS: 3-4 numbered questions, each on its own line written exactly as 'RQ1. <question>?', 'RQ2. <question>?' ... "
+            "They are the ONLY research questions of the manuscript: the Introduction and the Review Methodology will copy them verbatim and the Conclusion will answer each one."
+            if mode != "novel_research"
+            else ""
+        )
     )
     user_prompt = (
         f"Research Mode: {_mode_label(mode)}\n"
@@ -484,7 +518,7 @@ def _generate_stage_1_front_matter_and_intro(
             "### 1.2 Limitations of Existing Surveys\n"
             "(2-3 paragraphs on what earlier surveys cover and miss, ONLY from surveys present in the citations; if none is available, say the coverage of earlier surveys was not systematically compared. Never invent surveys.)\n"
             "### 1.3 Research Gaps and Research Questions\n"
-            "(The specific gaps, then 3-5 numbered research questions RQ1...; they are answered in Section 7.)\n"
+            "(The specific gaps, then the CANONICAL RESEARCH QUESTIONS from the design plan VERBATIM, one per line as '**RQ1.** ...'; if the design plan lists none, write 3-4 numbered questions RQ1... They are answered in Section 7.)\n"
             "### 1.4 Core Contributions\n"
             f"{contributions}\n"
             "### 1.5 Paper Organization\n"
@@ -672,6 +706,16 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
     sec1_text = _generate_stage_1_front_matter_and_intro(blueprint, state, references_prompt, mode, gateway, model_name)
     sec1_transition = _extract_last_paragraphs(sec1_text)
 
+    # RQ chuẩn: ưu tiên blueprint; nếu blueprint không có thì lấy bộ RQ ở Introduction làm nguồn duy nhất cho các chặng sau
+    canon_rqs = canonical_rqs(blueprint) if mode != "novel_research" else []
+    if mode != "novel_research" and not canon_rqs:
+        intro_rqs = next(iter(section_rqs(sec1_text).values()), [])
+        canon_rqs = canonical_rqs("\n".join(f"RQ{n}. {body}" for n, body in intro_rqs))
+    if canon_rqs:
+        blueprint = f"{blueprint}\n\n{rq_block(canon_rqs)}"
+    else:
+        logger.warning("Không đọc được RQ chuẩn từ blueprint hay Introduction; Quality Gate sẽ kiểm tra lệch RQ")
+
     # Stage 2: Related Work & Taxonomy
     logger.info("Executing Synthesis Stage 2: Section 2 (Related Work & Taxonomy)...")
     sec2_text = _generate_stage_2_related_work(blueprint, sec1_transition, state, references_prompt, mode, gateway, model_name)
@@ -700,7 +744,7 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
         sec4_text,
         sec5_text,
     ]
-    raw_stitched = "\n\n".join(full_markdown_parts)
+    raw_stitched = enforce_rqs("\n\n".join(full_markdown_parts), canon_rqs)
 
     missing = missing_end_sections(state, raw_stitched)
     if missing:
@@ -737,7 +781,14 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
     warning = source_diversity_warning(updated_text, len(clean_references))
     if warning:
         logger.warning("Chất lượng nguồn: %s", warning)
-    updated_text = finalize_structure(updated_text)
+    updated_text, dangling_refs, low_confidence_refs = finalize_structure_report(updated_text)
+    if low_confidence_refs:
+        logger.warning("Tham chiếu bảng/hình gán theo vị trí (không khớp nội dung): %s", low_confidence_refs)
+    validation_report = merge_structure_issues(
+        validation_report,
+        [f"tham chiếu tài liệu: {p}" for p in dangling_refs],
+        [f"tham chiếu bảng/hình gán theo vị trí gần nhất, cần kiểm tra: {r}" for r in low_confidence_refs],
+    )
     research_model = state.get("research_model")
     if research_model and research_model.get("claims"):
         leaks = find_leaked_claims(updated_text, research_model["claims"])
