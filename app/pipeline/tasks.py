@@ -61,6 +61,23 @@ def process_paper(paper_id: str) -> dict:
         db.close()
 
 
+def _save_validation_report(task_id: str, report: dict | None) -> None:
+    """Ghi validation_report.json để người dùng kiểm tra từng lỗi (không chặn task nếu không ghi được)."""
+    if not report:
+        return
+    try:
+        import json
+        from pathlib import Path
+
+        from app.core.config import get_settings
+
+        path = Path(get_settings().upload_dir) / "validation" / f"{task_id}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(report, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+    except OSError:
+        logger.exception("Không ghi được validation_report cho task %s", task_id)
+
+
 @celery_app.task(name="app.pipeline.tasks.run_research")
 def run_research(task_id: str) -> dict:
     """Chạy LangGraph research agent cho 1 ResearchTask, cập nhật report/citations/status."""
@@ -109,6 +126,7 @@ def run_research(task_id: str) -> dict:
             task.citations = json.dumps([c.model_dump() for c in state.get("citations", [])])
             task.contribution_type = state.get("contribution_type")
             task.research_model = json.dumps(state["research_model"]) if state.get("research_model") else None
+            _save_validation_report(task_id, state.get("validation_report"))
             task.status = ResearchStatus.DONE.value
             db.commit()
             logger.info("Research task %s hoàn tất: report %d ký tự", task_id, len(task.report or ""))

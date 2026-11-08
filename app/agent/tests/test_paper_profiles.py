@@ -250,3 +250,21 @@ def test_typst_ignores_mismatched_header_groups_instead_of_failing(tmp_path):
     }
     md = "# T\n\n## Abstract\nA.\n\n## 1. Introduction\n\n```table\n" + json.dumps(spec) + "\n```\n"
     assert "table.cell(colspan: 5)" not in typst_renderer.markdown_to_typst(md, work_dir=tmp_path)
+
+
+def test_survey_structure_has_review_methodology_and_comparability_rules():
+    _, stage2 = sn._stage_structure({}, "survey", "stage2")
+    _, stage4 = sn._stage_structure({}, "survey", "stage4")
+    _, stage5 = sn._stage_structure({}, "survey", "stage5")
+    assert "## 2. Review Methodology" in stage2 and "Research Questions" in stage2 and "Never invent" in stage2
+    assert "## 3. Taxonomy" in stage2 and "## 5. Comparative Evidence Synthesis" in stage4
+    assert "COMPARABILITY RULE" in stage4 and "## 7. Conclusion" in stage5
+
+
+def test_review_facts_state_only_real_process_and_skip_novel_mode():
+    from app.core.schemas import Citation
+
+    cites = [Citation(paper_id="p1", chunk_id="c1", page=1, section="s", text_snippet="t")]
+    facts = sn._review_facts({"citations": cites, "search_queries": ["brain tumor"]}, "survey")
+    assert "REVIEW FACTS" in facts and '"brain tumor"' in facts and "1 distinct papers" in facts
+    assert sn._review_facts({"citations": cites}, "novel_research") == ""

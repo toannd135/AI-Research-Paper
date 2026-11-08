@@ -83,6 +83,8 @@ class Settings(BaseSettings):
     open_alex_api_key: str | None = None
     # False: chỉ dùng kho PDF nội bộ (vd. bài tải tay từ Google Scholar), không gọi OpenAlex.
     external_search_enabled: bool = True
+    # Xác minh DOI/tiêu đề References qua Crossref (cần mạng); tắt mặc định để chạy offline.
+    reference_external_verify: bool = False
     # Chế độ chỉ-nội-bộ: số chunk tối đa mỗi paper đưa vào evidence, để context phủ được nhiều bài.
     local_max_chunks_per_paper: int = 2
 

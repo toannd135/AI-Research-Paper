@@ -1,5 +1,10 @@
 """Node phân tích evidence: xây dựng context học thuật, tổng hợp chuyên sâu và đề xuất giải pháp."""
 
+import logging
+import time
+
+from app.agent.evidence.extractor import extract_results, records_to_dicts
+from app.agent.evidence.ledger import render_ledger, replace_ledger
 from app.agent.format_sanitizer import sanitize_academic_markdown
 from app.agent.language import language_name
 from app.agent.profiles import audience_profile, field_profile
@@ -7,6 +12,8 @@ from app.agent.state import ResearchState
 from app.ai.context_builder import build_context
 from app.ai.llm_gateway.base import LLMGateway, Message
 from app.ai.llm_gateway.default import get_default_agent_gateway
+
+logger = logging.getLogger(__name__)
 
 _QUANT_LEDGER_RULE = (
     "- SỔ SỐ LIỆU ĐỊNH LƯỢNG (BẮT BUỘC): cuối bản phân tích thêm mục '## Quantitative Evidence Ledger' là MỘT bảng Markdown "
@@ -49,7 +56,7 @@ _NOVEL_ANALYZE_PROMPT = (
 
 
 def analyze_node(state: ResearchState, llm: LLMGateway | None = None) -> ResearchState:
-    context_text, citations = build_context(state.get("evidence", []))
+    context_text, citations = build_context(state.get("evidence", []), diversify=True)
     mode = state.get("research_mode", "survey")
 
     field, audience = field_profile(state), audience_profile(state)
@@ -74,6 +81,8 @@ def analyze_node(state: ResearchState, llm: LLMGateway | None = None) -> Researc
         user_content += f"\n\nPhản biện từ lần đánh giá trước, hãy hiệu chỉnh lại: {feedback}"
 
     gateway, model_name = get_default_agent_gateway(llm)
+    t0 = time.monotonic()
+    logger.info("Analyze: gọi LLM phân tích (context %d ký tự)...", len(context_text))
     response = gateway.generate(
         messages=[
             Message(role="system", content=system_prompt),
@@ -82,5 +91,12 @@ def analyze_node(state: ResearchState, llm: LLMGateway | None = None) -> Researc
         model_name=model_name,
     )
 
+    logger.info("Analyze: LLM phân tích xong sau %.0fs, bắt đầu trích xuất bản ghi", time.monotonic() - t0)
     clean_draft = sanitize_academic_markdown(response.text)
-    return {**state, "draft": clean_draft, "citations": citations}
+    # Số liệu định lượng chỉ lấy từ bản ghi đã kiểm chứng nguyên văn trong PDF, không dùng bảng LLM tự ghi.
+    records = extract_results(state.get("evidence", []), gateway, model_name)
+    paper_to_n: dict[str, int] = {}
+    for n, cit in enumerate(citations, start=1):
+        paper_to_n.setdefault(cit.paper_id, n)
+    clean_draft = replace_ledger(clean_draft, render_ledger(records, paper_to_n))
+    return {**state, "draft": clean_draft, "citations": citations, "results": records_to_dicts(records)}

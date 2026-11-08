@@ -148,6 +148,20 @@ def _task_report(task_id: str, db: Session, user: User) -> str:
     return sanitize_academic_markdown(task.report)
 
 
+def _ensure_publishable(task_id: str, draft: bool) -> None:
+    """409 khi Quality Gate có lỗi BLOCKING, trừ khi người dùng chủ động tải bản nháp (?draft=true)."""
+    if draft:
+        return
+    from app.pipeline.export.validation_gate import load_blocking
+
+    blocking = load_blocking(task_id)
+    if blocking:
+        raise HTTPException(
+            status_code=409,
+            detail="Quality Gate chưa đạt, không xuất bản publication-ready (thêm ?draft=true để tải bản nháp): " + " | ".join(blocking[:5]),
+        )
+
+
 @router.get("/{task_id}/bib")
 def export_research_bibtex(
     task_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user_or_query_token)
@@ -171,6 +185,7 @@ def export_research_latex(
     chart_format: str = Query(default="pdf", pattern="^(pdf|eps)$"),
     survey_table: bool = False,
     template: str = Query(default="ieee", pattern="^(ieee|cvpr)$"),
+    draft: bool = False,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user_or_query_token),
 ) -> Response:
@@ -178,6 +193,7 @@ def export_research_latex(
     from app.pipeline.export.latex_renderer import export_latex_bundle
 
     report = _task_report(task_id, db, user)
+    _ensure_publishable(task_id, draft)
     try:
         bundle = export_latex_bundle(report, chart_format, survey_table, template)
     except Exception as e:
@@ -195,6 +211,7 @@ def export_research_pdf(
     task_id: str,
     engine: str = "html",
     columns: int = Query(default=2, ge=1, le=2),
+    draft: bool = False,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user_or_query_token),
 ) -> Response:
@@ -203,6 +220,7 @@ def export_research_pdf(
         raise HTTPException(status_code=404, detail="Research task không tồn tại")
     if not task.report:
         raise HTTPException(status_code=409, detail="Research task chưa có báo cáo")
+    _ensure_publishable(task_id, draft)
 
     from app.agent.format_sanitizer import sanitize_academic_markdown
 

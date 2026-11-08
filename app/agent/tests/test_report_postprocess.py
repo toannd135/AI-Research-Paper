@@ -1,7 +1,9 @@
 import json
+import re
 
 from app.agent.report_postprocess import (
     build_ledger_chart,
+    build_ledger_charts,
     fix_mermaid_block,
     postprocess_report,
     scrub_chart_spec,
@@ -96,3 +98,29 @@ def test_scrub_chart_spec_keeps_grounded_scientific_charts():
 
 def test_scrub_chart_spec_drops_scientific_chart_without_grounded_values():
     assert scrub_chart_spec(json.dumps({"type": "xyline", "series": [{"name": "T", "x": [1, 2], "y": [0.77, 0.66]}]}), "0.9") is None
+
+
+_DRAFT3 = """analysis
+## Quantitative Evidence Ledger
+| Source [n] | Method | Dataset | Metric | Value | Notes |
+|---|---|---|---|---|---|
+""" + "".join(
+    f"| [{i}] | M{i} | BraTS2020 | Dice {r} | {80 + i + k} | x |\n"
+    for r, k in (("WT", 8), ("TC", 3), ("ET", 0))
+    for i in (1, 2, 3)
+)
+
+
+def test_ledger_charts_one_per_setting_and_min_charts_injected():
+    charts = build_ledger_charts(_DRAFT3, 3)
+    assert len(charts) == 3
+    assert {json.loads(c)["type"] for c in charts} == {"barh", "bar", "heatmap"}
+    out = postprocess_report("## 4. X\n\nText.\n\n## 5. Y\n\nDone.", _DRAFT3, None, None, "en", min_charts=3)
+    assert out.count("```chart") == 3
+    assert {json.loads(m)["type"] for m in re.findall(r"```chart\n(.*?)\n```", out, re.DOTALL)} == {"barh", "bar", "heatmap"}
+    assert out.index("```chart") < out.index("## 5.")
+
+
+def test_min_charts_not_fabricated_when_ledger_thin():
+    out = postprocess_report("## 4. X\n\n## 5. Y\n\nDone.", _DRAFT, None, None, "en", min_charts=3)
+    assert out.count("```chart") == 1

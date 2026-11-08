@@ -22,7 +22,8 @@ plan -> search -> analyze -> critique --(thiếu evidence)--> analyze
 ```
 - plan: làm rõ câu hỏi, đoán field/audience/contribution_type (`clarify.py`, `profiles.py`, `research_model.py`).
 - search: RAG nội bộ (`tools/search_papers`, `retrieve_evidence`) + OpenAlex (`tools/search_external_papers`, lọc miền theo field).
-- analyze/critique: trích finding, chấm đủ/thiếu.
+- analyze/critique: trích finding, chấm đủ/thiếu. analyze còn trích `ResultRecord` có cấu trúc (`evidence/extractor.py`, lô ≤5 paper, giá trị phải có nguyên văn trong chunk) vào `state["results"]` và dựng Quantitative Evidence Ledger bằng code (`evidence/ledger.py`, thiếu = NR).
+- synthesize: sau khi ghép bài chạy Quality Gate (`evidence/quality_gate.py`: reference, truy vết số, so sánh được, hình/bảng, nhất quán) → `validation_report`; chèn bảng Δ/ablation/scatter suy ra từ record (`evidence/quant_analysis.py`, khối `derived:true`). Export PDF/LaTeX trả 409 khi `passed=false` (trừ `?draft=true`).
 - model: dựng Research Knowledge Model (gaps, questions, claims, experiments) — `model_node.py`.
 - synthesize: viết paper; hậu xử lý `report_postprocess.py`, `format_sanitizer.py`; kiểm chứng `evidence/` (citation_validator, hallucination_detector, claim_validator, stats, claim_scan, report_structure).
   - `stats.py`: Welch t-test + Cohen's d trên số liệu từng lần chạy (`experiments`) của người dùng; không đủ ≥2 lần chạy thì chỉ cảnh báo, khác biệt không có ý nghĩa thì claim thành `unsupported`.

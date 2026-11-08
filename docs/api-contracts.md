@@ -35,8 +35,8 @@ Nguồn sự thật: code ở `app/api/routes/*` và `app/core/schemas.py`; Open
 | GET | /{task_id} | `ResearchTaskResponse`: report, citations[], research_model (dict hoặc null), error |
 | DELETE | /{task_id} | 204 |
 | GET | /{task_id}/bib | BibTeX |
-| GET | /{task_id}/latex | LaTeX |
-| GET | /{task_id}/pdf | `?engine=html\|typst&columns=1\|2` |
+| GET | /{task_id}/latex | LaTeX; `?draft=true` bỏ qua chặn Quality Gate |
+| GET | /{task_id}/pdf | `?engine=html\|typst&columns=1\|2&draft=false`. 409 khi `validation/<task_id>.json` có `passed=false` (kèm lỗi BLOCKING), trừ `?draft=true` |
 
 ## Chat (cần đăng nhập)
 | Method | Path | Ghi chú |

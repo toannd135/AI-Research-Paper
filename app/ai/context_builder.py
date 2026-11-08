@@ -9,8 +9,27 @@ def _approx_tokens(text: str) -> int:
     return max(1, int(len(text) / 3.0))
 
 
-def build_context(chunks: list[ScoredChunk], token_limit: int | None = None) -> tuple[str, list[Citation]]:
-    """Dedup theo chunk id, sort theo score giảm dần, cắt tới token_limit; trả về (context_text, citations)."""
+def _diversify(items: list[ScoredChunk]) -> list[ScoredChunk]:
+    """Chunk tốt nhất của mỗi paper đứng trước, các chunk phụ sau: context phủ được nhiều paper nhất có thể."""
+    seen_papers: set[str] = set()
+    first: list[ScoredChunk] = []
+    rest: list[ScoredChunk] = []
+    for item in items:  # đã sort theo score giảm dần
+        if item.chunk.paper_id in seen_papers:
+            rest.append(item)
+        else:
+            seen_papers.add(item.chunk.paper_id)
+            first.append(item)
+    return first + rest
+
+
+def build_context(
+    chunks: list[ScoredChunk], token_limit: int | None = None, diversify: bool = False
+) -> tuple[str, list[Citation]]:
+    """Dedup theo chunk id, sort theo score giảm dần, cắt tới token_limit; trả về (context_text, citations).
+
+    diversify=True: ưu tiên mỗi paper một chunk tốt nhất trước khi lấy chunk thứ hai (dùng cho bài tổng hợp nhiều nguồn).
+    """
     limit = token_limit or get_settings().context_token_limit
 
     seen: set[str] = set()
@@ -20,6 +39,8 @@ def build_context(chunks: list[ScoredChunk], token_limit: int | None = None) -> 
             continue
         seen.add(item.chunk.id)
         deduped.append(item)
+    if diversify:
+        deduped = _diversify(deduped)
 
     parts: list[str] = []
     citations: list[Citation] = []

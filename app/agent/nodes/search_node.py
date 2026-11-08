@@ -79,7 +79,7 @@ def _local_only_evidence(queries: list[str], max_per_paper: int) -> list:
     best: dict[str, object] = {}
     for query in queries:
         start = time.perf_counter()
-        for sc in search_papers(query, top_k=15, candidate_k=30):
+        for sc in search_papers(query, top_k=30, candidate_k=60):
             if sc.chunk.id not in best or sc.score > best[sc.chunk.id].score:
                 best[sc.chunk.id] = sc
         logger.info("Search local '%s' chạy %.1fs", query[:60], time.perf_counter() - start)

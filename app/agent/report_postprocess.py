@@ -282,32 +282,78 @@ def _ledger_rows(draft: str) -> list[dict[str, str]]:
     return rows[1:] if rows and rows[0]["value"].lower().startswith("value") else rows
 
 
-def build_ledger_chart(draft: str) -> str | None:
-    """Dựng khối ```chart từ nhóm (metric, dataset) có nhiều phương pháp nhất trong ledger. Chỉ dùng số có thật."""
-    groups: dict[tuple[str, str], list[tuple[str, float, str]]] = defaultdict(list)
+def _ledger_groups(draft: str) -> dict[tuple[str, str], dict[str, tuple[float, str]]]:
+    """(metric, dataset) -> {method: (giá trị, nguồn)}; chỉ giá trị số thật, lấy giá trị đầu tiên của mỗi phương pháp."""
+    groups: dict[tuple[str, str], dict[str, tuple[float, str]]] = defaultdict(dict)
     for r in _ledger_rows(draft):
         m = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*%?\s*", _CITE_RE.sub("", r["value"]))
         if not m or not r["method"] or r["method"].lower().startswith("no quantitative"):
             continue
-        groups[(r["metric"], r["dataset"])].append((r["method"], float(m.group(1)), r["source"]))
-    best = max(groups.items(), key=lambda kv: len({x[0] for x in kv[1]}), default=None)
-    if not best:
-        return None
-    (metric, dataset), items = best
-    seen: dict[str, tuple[float, str]] = {}
-    for method, val, src in items:
-        seen.setdefault(method, (val, src))
-    if len(seen) < 3:
-        return None
-    entries = sorted(seen.items(), key=lambda kv: -kv[1][0])[:8]
-    cites = ", ".join(sorted({e[1][1] for e in entries if e[1][1]}))
-    spec = {
-        "type": "barh",
-        "caption": f"Reported {metric} on {dataset} {cites}".strip(),
-        "labels": [e[0][:40] for e in entries],
-        "series": [{"name": metric, "values": [e[1][0] for e in entries]}],
-    }
-    return json.dumps(spec, ensure_ascii=False)
+        groups[(r["metric"], r["dataset"])].setdefault(r["method"], (float(m.group(1)), r["source"]))
+    return groups
+
+
+def _complete_matrix(groups: dict) -> tuple[str, str, list[str], list[str], list[list[float]], str] | None:
+    """Tìm (họ metric, dataset) có ≥2 metric cùng họ (vd Dice WT/TC/ET) và ≥3 phương pháp có đủ mọi metric."""
+    best = None
+    by_key: dict[tuple[str, str], list[str]] = defaultdict(list)
+    for metric, dataset in groups:
+        by_key[((metric.split() or [""])[0].lower(), dataset)].append(metric)
+    for (family, dataset), metrics in by_key.items():
+        if len(metrics) < 2:
+            continue
+        methods = [m for m in groups[(metrics[0], dataset)] if all(m in groups[(x, dataset)] for x in metrics)]
+        if len(methods) >= 3 and (best is None or len(methods) * len(metrics) > len(best[3]) * len(best[2])):
+            matrix = [[groups[(x, dataset)][m][0] for x in metrics] for m in methods]
+            cites = ", ".join(sorted({groups[(x, dataset)][m][1] for x in metrics for m in methods if groups[(x, dataset)][m][1]}))
+            best = (family, dataset, metrics, methods, matrix, cites)
+    return best
+
+
+def build_ledger_charts(draft: str, limit: int = 1) -> list[str]:
+    """Dựng tối đa `limit` khối ```chart ưu tiên KHÁC LOẠI: barh (xếp hạng một metric), bar (nhóm theo vùng/metric), heatmap.
+
+    Chỉ dùng số có thật trong ledger, mỗi biểu đồ cùng dataset và cùng họ metric."""
+    groups = _ledger_groups(draft)
+    ranked = sorted(groups.items(), key=lambda kv: -len(kv[1]))
+    out: list[str] = []
+    matrix = _complete_matrix(groups)
+    if ranked and len(ranked[0][1]) >= 3:
+        (metric, dataset), items = ranked[0]
+        entries = sorted(items.items(), key=lambda kv: -kv[1][0])[:8]
+        cites = ", ".join(sorted({e[1][1] for e in entries if e[1][1]}))
+        out.append(json.dumps({
+            "type": "barh", "caption": f"Reported {metric} on {dataset} {cites}".strip(),
+            "labels": [e[0][:40] for e in entries], "series": [{"name": metric, "values": [e[1][0] for e in entries]}],
+        }, ensure_ascii=False))
+    if matrix:
+        family, dataset, metrics, methods, values, cites = matrix
+        labels = [m[:40] for m in methods]
+        out.append(json.dumps({
+            "type": "bar", "caption": f"Reported {family.upper() if len(family) <= 4 else family} by region/metric on {dataset} {cites}".strip(),
+            "labels": labels, "series": [{"name": x, "values": [row[j] for row in values]} for j, x in enumerate(metrics)],
+        }, ensure_ascii=False))
+        out.append(json.dumps({
+            "type": "heatmap", "caption": f"Heatmap of reported {family} on {dataset} (methods x metrics) {cites}".strip(),
+            "x_labels": metrics, "y_labels": labels, "matrix": values, "c_label": family,
+        }, ensure_ascii=False))
+    for (metric, dataset), items in ranked[1:]:  # bù cùng loại barh nếu vẫn thiếu
+        if len(out) >= limit:
+            break
+        if len(items) >= 3:
+            entries = sorted(items.items(), key=lambda kv: -kv[1][0])[:8]
+            cites = ", ".join(sorted({e[1][1] for e in entries if e[1][1]}))
+            out.append(json.dumps({
+                "type": "barh", "caption": f"Reported {metric} on {dataset} {cites}".strip(),
+                "labels": [e[0][:40] for e in entries], "series": [{"name": metric, "values": [e[1][0] for e in entries]}],
+            }, ensure_ascii=False))
+    return out[:limit]
+
+
+def build_ledger_chart(draft: str) -> str | None:
+    """Chart tốt nhất từ ledger (nhóm có nhiều phương pháp nhất), hoặc None."""
+    charts = build_ledger_charts(draft, 1)
+    return charts[0] if charts else None
 
 
 # --------------------------------------------------------------------------- language
@@ -461,6 +507,7 @@ def postprocess_report(
     language: str = "en",
     figures: list[dict] | None = None,
     evidence_text: str = "",
+    min_charts: int = 1,
 ) -> str:
     """Kiểm chứng/sửa mọi khối mermaid, table, chart, image; dịch đoạn lẫn Việt; chèn biểu đồ ledger nếu thiếu."""
     used_figures: set[str] = set()
@@ -470,7 +517,7 @@ def postprocess_report(
         if kind == "mermaid":
             fixed = fix_mermaid_block(body, gateway, model_name)
         elif kind == "table":
-            fixed = scrub_table_spec(body, draft)
+            fixed = body if '"derived": true' in body else scrub_table_spec(body, draft)  # số suy ra không có trong PDF
         elif kind == "image":
             fixed = scrub_image_spec(body, figures)
             if fixed is not None:
@@ -492,10 +539,23 @@ def postprocess_report(
     for sent in dropped:
         logger.warning("Gỡ câu có số liệu không có trong evidence: %s", sent[:160])
 
-    if "```chart" not in report:
-        chart = build_ledger_chart(draft)
+    types = []
+    for m in re.finditer(r"```chart\n(.*?)```", report, re.DOTALL):
+        try:
+            types.append(str(json.loads(m.group(1)).get("type", "bar")))
+        except (ValueError, AttributeError):
+            continue
+    if len(set(types)) < min_charts:
         marker = re.search(r"^## 5\.", report, re.MULTILINE)
-        if chart and marker:
-            block = f"```chart\n{chart}\n```\n\n"
+        extra = []
+        for c in build_ledger_charts(draft, 10):
+            t = json.loads(c)["type"]
+            if t not in types and len(set(types)) < min_charts:
+                types.append(t)
+                extra.append(c)
+        if extra and marker:
+            block = "".join(f"```chart\n{c}\n```\n\n" for c in extra)
             report = report[: marker.start()] + block + report[marker.start():]
+        if len(set(types)) < min_charts:
+            logger.warning("Chỉ có %d/%d LOẠI biểu đồ khác nhau: ledger không đủ dữ liệu cùng setting (không bịa số)", len(set(types)), min_charts)
     return re.sub(r"\n{3,}", "\n\n", report)

@@ -27,3 +27,5 @@ class ResearchState(TypedDict, total=False):
     target_venue: str | None
     user_results: str | None  # kết quả thực nghiệm người dùng tự cung cấp (tùy chọn)
     research_model: dict  # Research Knowledge Model đã kiểm chứng (nodes/model_node.py)
+    validation_report: dict | None  # kết quả Scientific Quality Gate (evidence/quality_gate.py)
+    results: list[dict]  # ResultRecord đã kiểm chứng nguyên văn trong PDF (evidence/extractor.py)

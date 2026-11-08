@@ -201,3 +201,17 @@ def test_create_research_stores_contribution_venue_results_and_returns_model(moc
 
     bad = client.post("/research/", json={"question": "DDoS detection K8s", "contribution_type": "magic"})
     assert bad.status_code == 422
+
+
+def test_pdf_export_blocked_by_failed_quality_gate_unless_draft(client):
+    db = MagicMock()
+    db.get.return_value = SimpleNamespace(report="# Paper\n\n## 1. Method\nEvidence.", citations=None, user_id=None)
+    app.dependency_overrides[get_db] = lambda: db
+    with (
+        patch("app.pipeline.export.validation_gate.load_blocking", return_value=["44 giá trị UNTRACED"]),
+        patch("app.pipeline.export.pdf_renderer.report_to_pdf", return_value=b"%PDF-test"),
+    ):
+        blocked = client.get("/research/test-task/pdf")
+        draft = client.get("/research/test-task/pdf", params={"draft": "true"})
+    assert blocked.status_code == 409 and "UNTRACED" in blocked.json()["detail"]
+    assert draft.status_code == 200

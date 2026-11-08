@@ -29,6 +29,7 @@ from app.agent.profiles import adaptation_rules, audience_profile, field_profile
 from app.agent.report_postprocess import postprocess_report
 from app.agent.research_model import contribution_guidance, model_brief
 from app.agent.state import ResearchState
+from app.core.config import get_settings
 from app.pipeline.figures import load_figures
 from app.ai.llm_gateway.base import LLMGateway, Message
 from app.ai.llm_gateway.default import get_default_agent_gateway
@@ -43,6 +44,7 @@ _TABLE_BLOCK_RULE = """   - QUANTITATIVE COMPARISON TABLES (results with numbers
      {"caption": "Main results on dataset X [n]", "header_groups": [{"label": "", "span": 2}, {"label": "Dataset A", "span": 2}], "columns": ["Category", "Method", "F1", "AUC"], "rows": [["Supervised", "TabNet [2]", "97.4", "95.1"], ["", "CNN [2]", "93.0", "90.2"], ["Hybrid", "**Best**", "**98.1**", "**96.0**"]], "bold_rows": []}
      ```
      header_groups is optional (sum of spans = number of columns); an empty first-column cell merges with the cell above (method families); add "highlight_best": "max" (or "min", or {"Latency (ms)": "min", "F1": "max"}) to shade the best value of each numeric column. Every cell is a string. Only use numbers that appear in the draft/references with their [n]; use "–" if unavailable. Descriptive tables (taxonomy, configuration, qualitative cases) stay as Markdown tables.
+     NOT REPORTED: the Quantitative Evidence Ledger is the only source of numbers; where it says NR (Not Reported) or has no row, write "NR" and never estimate, convert or fill the value. Never state that method A outperforms method B unless both values share dataset version, split, region, metric and unit; otherwise say the results are not directly comparable. If a DOI or other metadata is unknown, leave it out rather than guess.
 """
 
 _CHART_BLOCK_RULE = """   - FIGURES: visualize quantitative values that already appear in the draft/references with a ```chart fenced block containing JSON:
@@ -59,13 +61,52 @@ _CHART_BLOCK_RULE = """   - FIGURES: visualize quantitative values that already 
 _IMAGE_BLOCK_RULE = """   - REAL FIGURES: to show a real image from the AVAILABLE FIGURES list, write a ```image fenced block containing JSON:
      {"ref": "F2", "caption": "What the image shows and why it matters ([n])"}
      Use only refs from the list, at most once each, placed where the text discusses them; describe only what the original caption supports. Never refer to images that are not in the list.
+     IMAGES ARE ILLUSTRATIONS, NOT DATA: you only see an image's caption, never its pixels or plotted values. Never read, estimate or quote numbers from an image (bar heights, curve points, Dice/IoU values) and never build a table or ```chart from one; numeric values come only from the text, tables and ledger of the sources, with [n].
 """
 
 # Số hình thật tối đa đưa vào prompt (tránh prompt quá dài với model free).
-MAX_PROMPT_FIGURES = 8
+MAX_PROMPT_FIGURES = 4
 
 _MERMAID_BLOCK_RULE = """   - MERMAID SYNTAX: start with `graph TD` or `graph LR`; give every node a short ASCII id (A, B1, ...) and wrap each label in double quotes, e.g. A["Retriever [3]"] --> B["Reranker"]; no parentheses, brackets, semicolons, pipes or Unicode math symbols inside labels; no `direction` lines; close every `subgraph` with `end`; labels in the manuscript language; at most ~12 nodes. Put a '**Figure N: Caption**' line directly above the block.
 """
+
+
+# Chuẩn nội bộ PaperAI về Figure/Table (không phải quy định xuất bản bắt buộc): số lượng chỉ là mục tiêu, không được bịa dữ liệu để cho đủ.
+_DISPLAY_ITEMS_RULE = """7b. FIGURES & TABLES POLICY (PaperAI internal quality standard):
+   - TARGETS: {targets} These are targets, NOT quotas: NEVER create a figure or table only to reach a count, and NEVER invent Dice, Accuracy, Loss, F1 or any comparison value to fill one. Every result figure/table must come from the Draft Basis, the cited sources or USER-PROVIDED RESULTS, with its [n]. If the evidence is insufficient, use fewer items and say so in the text.
+   - Distinguish Figure (diagram, plot, image) from Table (data). Number them in order of appearance (Figure 1, Figure 2, ... / Table 1, ...); give every one a caption that says what it shows; mention every one in the body text ('as shown in Figure 2'); do not show the same data both as a table and as a figure.
+   - Plots need axis names, units and a legend when there is more than one series; never use scales or crops that mislead. An image taken from another study must name its source [n].
+   - PRIORITY OF FIGURES (use those the evidence supports): (1) research framework / pipeline overview; (2) dataset or input illustration (only a real image from AVAILABLE FIGURES); (3) model/system architecture; (4) training/validation curves (only with reported per-epoch values); (5) qualitative results (real images only); (6) performance comparison of proposed vs. baselines; (7) ablation (only when a component-level improvement is proposed); (8) error analysis.
+   - PRIORITY OF TABLES: dataset characteristics; experimental configuration; comparison with baselines; ablation results; quantitative evaluation. Keep descriptive tables (dataset, configuration) as Markdown tables and numeric ones as ```table blocks.
+   - REQUIRED CONTENT: research methodology, quantitative evaluation, qualitative evaluation (mandatory for image segmentation/medical imaging when real example images exist; otherwise describe the visual findings reported in the sources), ablation study (when a method is proposed or improved), references sufficient to support the claims.
+   - HONESTY ABOUT SCOPE: a literature-based paper cannot prove that a new model reaches any performance. Without USER-PROVIDED RESULTS, present the proposed method's experiments as a PLANNED protocol: planned figures/tables list their design and use '*Not Exp.*' / '–' for unrun values, and published baseline numbers are cited with [n].
+"""
+
+
+def _display_items_rule(state: ResearchState, mode: str) -> str:
+    """Mục tiêu số Figure/Table theo loại bài; kết quả của chính đề xuất chỉ có khi người dùng cung cấp số liệu."""
+    if mode == "novel_research":
+        targets = "6-8 figures and 3-5 tables for a complete experimental paper (AI/ML on images: 5-10 figures); a theoretical paper needs only 1-3 figures."
+    else:
+        targets = "5-6 figures (taxonomy/framework, pipeline or method comparison, 1-2 quantitative plots restricted to comparable settings, 1 qualitative image) and at least 4 tables (taxonomy, datasets and metrics, quantitative comparison of published results, strengths/limitations/open challenges) for a survey/review; each table must answer one research question."
+    return _DISPLAY_ITEMS_RULE.format(targets=targets)
+
+
+# Số paper khác nhau tối thiểu mà bài phải cite (khi kho đủ nguồn).
+MIN_CITED_PAPERS = 25
+
+
+def _source_coverage_rule(state: ResearchState) -> str:
+    """Yêu cầu bài cite đủ nhiều paper khác nhau trong danh sách Available Citations."""
+    available = {getattr(c, "paper_id", None) for c in state.get("citations", [])} - {None}
+    target = min(MIN_CITED_PAPERS, len(available))
+    if target < 2:
+        return ""
+    return (
+        f"7c. SOURCE COVERAGE: Available Citations hold {len(available)} distinct papers. The manuscript as a whole MUST cite at least {target} "
+        "distinct papers, spread across sections (taxonomy, methodology families, benchmark discussion); cite a paper only for what it supports, "
+        "never add a citation just to reach the count.\n"
+    )
 
 
 def _lang_label(state: ResearchState) -> str:
@@ -108,6 +149,8 @@ STRICT PEER-REVIEW PUBLICATION STANDARDS (MANDATORY ACROSS ALL SECTIONS):
    - Every table MUST have a clear caption above it: '**Table N: Caption**'.
    - Mermaid diagrams: every node label in double quotes (NodeId["Label"]), '<br/>' for line breaks, edge labels as -->|"label"|.
 {_TABLE_BLOCK_RULE}{_CHART_BLOCK_RULE}{_MERMAID_BLOCK_RULE}"""
+    rules += _display_items_rule(state, mode)
+    rules += _source_coverage_rule(state)
     if mode == "novel_research":
         rules += (
             "8. REGISTERED-REPORT RULE (novel research):\n"
@@ -146,41 +189,60 @@ def _collect_figures(citations: list[Any]) -> list[dict]:
 _STAGE_STRUCTURES: dict[str, dict[str, str]] = {
     "survey": {
         "stage2": (
-            "Section 2 (RELATED WORK AND TAXONOMY)",
-            "## 2. Taxonomy & Conceptual Framework\n"
-            "### 2.1 Multi-Dimensional Classification\n"
-            "- Classify the surveyed approaches along 3-4 orthogonal dimensions. Include a Markdown taxonomy table with caption '**Table 1: Taxonomy of ...**'.\n"
-            "### 2.2 Architectural Pipeline\n"
+            "Sections 2 and 3 (REVIEW METHODOLOGY AND TAXONOMY)",
+            "## 2. Review Methodology\n"
+            "- Describe ONLY the process that was really carried out, using the REVIEW FACTS: the corpus is a curated repository of PDFs, retrieval is hybrid search over it with the listed queries, and the papers cited are those that the retrieval returned. "
+            "Never invent databases (IEEE Xplore, PubMed, Scopus...), search dates, hit counts, screening numbers or a PRISMA flow that did not happen; say plainly that this is a narrative review of a curated corpus, not a systematic review, and state this as a limitation.\n"
+            "### 2.1 Research Questions\n"
+            "- 3-5 numbered questions (RQ1...RQ4) that the later sections answer, e.g. architectural paradigms, handling of missing inputs/modalities, comparability of reported results, obstacles to deployment (adapt to the topic).\n"
+            "### 2.2 Corpus, Search Strategy and Selection Criteria\n"
+            "- The REVIEW FACTS (corpus size, queries, number of papers retrieved/cited, search date); explicit inclusion and exclusion criteria stated as the criteria applied by this review (e.g. published method or benchmark paper on the topic; excluded: papers off the topic or without reported methods).\n"
+            "### 2.3 Data Extraction and Quality Assessment\n"
+            "- The fields extracted from each paper (architecture, dataset and version, input modalities, metrics, reported values, stated limitations) and how evidence quality is judged (peer-reviewed vs preprint, benchmark vs private data, reported variance). Include a small Markdown table '**Table 1: Data extraction scheme**' only if it adds information.\n"
+            "### 2.4 Comparison with Existing Surveys\n"
+            "- Compare with earlier surveys ONLY when they are present in AVAILABLE CITATIONS (a Markdown table of what each covers); if the corpus holds no survey, state that earlier surveys were not systematically compared and name this as a limitation. Never invent surveys.\n\n"
+            "## 3. Taxonomy & Conceptual Framework\n"
+            "### 3.1 Multi-Dimensional Classification\n"
+            "- Classify the surveyed approaches along 3-4 orthogonal dimensions. Include a Markdown taxonomy table with caption '**Table 2: Taxonomy of ...**'.\n"
+            "### 3.2 Architectural Pipeline\n"
             "- Include one ```mermaid flowchart (graph TD or LR) showing the typical end-to-end pipeline or the taxonomy tree, with citations [n] in labels where relevant.\n"
-            "### 2.3 Gaps in Existing Surveys & Literature\n"
-            "- State precisely which gaps this survey addresses.",
+            "### 3.3 Gaps in Existing Work\n"
+            "- State precisely which gaps this survey addresses and how the taxonomy helps close them.",
         ),
         "stage3": (
-            "Section 3 (IN-DEPTH TECHNICAL METHODOLOGIES)",
-            "## 3. In-Depth Technical Methodologies\n"
-            "- Use 3 subsections (### 3.1 - 3.3), one per major paradigm / mechanism family of the taxonomy.\n"
+            "Section 4 (IN-DEPTH TECHNICAL METHODOLOGIES)",
+            "## 4. In-Depth Technical Methodologies\n"
+            "- Use 3-4 subsections (### 4.1 - 4.4), one per major paradigm / mechanism family of the taxonomy.\n"
             "- For each: core mechanism, representative works [n], what problem it solves, assumptions, strengths and weaknesses. Compare families against each other.\n"
             "- Include formulas or short pseudocode only when the cited sources give them.",
         ),
         "stage4": (
-            "Section 4 (COMPARATIVE EVIDENCE SYNTHESIS)",
-            "## 4. Comparative Evidence Synthesis\n"
-            "### 4.1 Standard Benchmark Datasets & Metrics\n"
-            "- Only datasets and metrics that appear in the evidence; explain why each metric is (in)appropriate.\n"
-            "### 4.2 Comprehensive Benchmark Comparison Table\n"
-            "- One quantitative comparison table as a ```table JSON block (method [n], paradigm, dataset, metrics) using results reported in the cited sources; group methods by paradigm with header_groups/merged first column when helpful.\n"
-            "### 4.3 Quantitative Findings & Trade-off Analysis\n"
-            "- Interpret the table; include 2-3 ```chart blocks built only from reported numbers, each showing a different metric or setting (e.g. per-class scores, robustness under a harder setting, error/distance metrics); never repeat the same series twice; discuss trade-offs (accuracy vs. latency/cost/interpretability, etc.) and the heterogeneity of the reported evidence.",
+            "Section 5 (COMPARATIVE EVIDENCE SYNTHESIS)",
+            "## 5. Comparative Evidence Synthesis\n"
+            "### 5.1 Standard Benchmark Datasets & Metrics\n"
+            "- Only datasets and metrics that appear in the evidence, with dataset VERSION/year, split and what each metric measures; give them as a Markdown table '**Table 3: Datasets and evaluation metrics**'.\n"
+            "### 5.2 Quantitative Comparison of Published Results\n"
+            "- One ```table JSON block (method [n], paradigm, dataset+version, sub-region/class, metric, value) with results reported in the cited sources; group methods by paradigm. "
+            "COMPARABILITY RULE: values are directly comparable only under the same dataset version, split, sub-region/class (e.g. whole tumor, tumor core and enhancing tumor are three different quantities) and metric definition; keep such quantities in separate columns or tables, never average or rank across them, and mark rows from a different setting. Where conditions differ, say the results are not directly comparable.\n"
+            "### 5.3 Qualitative Visual Comparison\n"
+            "- At most one or two real images from AVAILABLE FIGURES, each caption naming the source [n] and noting it is reproduced from that paper (reuse is subject to the original licence).\n"
+            "### 5.4 Performance Trade-offs\n"
+            "- Accuracy vs. latency/cost/interpretability and similar trade-offs, from reported evidence only; aim for 3 ```chart blocks of 3 DIFFERENT chart types WHEN the evidence has enough real, comparable numbers (otherwise include fewer; never invent or pad data just to reach a count), chosen from bar | barh | line/xyline | heatmap | stacked_barh | scatter | boxplot (e.g. one barh ranking of a single metric, one grouped bar across regions, one heatmap of methods x regions, or a line over the number of available modalities when the sources report it), each restricted to ONE comparable setting (same dataset version, same region, same metric) and each plotting only numbers that appear in the evidence with their [n]. Split the evidence into separate charts, e.g. Dice for whole tumor, Dice for tumor core, Dice for enhancing tumor on the same dataset version, or HD95 on its own; one chart per region/metric. Never plot values from incomparable settings on one axis, never mix Dice with HD95 or with parameter counts, never use null, \"relative\"/normalized/estimated values or numbers read from an image; a method with no reported value for that setting is simply left out of that chart (each chart needs >=3 methods).\n"
+            "### 5.5 Cross-study Evidence Analysis\n"
+            "- Where studies agree or disagree, and why (data, preprocessing, protocol); state how strong the evidence is for each conclusion.",
         ),
         "stage5": (
-            "Sections 5 and 6 (DISCUSSION AND CONCLUSION)",
-            "## 5. Discussion & Open Research Challenges\n"
-            "### 5.1 Technical Barriers & Trade-offs\n"
-            "### 5.2 Scalability, Robustness & Deployment Concerns\n"
-            "### 5.3 Open Research Directions\n"
-            "- At least 4 concrete, distinct directions grounded in the evidence.\n\n"
-            "## 6. Conclusion\n"
-            "- Synthesize the overall picture and the outlook; no new claims.",
+            "Sections 6 and 7 (DISCUSSION AND CONCLUSION)",
+            "## 6. Discussion & Open Research Challenges\n"
+            "### 6.1 Technical Barriers & Trade-offs\n"
+            "- Include a Markdown table '**Table 4: Strengths, limitations and unresolved challenges**' per method family.\n"
+            "### 6.2 Generalization, Robustness & Clinical/Deployment Concerns\n"
+            "### 6.3 Limitations of this Review\n"
+            "- Corpus-based narrative review, not exhaustive; possible selection bias; no independent re-run of the published methods.\n"
+            "### 6.4 Open Research Directions\n"
+            "- At least 4 concrete, distinct directions grounded in the evidence; say which research question (RQ) each one follows from.\n\n"
+            "## 7. Conclusion\n"
+            "- Answer each research question in one or two sentences, then give the outlook; no new claims.",
         ),
     },
     "novel_research": {
@@ -200,7 +262,7 @@ _STAGE_STRUCTURES: dict[str, dict[str, str]] = {
             "### 3.1 Problem Formulation & Foundations\n"
             "- Define inputs, outputs, objective and all notation from the design plan.\n"
             "### 3.2 System Architecture\n"
-            "- Describe the end-to-end flow and include one ```mermaid flowchart.\n"
+            "- Describe the end-to-end flow and include one ```mermaid flowchart as the research framework (Figure 1) and, when the model has distinct modules, a second ```mermaid architecture diagram.\n"
             "### 3.3 Core Components\n"
             "- Each component: purpose, mechanism, how it addresses a gap from Section 2; formulas only where they are well-defined. State clearly which parts are hypotheses.\n"
             "### 3.4 Algorithmic Execution\n"
@@ -212,15 +274,15 @@ _STAGE_STRUCTURES: dict[str, dict[str, str]] = {
             "Section 4 (EXPERIMENTS AND RESULTS)",
             "## 4. Experiments and Results\n"
             "### 4.1 Benchmark Datasets, Metrics & Evaluation Protocol\n"
-            "- Only datasets and metrics present in the evidence.\n"
+            "- Only datasets and metrics present in the evidence; summarise them in a Markdown table (dataset characteristics) and, if real images are available, one ```image block illustrating the input data.\n"
             "### 4.2 Baselines & Experimental Setup\n"
-            "- Baselines [n] and the configuration as a Markdown table.\n"
+            "- Baselines [n] and the experimental configuration (hyper-parameters, hardware, splits) as a Markdown table.\n"
             "### 4.3 Quantitative Benchmark Comparison\n"
             "- A ```table JSON block comparing published baseline results [n] with the proposed method (marked '*Not Exp.*' unless supported); 1-2 ```chart blocks of real baseline numbers (different metrics or settings).\n"
             "### 4.4 Ablation Study Design\n"
             "- Ablation variants and what each tests (a ```table block with '*Not Exp.*' for unrun results).\n"
             "### 4.5 Qualitative Analysis\n"
-            "- Expected failure modes and case-study protocol, labelled as planned if not executed.",
+            "- Qualitative results (real ```image blocks if available) and error analysis; otherwise expected failure modes and case-study protocol, labelled as planned if not executed.",
         ),
         "stage5": (
             "Sections 5 and 6 (DISCUSSION AND CONCLUSION)",
@@ -273,9 +335,28 @@ def _generate(
     return response.text.strip()
 
 
+def _review_facts(state: ResearchState, mode: str) -> str:
+    """Số liệu thật về quy trình thu thập nguồn, để chương Review Methodology không bịa cơ sở dữ liệu/số lượng sàng lọc."""
+    if mode == "novel_research":
+        return ""
+    settings = get_settings()
+    cited = {getattr(c, "paper_id", None) for c in state.get("citations", [])} - {None}
+    queries = "; ".join(f'"{q}"' for q in (state.get("search_queries") or [])[:8]) or "(not recorded)"
+    corpus = len(_local_catalog()) or "unknown"
+    scope = "the curated internal PDF repository only" if not settings.external_search_enabled else "the internal repository plus an external scholarly index (OpenAlex)"
+    return (
+        "REVIEW FACTS (the only facts about the search process you may state in Section 2; do not add others):\n"
+        f"- Sources searched: {scope}.\n"
+        f"- Corpus size: {corpus} papers in the repository catalog; {len(cited)} distinct papers were retrieved as evidence for this manuscript.\n"
+        f"- Search queries used (hybrid dense+sparse retrieval with reranking): {queries}.\n"
+        f"- Search date: {date.today().isoformat()}.\n"
+        "- No independent title/abstract screening or PRISMA flow was performed beyond retrieval relevance.\n"
+    )
+
+
 def _research_context(state: ResearchState) -> str:
     """Research Knowledge Model, kết quả người dùng cung cấp và venue đích, đưa vào prompt của mọi chặng."""
-    parts = [model_brief(state.get("research_model"))]
+    parts = [model_brief(state.get("research_model")), _review_facts(state, state.get("research_mode", "survey"))]
     if state.get("user_results"):
         parts.append(
             "USER-PROVIDED EXPERIMENT RESULTS (the only measured results of the proposed work; report them faithfully, do not alter or extend them):\n"
@@ -399,12 +480,23 @@ def _generate_stage_1_front_matter_and_intro(
         + "## 1. Introduction\n"
         "### 1.1 Motivation & Background\n"
         "(3-4 full paragraphs on the problem's importance and context, using the evidence [n].)\n"
-        "### 1.2 Limitations of Existing Work\n"
-        "(3-4 paragraphs on concrete deficiencies of prior work, with [n].)\n"
-        "### 1.3 Core Contributions\n"
-        f"{contributions}\n"
-        "### 1.4 Paper Organization\n"
-        "(Outline strictly Sections 2 through 6. Do NOT reference unwritten sections or phantom appendices.)"
+        + (
+            "### 1.2 Limitations of Existing Surveys\n"
+            "(2-3 paragraphs on what earlier surveys cover and miss, ONLY from surveys present in the citations; if none is available, say the coverage of earlier surveys was not systematically compared. Never invent surveys.)\n"
+            "### 1.3 Research Gaps and Research Questions\n"
+            "(The specific gaps, then 3-5 numbered research questions RQ1...; they are answered in Section 7.)\n"
+            "### 1.4 Core Contributions\n"
+            f"{contributions}\n"
+            "### 1.5 Paper Organization\n"
+            "(Outline strictly Sections 2 through 7. Do NOT reference unwritten sections or phantom appendices.)"
+            if mode != "novel_research"
+            else "### 1.2 Limitations of Existing Work\n"
+            "(3-4 paragraphs on concrete deficiencies of prior work, with [n].)\n"
+            "### 1.3 Core Contributions\n"
+            f"{contributions}\n"
+            "### 1.4 Paper Organization\n"
+            "(Outline strictly Sections 2 through 6. Do NOT reference unwritten sections or phantom appendices.)"
+        )
     )
     user_prompt = _user_prompt(state, "Write the front matter and Section 1 in the manuscript language with high academic depth.")
     return _generate(system_prompt, user_prompt, gateway, model_name)
@@ -539,6 +631,18 @@ def _generate_audience_appendix(
     return _generate(system_prompt, user_prompt, gateway, model_name)
 
 
+def _run_quality_gate(state: ResearchState, text: str) -> dict | None:
+    from app.agent.evidence.quality_gate import run_quality_gate
+
+    try:
+        report = run_quality_gate(state, text)
+    except (KeyError, ValueError, TypeError, AttributeError, OSError):
+        logger.exception("Quality Gate lỗi, bỏ qua validation_report")
+        return None
+    logger.info("Quality Gate: passed=%s, %d lỗi chặn, %d cảnh báo", report["passed"], len(report["blocking"]), len(report["warnings"]))
+    return report
+
+
 class InsufficientEvidenceError(ValueError):
     """Không có nguồn thật nào cho paper; chặn xuất bản thay vì để LLM tự gán [1]."""
 
@@ -607,11 +711,25 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
         else:
             logger.warning("Lời gọi bổ sung không tạo được mục %s", missing)
 
+    # Quality Gate trên văn bản chưa đánh số lại [n]: không sửa gì, chỉ ghi validation_report; lỗi gate không làm sập graph
+    validation_report = _run_quality_gate(state, raw_stitched)
+
+    # Phase 4: bảng Δ/ablation và scatter đánh đổi từ bản ghi đã kiểm chứng; chèn TRƯỚC khi đánh số lại [n]
+    if state.get("results"):
+        from app.agent.evidence.extractor import records_from_dicts
+        from app.agent.evidence.quant_analysis import build_quant_blocks, inject_quant_blocks
+
+        paper_to_n: dict[str, int] = {}
+        for n, cit in enumerate(citations, start=1):
+            paper_to_n.setdefault(cit.paper_id, n)
+        raw_stitched = inject_quant_blocks(raw_stitched, build_quant_blocks(records_from_dicts(state["results"]), paper_to_n))
+
     # Deduplicate citations, remap numbers, and generate clean IEEE references
     updated_text, clean_references = clean_and_deduplicate_citations(citations, raw_stitched)
     updated_text = postprocess_report(
         updated_text, state.get("draft", ""), gateway, model_name, state.get("language", "en"), state["figures"],
         evidence_text=" ".join(str(getattr(c, "text_snippet", "") or "") for c in citations),
+        min_charts=3 if mode == "survey" else 1,
     )
     updated_text, dangling = strip_dangling_citations(updated_text, len(clean_references))
     if dangling:
@@ -634,4 +752,4 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
 
     clean_report = sanitize_academic_markdown(final_text_with_refs)
     logger.info(f"Synthesized comprehensive 10-page paper: {len(clean_report):,} chars")
-    return {**state, "report": clean_report}
+    return {**state, "report": clean_report, "validation_report": validation_report}
