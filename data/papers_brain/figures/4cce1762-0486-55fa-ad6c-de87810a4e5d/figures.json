@@ -1,0 +1,182 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 7,
+  "caption": "Fig. 1: Search on PubMed in 2012 showing related growing body of literature. Figure taken from [1].",
+  "kind": "raster",
+  "width": 687,
+  "height": 631,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 8,
+  "caption": "Fig. 2: Glioma sub-regions. The image patches show from left to right: the whole tumor (yellow) visible in T2-FLAIR (A), the tumor core (red) visible in T2 (B), the active tumor structures (light blue) visible in T1Gd, surrounding the cystic/necrotic components of the core (green) (C). The segmentations are combined to generate the ﬁnal labels of the tumor sub-regions (D): ED (yellow), NET (red), ",
+  "kind": "raster",
+  "width": 981,
+  "height": 357,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 8,
+  "caption": "Fig. 3: Illustrative pipeline example for predicting patient overall survival.",
+  "kind": "raster",
+  "width": 981,
+  "height": 338,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 16,
+  "caption": "Fig. 4: Summary results of the BraTS 2012-2013. Label fusion (red outline) out-performs all indi- vidual methods and the inter-rater agreement. Figure adopted from [1].",
+  "kind": "raster",
+  "width": 687,
+  "height": 491,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 17,
+  "caption": "Fig. 5: BraTS 2017 Ranking of all Participating Teams in Segmentation Task. (smaller values are higher ranks)",
+  "kind": "raster",
+  "width": 981,
+  "height": 1164,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ },
+ {
+  "file": "fig_6.png",
+  "page": 18,
+  "caption": "Fig. 6: BraTS 2017 Ranking of all Participating Teams in Survival Task. (larger values are better)",
+  "kind": "raster",
+  "width": 981,
+  "height": 676,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ },
+ {
+  "file": "fig_7.png",
+  "page": 20,
+  "caption": "Fig. 7: BraTS 2018 Ranking of all Participating Teams in Segmentation Task. (smaller values are higher ranks)",
+  "kind": "raster",
+  "width": 981,
+  "height": 1137,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ },
+ {
+  "file": "fig_8.png",
+  "page": 21,
+  "caption": "Fig. 8: BraTS 2018 Ranking of all Participating Teams in Survival Task. (larger values are better)",
+  "kind": "raster",
+  "width": 981,
+  "height": 667,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ },
+ {
+  "file": "fig_9.png",
+  "page": 31,
+  "caption": "Fig. 9: BraTS 2018 summarizing results (Dice) for the segmentation of the active tumor compart- ment.",
+  "kind": "raster",
+  "width": 981,
+  "height": 1125,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ },
+ {
+  "file": "fig_10.png",
+  "page": 32,
+  "caption": "Fig. 10: BraTS 2018 summarizing results (Dice) for the segmentation of the tumor core compart- ment.",
+  "kind": "raster",
+  "width": 981,
+  "height": 1125,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ },
+ {
+  "file": "fig_11.png",
+  "page": 33,
+  "caption": "Fig. 11: BraTS 2018 summarizing results (Dice) for the segmentation of the whole tumor compart- ment.",
+  "kind": "raster",
+  "width": 981,
+  "height": 1125,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ },
+ {
+  "file": "fig_12.png",
+  "page": 34,
+  "caption": "Fig. 12: BraTS 2018 summarizing results (Hausdorff) for the segmentation of the active tumor compartment.",
+  "kind": "raster",
+  "width": 981,
+  "height": 1125,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ },
+ {
+  "file": "fig_13.png",
+  "page": 35,
+  "caption": "Fig. 13: BraTS 2018 summarizing results (Hausdorff) for the segmentation of the active tumor compartment, with cutoff values for visualization purposes.",
+  "kind": "raster",
+  "width": 981,
+  "height": 1125,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ },
+ {
+  "file": "fig_14.png",
+  "page": 36,
+  "caption": "Fig. 14: BraTS 2018 summarizing results (Hausdorff) for the segmentation of the tumor core com- partment.",
+  "kind": "raster",
+  "width": 981,
+  "height": 1125,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ },
+ {
+  "file": "fig_15.png",
+  "page": 37,
+  "caption": "Fig. 15: BraTS 2018 summarizing results (Hausdorff) for the segmentation of the tumor core com- partment, with cutoff values for visualization purposes.",
+  "kind": "raster",
+  "width": 981,
+  "height": 1125,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ },
+ {
+  "file": "fig_16.png",
+  "page": 38,
+  "caption": "Fig. 16: BraTS 2018 summarizing results (Hausdorff) for the segmentation of the whole tumor compartment.",
+  "kind": "raster",
+  "width": 981,
+  "height": 1125,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ },
+ {
+  "file": "fig_17.png",
+  "page": 39,
+  "caption": "Fig. 17: BraTS 2018 summarizing results (Hausdorff) for the segmentation of the whole tumor compartment, with cutoff values for visualization purposes.",
+  "kind": "raster",
+  "width": 981,
+  "height": 1125,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ },
+ {
+  "file": "fig_18.png",
+  "page": 41,
+  "caption": "Fig. 18: BraTS 2017 summarizing results (Dice) for the segmentation of the active tumor compart- ment.",
+  "kind": "raster",
+  "width": 981,
+  "height": 1125,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ },
+ {
+  "file": "fig_19.png",
+  "page": 42,
+  "caption": "Fig. 19: BraTS 2017 summarizing results (Dice) for the segmentation of the tumor core compart- ment.",
+  "kind": "raster",
+  "width": 981,
+  "height": 1125,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ },
+ {
+  "file": "fig_20.png",
+  "page": 43,
+  "caption": "Fig. 20: BraTS 2017 summarizing results (Dice) for the segmentation of the whole tumor compart- ment.",
+  "kind": "raster",
+  "width": 981,
+  "height": 1125,
+  "source_title": "4cce1762-0486-55fa-ad6c-de87810a4e5d.pdf"
+ }
+]

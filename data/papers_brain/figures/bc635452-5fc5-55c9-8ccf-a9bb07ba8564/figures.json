@@ -1,0 +1,47 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Figure 1. Full-modality training and evaluation of ShaSpec. All modalities {x(i)}N",
+  "kind": "vector",
+  "width": 835,
+  "height": 448,
+  "source_title": "bc635452-5fc5-55c9-8ccf-a9bb07ba8564.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 4,
+  "caption": "Figure 2. Missing-modality training and evaluation of ShaSpec. Without losing generality, we assume x(n) is missing, where n can be 1, 2, ..., N. For available modalities x(1), ..., x(n−1), x(n+1), ..., x(N), the shared-specific fused features f (1), ..., f (n−1), f (n+1), ..., f (N)",
+  "kind": "vector",
+  "width": 835,
+  "height": 370,
+  "source_title": "bc635452-5fc5-55c9-8ccf-a9bb07ba8564.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 7,
+  "caption": "Figure 3. Model performance with varying rates of missing modal- ity data (for both image and audio) on Audiovision-MNIST.",
+  "kind": "vector",
+  "width": 473,
+  "height": 271,
+  "source_title": "bc635452-5fc5-55c9-8ccf-a9bb07ba8564.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 8,
+  "caption": "Figure 5. t-SNE visualisation of shared and specific features of four modalities from all training data on BraTS2018. The shared features of four modalities are presented by ‘x’ in different colours, while the specific features of four modalities are presented by ‘o’ in different colours.",
+  "kind": "raster",
+  "width": 362,
+  "height": 269,
+  "source_title": "bc635452-5fc5-55c9-8ccf-a9bb07ba8564.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 8,
+  "caption": "Figure 4. Sensitivity of α and β for Eq. (9) for non-dedicated training, where only T1 is available for evaluation on BraTS2018.",
+  "kind": "vector",
+  "width": 542,
+  "height": 230,
+  "source_title": "bc635452-5fc5-55c9-8ccf-a9bb07ba8564.pdf"
+ }
+]

@@ -13,7 +13,6 @@ htmlcov/
 dist/
 build/
 *.egg-info/
-data/
 uploads/
 /models/
 .DS_Store
@@ -23,10 +22,10 @@ frontend
 node_modules/
 
 # Kết quả xuất ra & tệp sinh tự động
-output/
-*.pdf
-!docs/samples/*.pdf
-!quick_paper.pdf
-*.log
-celerybeat-schedule*
-dump.rdb
+# output/
+# *.pdf
+# !docs/samples/*.pdf
+# !quick_paper.pdf
+# *.log
+# celerybeat-schedule*
+# dump.rdb

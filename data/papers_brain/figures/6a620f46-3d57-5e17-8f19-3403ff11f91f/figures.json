@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 4,
+  "caption": "Figure 1: SMU-Net with 1) style matching mechanism to reconstruct the missing infor-",
+  "kind": "vector",
+  "width": 779,
+  "height": 319,
+  "source_title": "6a620f46-3d57-5e17-8f19-3403ff11f91f.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 8,
+  "caption": "Figure 3: Visual segmentation results of the SMU-Net on BraTS 2018 using a single modal-",
+  "kind": "raster",
+  "width": 505,
+  "height": 244,
+  "source_title": "6a620f46-3d57-5e17-8f19-3403ff11f91f.pdf"
+ }
+]

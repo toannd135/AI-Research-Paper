@@ -1,0 +1,38 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 4,
+  "caption": "Fig. 2. Joint intensity distribution of MR images: (a) FLAIR-T1, (b) FLAIR-T2 and (c) T1-T2.",
+  "kind": "raster",
+  "width": 578,
+  "height": 578,
+  "source_title": "b5895376-8243-58fb-b03e-fc9ffd10e765.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 4,
+  "caption": "Fig. 3. Architecture of correlation representation block.",
+  "kind": "raster",
+  "width": 650,
+  "height": 360,
+  "source_title": "b5895376-8243-58fb-b03e-fc9ffd10e765.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 5,
+  "caption": "Fig. 4. The architecture of fusion block.",
+  "kind": "raster",
+  "width": 650,
+  "height": 212,
+  "source_title": "b5895376-8243-58fb-b03e-fc9ffd10e765.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 8,
+  "caption": "Fig. 6. Examples of the segmentation results compared to ground truth. Red: necrotic and non-enhancing tumor core; Orange: edema; White: enhancing tumor.",
+  "kind": "raster",
+  "width": 721,
+  "height": 286,
+  "source_title": "b5895376-8243-58fb-b03e-fc9ffd10e765.pdf"
+ }
+]

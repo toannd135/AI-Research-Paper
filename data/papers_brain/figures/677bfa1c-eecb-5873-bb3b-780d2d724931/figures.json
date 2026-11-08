@@ -1,0 +1,38 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 4,
+  "caption": "Fig. 2: Our ensemble of diverse networks, EMMA (red), averages out the bias infused by individual model conﬁgurations m, to approximate more reliably the true posterior (black), while being robust to suboptimal conﬁgurations. Poste- riors on the left were obtained from multiple perceptrons, trained to classify clusters centred on 10 and -10 as a toy example, with diﬀerent losses, regulariza- tions",
+  "kind": "raster",
+  "width": 722,
+  "height": 260,
+  "source_title": "677bfa1c-eecb-5873-bb3b-780d2d724931.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 7,
+  "caption": "Fig. 4: Schematic of one of the FCN architecture used in EMMA. Shown are number of feature maps per layer. All kernels and feature maps are 3D, even though not depicted for simplicity.",
+  "kind": "raster",
+  "width": 650,
+  "height": 269,
+  "source_title": "677bfa1c-eecb-5873-bb3b-780d2d724931.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 9,
+  "caption": "Fig. 6: Results are aﬀected by normalization. To make a system robust to this factor, we introduce in EMMA models trained on diﬀerently normalized data.",
+  "kind": "raster",
+  "width": 578,
+  "height": 351,
+  "source_title": "677bfa1c-eecb-5873-bb3b-780d2d724931.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 10,
+  "caption": "Fig. 7: FLAIR, T1ce and manual annotation of a case in the training set, along with automatic segmentation from preliminary version of EMMA consisting of six models. Green arrows point inconsistent mistakes by the individual model that are corrected by the ensembling, while red arrow shows a consistent mistake.",
+  "kind": "raster",
+  "width": 722,
+  "height": 363,
+  "source_title": "677bfa1c-eecb-5873-bb3b-780d2d724931.pdf"
+ }
+]

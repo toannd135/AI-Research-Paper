@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Figure 1: The Transformer - model architecture.",
+  "kind": "raster",
+  "width": 457,
+  "height": 672,
+  "source_title": "Attention Is All You Need (Vaswani et al., 2017)"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 4,
+  "caption": "Figure 2: (left) Scaled Dot-Product Attention. (right) Multi-Head Attention consists of several attention layers running in parallel.",
+  "kind": "raster",
+  "width": 609,
+  "height": 385,
+  "source_title": "Attention Is All You Need (Vaswani et al., 2017)"
+ }
+]

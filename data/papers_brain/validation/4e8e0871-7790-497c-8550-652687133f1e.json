@@ -1,0 +1,893 @@
+{
+  "passed": false,
+  "blocking": [
+    "44 giá trị không tìm thấy trong nguồn được trích và 0 giá trị không có [n] trong bảng/biểu đồ — không được dùng làm bảng kết quả"
+  ],
+  "warnings": [],
+  "references": {
+    "references": [
+      {
+        "paper_id": "3b54afea-d9b8-5c98-9371-b3953db3b746",
+        "status": "VERIFIED",
+        "missing": [],
+        "issues": []
+      },
+      {
+        "paper_id": "1bfead36-f4cc-58f3-9eb9-ae619c74772d",
+        "status": "VERIFIED",
+        "missing": [],
+        "issues": []
+      },
+      {
+        "paper_id": "b5895376-8243-58fb-b03e-fc9ffd10e765",
+        "status": "VERIFIED",
+        "missing": [],
+        "issues": []
+      },
+      {
+        "paper_id": "846a4576-9186-5828-b5f1-f62cc4417c97",
+        "status": "VERIFIED",
+        "missing": [],
+        "issues": []
+      },
+      {
+        "paper_id": "677bfa1c-eecb-5873-bb3b-780d2d724931",
+        "status": "VERIFIED",
+        "missing": [],
+        "issues": []
+      },
+      {
+        "paper_id": "b859a356-dfc5-52ef-b123-00cb8eb55e90",
+        "status": "VERIFIED",
+        "missing": [],
+        "issues": []
+      },
+      {
+        "paper_id": "283cea40-6b7e-5a72-9502-73d4d5585276",
+        "status": "VERIFIED",
+        "missing": [],
+        "issues": []
+      },
+      {
+        "paper_id": "af9e8061-7ae7-5701-8d22-55ee60f2bd08",
+        "status": "VERIFIED",
+        "missing": [],
+        "issues": []
+      },
+      {
+        "paper_id": "5695a1e0-d789-5bbf-86b2-a99973fd53b5",
+        "status": "VERIFIED",
+        "missing": [],
+        "issues": []
+      },
+      {
+        "paper_id": "b480e2eb-b7cf-515d-9645-6debf6d36d15",
+        "status": "VERIFIED",
+        "missing": [],
+        "issues": []
+      },
+      {
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "status": "VERIFIED",
+        "missing": [],
+        "issues": []
+      },
+      {
+        "paper_id": "6a620f46-3d57-5e17-8f19-3403ff11f91f",
+        "status": "VERIFIED",
+        "missing": [],
+        "issues": []
+      },
+      {
+        "paper_id": "f7f5d237-2215-54d5-887a-06f70c5259e5",
+        "status": "VERIFIED",
+        "missing": [],
+        "issues": []
+      },
+      {
+        "paper_id": "4cce1762-0486-55fa-ad6c-de87810a4e5d",
+        "status": "VERIFIED",
+        "missing": [],
+        "issues": []
+      },
+      {
+        "paper_id": "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5",
+        "status": "VERIFIED",
+        "missing": [],
+        "issues": []
+      },
+      {
+        "paper_id": "4e2e7dfc-7edc-5ffa-81d7-30a929511c91",
+        "status": "VERIFIED",
+        "missing": [],
+        "issues": []
+      }
+    ],
+    "counts": {
+      "VERIFIED": 16
+    },
+    "duplicates": 0
+  },
+  "traceability": {
+    "counts": {
+      "TRACED": 20,
+      "UNTRACED": 44,
+      "NO_CITATION": 0
+    },
+    "untraced": [
+      {
+        "block": "table#1",
+        "location": "row 1, ET",
+        "value": "78.59",
+        "cites": [
+          1
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 1, WT",
+        "value": "90.50",
+        "cites": [
+          1
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 1, TC",
+        "value": "83.78",
+        "cites": [
+          1
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 2, ET",
+        "value": "74.11",
+        "cites": [
+          1
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 2, WT",
+        "value": "88.96",
+        "cites": [
+          1
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 2, TC",
+        "value": "82.55",
+        "cites": [
+          1
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 3, ET",
+        "value": "78.31",
+        "cites": [
+          1
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 3, WT",
+        "value": "87.39",
+        "cites": [
+          1
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 3, TC",
+        "value": "77.48",
+        "cites": [
+          1
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 4, ET",
+        "value": "81.45",
+        "cites": [
+          13
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 4, WT",
+        "value": "90.42",
+        "cites": [
+          13
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 4, TC",
+        "value": "85.96",
+        "cites": [
+          13
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 4, ET",
+        "value": "3.80",
+        "cites": [
+          13
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 4, WT",
+        "value": "4.48",
+        "cites": [
+          13
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 4, TC",
+        "value": "8.28",
+        "cites": [
+          13
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 5, ET",
+        "value": "81.73",
+        "cites": [
+          13
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 5, WT",
+        "value": "90.68",
+        "cites": [
+          13
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 5, TC",
+        "value": "86.02",
+        "cites": [
+          13
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 5, ET",
+        "value": "3.82",
+        "cites": [
+          13
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 5, WT",
+        "value": "4.41",
+        "cites": [
+          13
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 5, TC",
+        "value": "6.84",
+        "cites": [
+          13
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 6, ET",
+        "value": "82.33",
+        "cites": [
+          13
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 6, WT",
+        "value": "91.00",
+        "cites": [
+          13
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 6, TC",
+        "value": "86.68",
+        "cites": [
+          13
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 6, ET",
+        "value": "3.93",
+        "cites": [
+          13
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 6, WT",
+        "value": "4.52",
+        "cites": [
+          13
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 6, TC",
+        "value": "6.85",
+        "cites": [
+          13
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 8, ET",
+        "value": "17.95",
+        "cites": [
+          11
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 8, WT",
+        "value": "4.96",
+        "cites": [
+          11
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 8, TC",
+        "value": "9.77",
+        "cites": [
+          11
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 9, ET",
+        "value": "85.30",
+        "cites": [
+          15
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 9, WT",
+        "value": "92.70",
+        "cites": [
+          15
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 9, TC",
+        "value": "87.60",
+        "cites": [
+          15
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 9, ET",
+        "value": "16.33",
+        "cites": [
+          15
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 9, WT",
+        "value": "4.74",
+        "cites": [
+          15
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 9, TC",
+        "value": "15.31",
+        "cites": [
+          15
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "chart#2",
+        "location": "series 1, point 2",
+        "value": "0.92",
+        "cites": [
+          8
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "chart#2",
+        "location": "series 1, point 3",
+        "value": "0.89",
+        "cites": [
+          8
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "chart#2",
+        "location": "series 1, point 4",
+        "value": "0.85",
+        "cites": [
+          8
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "chart#2",
+        "location": "series 1, point 5",
+        "value": "0.81",
+        "cites": [
+          8
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      }
+    ],
+    "traced_sample": [
+      {
+        "block": "table#1",
+        "location": "row 7, ET",
+        "value": "78.93",
+        "cites": [
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "pages": [
+          6,
+          7
+        ],
+        "pdf_sha256": "4fa7cdd035bc8075c9db46b2540f76ff802a18b514af7baf8ca5b72ae1b8a591"
+      },
+      {
+        "block": "table#1",
+        "location": "row 7, WT",
+        "value": "90.00",
+        "cites": [
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "pages": [
+          6,
+          7
+        ],
+        "pdf_sha256": "4fa7cdd035bc8075c9db46b2540f76ff802a18b514af7baf8ca5b72ae1b8a591"
+      },
+      {
+        "block": "table#1",
+        "location": "row 7, TC",
+        "value": "81.94",
+        "cites": [
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "pages": [
+          6,
+          7
+        ],
+        "pdf_sha256": "4fa7cdd035bc8075c9db46b2540f76ff802a18b514af7baf8ca5b72ae1b8a591"
+      },
+      {
+        "block": "table#1",
+        "location": "row 8, ET",
+        "value": "78.73",
+        "cites": [
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "pages": [
+          6,
+          7
+        ],
+        "pdf_sha256": "4fa7cdd035bc8075c9db46b2540f76ff802a18b514af7baf8ca5b72ae1b8a591"
+      },
+      {
+        "block": "table#1",
+        "location": "row 8, WT",
+        "value": "90.09",
+        "cites": [
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "pages": [
+          6,
+          7
+        ],
+        "pdf_sha256": "4fa7cdd035bc8075c9db46b2540f76ff802a18b514af7baf8ca5b72ae1b8a591"
+      },
+      {
+        "block": "table#1",
+        "location": "row 8, TC",
+        "value": "81.73",
+        "cites": [
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "pages": [
+          6,
+          7
+        ],
+        "pdf_sha256": "4fa7cdd035bc8075c9db46b2540f76ff802a18b514af7baf8ca5b72ae1b8a591"
+      },
+      {
+        "block": "table#1",
+        "location": "row 15, ET",
+        "value": "46.12",
+        "cites": [
+          12
+        ],
+        "status": "TRACED",
+        "paper_id": "6a620f46-3d57-5e17-8f19-3403ff11f91f",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "c2aaf8d777ee916640edc8f0b8705f5f2e536be97957e29138a7dea714a934d8"
+      },
+      {
+        "block": "table#1",
+        "location": "row 15, WT",
+        "value": "87.52",
+        "cites": [
+          12
+        ],
+        "status": "TRACED",
+        "paper_id": "6a620f46-3d57-5e17-8f19-3403ff11f91f",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "c2aaf8d777ee916640edc8f0b8705f5f2e536be97957e29138a7dea714a934d8"
+      },
+      {
+        "block": "table#1",
+        "location": "row 15, TC",
+        "value": "71.80",
+        "cites": [
+          12
+        ],
+        "status": "TRACED",
+        "paper_id": "6a620f46-3d57-5e17-8f19-3403ff11f91f",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "c2aaf8d777ee916640edc8f0b8705f5f2e536be97957e29138a7dea714a934d8"
+      },
+      {
+        "block": "table#1",
+        "location": "row 16, ET",
+        "value": "44.23",
+        "cites": [
+          12
+        ],
+        "status": "TRACED",
+        "paper_id": "6a620f46-3d57-5e17-8f19-3403ff11f91f",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "c2aaf8d777ee916640edc8f0b8705f5f2e536be97957e29138a7dea714a934d8"
+      },
+      {
+        "block": "table#1",
+        "location": "row 16, WT",
+        "value": "85.49",
+        "cites": [
+          12
+        ],
+        "status": "TRACED",
+        "paper_id": "6a620f46-3d57-5e17-8f19-3403ff11f91f",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "c2aaf8d777ee916640edc8f0b8705f5f2e536be97957e29138a7dea714a934d8"
+      },
+      {
+        "block": "table#1",
+        "location": "row 16, TC",
+        "value": "69.20",
+        "cites": [
+          12
+        ],
+        "status": "TRACED",
+        "paper_id": "6a620f46-3d57-5e17-8f19-3403ff11f91f",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "c2aaf8d777ee916640edc8f0b8705f5f2e536be97957e29138a7dea714a934d8"
+      },
+      {
+        "block": "table#1",
+        "location": "row 17, ET",
+        "value": "45.14",
+        "cites": [
+          12
+        ],
+        "status": "TRACED",
+        "paper_id": "6a620f46-3d57-5e17-8f19-3403ff11f91f",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "c2aaf8d777ee916640edc8f0b8705f5f2e536be97957e29138a7dea714a934d8"
+      },
+      {
+        "block": "table#1",
+        "location": "row 17, WT",
+        "value": "86.41",
+        "cites": [
+          12
+        ],
+        "status": "TRACED",
+        "paper_id": "6a620f46-3d57-5e17-8f19-3403ff11f91f",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "c2aaf8d777ee916640edc8f0b8705f5f2e536be97957e29138a7dea714a934d8"
+      },
+      {
+        "block": "table#1",
+        "location": "row 17, TC",
+        "value": "70.38",
+        "cites": [
+          12
+        ],
+        "status": "TRACED",
+        "paper_id": "6a620f46-3d57-5e17-8f19-3403ff11f91f",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "c2aaf8d777ee916640edc8f0b8705f5f2e536be97957e29138a7dea714a934d8"
+      },
+      {
+        "block": "table#1",
+        "location": "row 18, ET",
+        "value": "45.43",
+        "cites": [
+          12
+        ],
+        "status": "TRACED",
+        "paper_id": "6a620f46-3d57-5e17-8f19-3403ff11f91f",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "c2aaf8d777ee916640edc8f0b8705f5f2e536be97957e29138a7dea714a934d8"
+      },
+      {
+        "block": "table#1",
+        "location": "row 18, WT",
+        "value": "86.29",
+        "cites": [
+          12
+        ],
+        "status": "TRACED",
+        "paper_id": "6a620f46-3d57-5e17-8f19-3403ff11f91f",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "c2aaf8d777ee916640edc8f0b8705f5f2e536be97957e29138a7dea714a934d8"
+      },
+      {
+        "block": "table#1",
+        "location": "row 18, TC",
+        "value": "69.89",
+        "cites": [
+          12
+        ],
+        "status": "TRACED",
+        "paper_id": "6a620f46-3d57-5e17-8f19-3403ff11f91f",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "c2aaf8d777ee916640edc8f0b8705f5f2e536be97957e29138a7dea714a934d8"
+      },
+      {
+        "block": "chart#2",
+        "location": "series 1, point 1",
+        "value": "1.0",
+        "cites": [
+          8
+        ],
+        "status": "TRACED",
+        "paper_id": "af9e8061-7ae7-5701-8d22-55ee60f2bd08",
+        "pages": [
+          1,
+          2
+        ],
+        "pdf_sha256": "942858750c60d3bbc3ff9301aa7d6bbc4d511b8c79ce383ae5f5873573c90ab0"
+      },
+      {
+        "block": "chart#2",
+        "location": "series 2, point 2",
+        "value": "1.0",
+        "cites": [
+          8
+        ],
+        "status": "TRACED",
+        "paper_id": "af9e8061-7ae7-5701-8d22-55ee60f2bd08",
+        "pages": [
+          1,
+          2
+        ],
+        "pdf_sha256": "942858750c60d3bbc3ff9301aa7d6bbc4d511b8c79ce383ae5f5873573c90ab0"
+      }
+    ]
+  },
+  "comparability": {
+    "chart_problems": []
+  }
+}

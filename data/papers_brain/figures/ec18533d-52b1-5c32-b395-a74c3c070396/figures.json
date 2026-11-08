@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Fig. 1. Overall architecture of the proposed TransBTS.",
+  "kind": "vector",
+  "width": 722,
+  "height": 325,
+  "source_title": "ec18533d-52b1-5c32-b395-a74c3c070396.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 7,
+  "caption": "Fig. 2. The visual comparison of MRI brain tumor segmentation results.",
+  "kind": "raster",
+  "width": 722,
+  "height": 431,
+  "source_title": "ec18533d-52b1-5c32-b395-a74c3c070396.pdf"
+ }
+]

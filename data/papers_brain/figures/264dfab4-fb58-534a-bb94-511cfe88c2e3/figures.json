@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 4,
+  "caption": "Fig. 2: Architecture of nnFormer. In (a), we show the overall architecture of nnFormer. In (b), we present more details of the embedding layers on three publicly available datasets. In (c), (d), (e), we display how to implement the down-sampling, up-sampling and expanding layers, respectively. In practice, the architecture may slightly vary depending on the input scan size. In (b)-(e), K denotes t",
+  "kind": "vector",
+  "width": 1081,
+  "height": 660,
+  "source_title": "264dfab4-fb58-534a-bb94-511cfe88c2e3.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 4,
+  "caption": "Fig. 3: Three types of attention mechanism in nnFormer. Norm denotes the layer normalization method. MLP is the abbreviation for multi-layer perceptron, which is a two-layer neural network in practice.",
+  "kind": "vector",
+  "width": 1047,
+  "height": 413,
+  "source_title": "264dfab4-fb58-534a-bb94-511cfe88c2e3.pdf"
+ }
+]
