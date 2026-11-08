@@ -33,14 +33,17 @@ _REGIONS = {"wt": "WT", "tc": "TC", "et": "ET", "whole tumor": "WT", "tumor core
 
 _PROMPT = (
     "Extract quantitative results from the passages. Return ONLY a JSON list; each item: "
-    '{"paper_id","model","dataset","dataset_version","split","region","metric","value","unit","variant","modality","table"}. '
+    '{"paper_id","model","dataset","dataset_version","split","region","metric","value","unit","variant","modality","table","spread","spread_type"}. '
     "metric is one of Dice, HD95, IoU, AUC, EER, ACC, F1, AP, Params, GFLOPs, InferenceTime. region is WT/TC/ET/AVG or null "
     "(null for non-segmentation metrics). unit is ratio|percent|mm|M|G|ms. "
     "For detection tasks, put the evaluation setting (e.g. 'cross-dataset', 'in-domain', 'frame-level') in split only if printed. "
     "value must be the number EXACTLY as printed in the passage. Use null for any field the passage does not state; "
     "never guess, convert or compute. variant = ablation variant name (e.g. 'w/o X') or null for the full model. "
+    "spread = the number printed after '±' for that value (std/CI half-width) EXACTLY as printed, else null; "
+    "spread_type is SD, SE or CI95 only if the passage says which, else null. "
     "If there are no numeric results, return []."
 )
+_SPREAD_TYPES = {"SD", "SE", "CI95"}
 
 
 def _paper_chunks(evidence: list[Any]) -> dict[str, list[dict[str, Any]]]:
@@ -75,6 +78,17 @@ def _grounded_in(chunks: list[dict[str, Any]], needle: str | None) -> bool:
     return bool(needle) and any(needle.lower() in c["text"].lower() for c in chunks)
 
 
+def _verified_spread(item: dict[str, Any], hits: list[dict[str, Any]]) -> tuple[float | None, str | None]:
+    """Giữ spread chỉ khi có loại sai số hợp lệ và con số đứng ngay sau '±' trong chunk (không suy diễn)."""
+    raw, kind = _s(item.get("spread")), (_s(item.get("spread_type")) or "").upper().replace(" ", "").replace("%", "")
+    kind = {"STD": "SD", "STDDEV": "SD", "CI": "CI95", "CI95": "CI95", "95CI": "CI95"}.get(kind, kind)
+    if not raw or kind not in _SPREAD_TYPES or not re.fullmatch(r"\d+(?:\.\d+)?", raw):
+        return None, None
+    if not any(re.search(rf"(?:±|\+/-|\+-)\s*{re.escape(raw)}(?![\d])", c["text"]) for c in hits):
+        return None, None
+    return float(raw), kind
+
+
 def _verify(item: dict[str, Any], chunks: list[dict[str, Any]]) -> ResultRecord | None:
     raw = _s(item.get("value"))
     metric = _s(item.get("metric"))
@@ -83,6 +97,7 @@ def _verify(item: dict[str, Any], chunks: list[dict[str, Any]]) -> ResultRecord 
     hits = [c for c in chunks if re.search(rf"(?<![\d.]){re.escape(raw)}(?![\d])", c["text"])]
     if not hits:
         return None  # giá trị không có nguyên văn trong PDF → bỏ
+    spread, spread_type = _verified_spread(item, hits)
     raw_region = _s(item.get("region"))
     region = _REGIONS.get(raw_region.lower()) if raw_region else None
     modality = item.get("modality")
@@ -101,6 +116,8 @@ def _verify(item: dict[str, Any], chunks: list[dict[str, Any]]) -> ResultRecord 
         source_page=hits[0]["page"],
         source_table=_s(item.get("table")) if _grounded_in(hits, _s(item.get("table"))) else None,
         variant=_s(item.get("variant")),
+        spread=spread,
+        spread_type=spread_type,
     )
 
 

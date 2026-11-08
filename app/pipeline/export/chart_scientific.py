@@ -1,13 +1,16 @@
 """Biểu đồ khoa học (xy / phân phối / heatmap) cho khối ```chart.
 
 Các type: xyline (hội tụ, độ nhạy 1D, scalability), scatter (PCA/t-SNE/UMAP), cdf (latency),
-histogram, boxplot, heatmap (độ nhạy 2D). Chỉ vẽ số liệu có trong spec — không sinh dữ liệu.
+histogram, boxplot, heatmap (độ nhạy 2D, Δ theo cấu hình; ô null = NR), dot (so sánh phương pháp × metric),
+dumbbell (hai điều kiện ghép cặp: validation/test, có/không module), evidence_map (nghiên cứu × tiêu chí: Yes/No/NR).
+Chỉ vẽ số liệu có trong spec — không sinh dữ liệu; giá trị thiếu không bao giờ vẽ thành 0.
 """
 
 import io
 import math
 
-SCIENTIFIC_TYPES = {"xyline", "scatter", "cdf", "histogram", "boxplot", "heatmap"}
+SCIENTIFIC_TYPES = {"xyline", "scatter", "cdf", "histogram", "boxplot", "heatmap", "dot", "dumbbell", "evidence_map"}
+_EVIDENCE_COLORS = {"yes": "#4f9a5b", "partial": "#e3b448", "no": "#c8553d", "nr": "#e6e6e6"}
 
 _PALETTE = ["#1f4e79", "#c55a11", "#548235", "#7f6000", "#7030a0", "#2e75b6"]
 _MARKERS = ["o", "s", "^", "D", "v", "P"]
@@ -37,6 +40,128 @@ def _pairs(xs, ys, errs=None) -> list[tuple[float, float, float | None]]:
     return pts
 
 
+def _cell(v) -> float:
+    f = _floats([v])
+    return f[0] if f else float("nan")
+
+
+def _labelled_values(spec: dict) -> tuple[list[str], list[tuple[str, list[float]]]]:
+    """labels + series[{name, values}] → (nhãn, [(tên, giá trị float|nan)]) — dùng cho dot/dumbbell."""
+    labels = [str(x) for x in spec.get("labels") or []]
+    out = []
+    for s in spec.get("series") or []:
+        if isinstance(s, dict) and len(s.get("values") or []) == len(labels):
+            out.append((str(s.get("name") or ""), [_cell(v) for v in s["values"]]))
+    return labels, out
+
+
+def _evidence_key(v) -> str:
+    t = str(v or "").strip().lower()
+    for key in ("yes", "partial", "no"):
+        if t.startswith(key):
+            return key
+    return "nr"
+
+
+def _draw_dot(ax, spec: dict) -> int:
+    labels, series = _labelled_values(spec)
+    keep = [i for i in range(len(labels)) if any(not math.isnan(v[i]) for _, v in series)]
+    if not keep:
+        return 0
+    ys = list(range(len(keep)))
+    offs = [0.0] if len(series) == 1 else [(-0.25 + 0.5 * k / (len(series) - 1)) for k in range(len(series))]
+    for k, (name, vals) in enumerate(series):
+        pts = [(vals[i], y + offs[k]) for y, i in zip(ys, keep, strict=True) if not math.isnan(vals[i])]
+        ax.scatter([p[0] for p in pts], [p[1] for p in pts], s=26, color=_PALETTE[k % len(_PALETTE)],
+                   marker=_MARKERS[k % len(_MARKERS)], label=name, zorder=3)
+    ax.set_yticks(ys, [labels[i] for i in keep])
+    ax.invert_yaxis()
+    ax.grid(axis="y", color="#eee", linewidth=0.6)
+    return len(series)
+
+
+def _draw_dumbbell(ax, spec: dict) -> int:
+    labels, series = _labelled_values(spec)
+    if len(series) != 2:
+        raise ValueError("dumbbell cần đúng 2 series (hai điều kiện ghép cặp)")
+    (n1, a), (n2, b) = series
+    keep = [i for i in range(len(labels)) if not math.isnan(a[i]) and not math.isnan(b[i])]
+    if not keep:
+        return 0
+    ys = list(range(len(keep)))
+    for y, i in zip(ys, keep, strict=True):
+        ax.plot([a[i], b[i]], [y, y], color="#9a9a9a", linewidth=2.2, zorder=1)
+        ax.annotate(f"{b[i] - a[i]:+.3g}", (max(a[i], b[i]), y), textcoords="offset points", xytext=(6, -3), fontsize=7, color="#444")
+    ax.scatter([a[i] for i in keep], ys, s=34, color=_PALETTE[0], label=n1, zorder=3)
+    ax.scatter([b[i] for i in keep], ys, s=34, color=_PALETTE[1], marker="s", label=n2, zorder=3)
+    ax.set_yticks(ys, [labels[i] for i in keep])
+    ax.invert_yaxis()
+    lo, hi = min(min(a[i], b[i]) for i in keep), max(max(a[i], b[i]) for i in keep)
+    pad = (hi - lo) * 0.25 or 1.0
+    ax.set_xlim(lo - pad * 0.4, hi + pad)
+    return 2
+
+
+def _draw_heatmap(fig, ax, spec: dict) -> int:
+    import matplotlib
+
+    xl, yl = [str(x) for x in spec.get("x_labels", [])], [str(y) for y in spec.get("y_labels", [])]
+    rows = spec.get("matrix") or []
+    if not rows or len(rows) != len(yl) or not all(isinstance(r, list) and len(r) == len(xl) for r in rows):
+        return 0
+    matrix = [[_cell(v) for v in r] for r in rows]
+    flat = [v for r in matrix for v in r if not math.isnan(v)]
+    if not flat:
+        return 0
+    lo, hi = min(flat), max(flat)
+    diverging = lo < 0 < hi  # Δ so với mốc: âm/dương đối xứng quanh 0
+    if diverging:
+        bound = max(abs(lo), abs(hi))
+        cmap, vmin, vmax = matplotlib.colormaps["RdBu"].with_extremes(bad="#eeeeee"), -bound, bound
+    elif hi <= 0:  # toàn Δ âm (suy giảm): đỏ đậm = giảm nhiều
+        cmap, vmin, vmax = matplotlib.colormaps["Reds_r"].with_extremes(bad="#eeeeee"), lo, 0.0
+    else:
+        cmap, vmin, vmax = matplotlib.colormaps["viridis"].with_extremes(bad="#eeeeee"), lo, hi
+    im = ax.imshow(matrix, cmap=cmap, vmin=vmin, vmax=vmax if vmax > vmin else vmin + 1, aspect="auto")
+    ax.set_xticks(range(len(xl)), xl, rotation=30 if max(map(len, xl)) > 6 else 0, ha="right" if max(map(len, xl)) > 6 else "center")
+    ax.set_yticks(range(len(yl)), yl)
+    for yi, row in enumerate(matrix):
+        for xi, v in enumerate(row):
+            if math.isnan(v):
+                ax.text(xi, yi, "NR", ha="center", va="center", fontsize=6.5, color="#777")
+                continue
+            t = (v - vmin) / ((vmax - vmin) or 1.0)
+            dark = (t < 0.2 or t > 0.8) if diverging else (t < 0.45 if hi <= 0 else t < 0.6)
+            signed = diverging or hi <= 0
+            v = 0.0 if abs(v) < 1e-9 else v  # tránh "-0"
+            ax.text(xi, yi, f"{v:+.3g}" if signed and v else f"{v:g}", ha="center", va="center", fontsize=6.5, color="white" if dark else "#222")
+    fig.colorbar(im, ax=ax, fraction=0.04, pad=0.02, label=spec.get("c_label", ""))
+    return 1
+
+
+def _draw_evidence_map(ax, spec: dict) -> int:
+    from matplotlib.patches import Patch, Rectangle
+
+    xl, yl = [str(x) for x in spec.get("x_labels", [])], [str(y) for y in spec.get("y_labels", [])]
+    rows = spec.get("matrix") or []
+    if not rows or len(rows) != len(yl) or not all(isinstance(r, list) and len(r) == len(xl) for r in rows):
+        return 0
+    for yi, row in enumerate(rows):
+        for xi, v in enumerate(row):
+            key = _evidence_key(v)
+            ax.add_patch(Rectangle((xi - 0.45, yi - 0.42), 0.9, 0.84, color=_EVIDENCE_COLORS[key], linewidth=0))
+    ax.set_xlim(-0.5, len(xl) - 0.5)
+    ax.set_ylim(len(yl) - 0.5, -0.5)
+    dense = len(xl) > 20
+    ax.set_xticks(range(len(xl)), xl, rotation=90 if dense else 35, ha="center" if dense else "right", fontsize=6 if dense else None)
+    ax.set_yticks(range(len(yl)), yl)
+    ax.tick_params(length=0)
+    ax.legend(handles=[Patch(color=c, label="NR" if k == "nr" else k.capitalize()) for k, c in _EVIDENCE_COLORS.items()
+                       if k != "partial" or any(_evidence_key(v) == "partial" for r in rows for v in r)],
+              loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=4, frameon=False, fontsize=7)
+    return 1
+
+
 def finish_figure(fig, fmt: str = "svg") -> str | bytes:
     """Lưu figure: svg → str; pdf/eps → bytes vector (font TrueType nhúng, đạt yêu cầu IEEE)."""
     import matplotlib.pyplot as plt
@@ -57,10 +182,19 @@ def render_scientific_svg(spec: dict, fmt: str = "svg") -> str | bytes:
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
+    from app.pipeline.export.figure_layout import COLUMN_WIDTH_IN, chart_width
+
     kind = spec["type"]
     series = [s for s in spec.get("series", []) if isinstance(s, dict)]
-    plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 9, "svg.fonttype": "path"})
-    fig, ax = plt.subplots(figsize=(6.6, 3.6 if kind != "heatmap" else 3.8))
+    width = chart_width(spec)
+    narrow = width <= COLUMN_WIDTH_IN
+    n_rows = len(spec.get("y_labels") or spec.get("labels") or [])
+    if kind in ("heatmap", "evidence_map", "dot", "dumbbell"):  # một hàng mỗi nhãn: cao theo số hàng
+        height = max(2.0, 0.24 * n_rows + 1.1)
+    else:
+        height = 2.7 if narrow else 3.6
+    plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 8 if narrow else 9, "svg.fonttype": "path"})
+    fig, ax = plt.subplots(figsize=(width, height))
     drawn = 0
 
     if kind in ("xyline", "scatter"):
@@ -115,21 +249,13 @@ def render_scientific_svg(spec: dict, fmt: str = "svg") -> str | bytes:
                 box.set_alpha(0.6)
             drawn = len(data)
     elif kind == "heatmap":
-        matrix = [_floats(r) if len(_floats(r)) == len(r) else [float("nan")] * len(r) for r in spec.get("matrix", [])]
-        xl, yl = [str(x) for x in spec.get("x_labels", [])], [str(y) for y in spec.get("y_labels", [])]
-        if matrix and len(matrix) == len(yl) and all(len(r) == len(xl) for r in matrix):
-            im = ax.imshow(matrix, cmap="viridis", aspect="auto")
-            ax.set_xticks(range(len(xl)), xl)
-            ax.set_yticks(range(len(yl)), yl)
-            flat = [v for r in matrix for v in r if not math.isnan(v)]
-            lo, hi = (min(flat), max(flat)) if flat else (0.0, 1.0)
-            for yi, row in enumerate(matrix):
-                for xi, v in enumerate(row):
-                    if not math.isnan(v):
-                        ax.text(xi, yi, f"{v:g}", ha="center", va="center", fontsize=7.5,
-                                color="white" if (v - lo) / ((hi - lo) or 1.0) < 0.6 else "#222")
-            fig.colorbar(im, ax=ax, fraction=0.04, pad=0.02, label=spec.get("c_label", ""))
-            drawn = 1
+        drawn = _draw_heatmap(fig, ax, spec)
+    elif kind == "evidence_map":
+        drawn = _draw_evidence_map(ax, spec)
+    elif kind == "dot":
+        drawn = _draw_dot(ax, spec)
+    elif kind == "dumbbell":
+        drawn = _draw_dumbbell(ax, spec)
 
     if not drawn:
         plt.close(fig)
@@ -139,13 +265,17 @@ def render_scientific_svg(spec: dict, fmt: str = "svg") -> str | bytes:
         ax.set_xlabel(spec["x_label"])
     if spec.get("y_label"):
         ax.set_ylabel(spec["y_label"])
-    if kind == "heatmap":
+    if kind in ("heatmap", "evidence_map"):
         ax.spines[:].set_visible(False)
+    elif kind in ("dot", "dumbbell"):
+        ax.spines[["top", "right", "left"]].set_visible(False)
+        ax.grid(axis="x", linestyle=":", alpha=0.6)
+        ax.set_axisbelow(True)
     else:
         ax.spines[["top", "right"]].set_visible(False)
         ax.grid(linestyle=":", alpha=0.6)
         ax.set_axisbelow(True)
-    if kind in ("xyline", "scatter", "cdf", "histogram") and len([s for s in series if s.get("name")]) > 1:
+    if kind in ("xyline", "scatter", "cdf", "histogram", "dot", "dumbbell") and len([s for s in series if s.get("name")]) > 1:
         ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.01), ncol=min(len(series), 4), frameon=True, fontsize=8, edgecolor="#bbb")
     fig.tight_layout()
 

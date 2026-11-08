@@ -192,3 +192,22 @@ def test_reference_publication_classification_and_gate_warnings():
     report = run_quality_gate(state, "A [1] and B [2].", catalog)
     assert report["references"]["publication"]["preprint"] == 1
     assert any("preprint" in w for w in report["warnings"]) and any("thiếu metadata" in w for w in report["warnings"])
+
+
+def test_gate_warns_without_prior_survey_and_reports_science_qa():
+    text = "No source reports per-modality degradation [1]. T1ce and T1c differ."
+    report = run_quality_gate(_GATE_STATE, text, _GATE_CATALOG)
+    assert any(w.startswith("novelty:") for w in report["warnings"])
+    assert any("thuật ngữ" in w for w in report["science_qa"]) and "study_profile" in report
+    with_survey = {"p1": {**_GATE_CATALOG["p1"], "title": "A survey of glioma segmentation"}}
+    assert not any(w.startswith("novelty:") for w in run_quality_gate(_GATE_STATE, text, with_survey)["warnings"])
+
+
+def test_prior_surveys_fact_lists_only_real_catalog_surveys():
+    from app.agent.nodes.synthesize_node import _prior_surveys_fact
+
+    state = {"citations": [SimpleNamespace(paper_id="s1")]}
+    catalog = {"s1": {"title": "A Review of MRI Fusion", "year": "2022"}, "s2": {"title": "Deep Survey of X", "year": "2020"}, "p3": {"title": "UNet"}}
+    fact = _prior_surveys_fact(state, catalog)
+    assert "[1] A Review of MRI Fusion (2022)" in fact and "(not retrieved, cannot be cited) Deep Survey of X" in fact and "UNet" not in fact
+    assert "none" in _prior_surveys_fact(state, {"p3": {"title": "UNet"}})

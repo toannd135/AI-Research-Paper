@@ -4,7 +4,8 @@ Tự động khắc phục các lỗi kinh điển khi LLM sinh định dạng:
 1. Mermaid: Sửa nhãn node không bọc ngoặc kép, chứa '\\n', chứa ký tự đặc biệt { }, ( ), ||, sửa subgraph và edge syntax.
 2. LaTeX Math: Chuẩn hóa khối display math $$...$$ tách biệt trên dòng riêng và cách dòng trống để KaTeX/MathJax render chuẩn 100%.
 3. Algorithm Blocks: Đảm bảo code block thuật toán luôn có tag ```python thay vì ```text hoặc thiếu tag.
-4. Authors & Affiliations: Loại bỏ các nhãn placeholder dạng [Author Names], [Institutional Affiliation].
+4. Authors & Affiliations: Bỏ dòng chỉ chứa giữ chỗ ([Author Names], 'PaperAI Automated Research Protocol'…).
+5. Caption: bỏ '**Figure N: …**' thừa ngay trên khối ```image/chart/table đã có caption.
 """
 
 from __future__ import annotations
@@ -176,21 +177,62 @@ def sanitize_code_and_algorithm_blocks(text: str) -> str:
     return text
 
 
+# Giá trị giữ chỗ không phải tác giả/đơn vị thật (LLM tự sinh hoặc bản cũ của hệ thống chèn vào).
+AUTHOR_PLACEHOLDERS = ("PaperAI Automated Research Protocol", "Open-Source Automated Science Initiative")
+_AUTHOR_LINE_RE = re.compile(r"^\*\*(?:Authors|Affiliations):\*\*.*$\n?", re.MULTILINE | re.IGNORECASE)
+_AUTHOR_FIELD_RE = re.compile(r"\*\*(Authors|Affiliations):\*\*\s*([^|\n]*)", re.IGNORECASE)
+
+
+def _is_placeholder(value: str) -> bool:
+    v = value.strip()
+    return not v or bool(re.fullmatch(r"\[.*\]", v)) or v in AUTHOR_PLACEHOLDERS
+
+
 def sanitize_author_placeholders(text: str) -> str:
-    """Loại bỏ các nhãn giữ chỗ tác giả và viện nghiên cứu nếu LLM sinh ra."""
-    text = re.sub(
-        r"\*\*Authors:\*\*\s*\[(?:Author Names|Tên tác giả|.*?)\]",
-        "**Authors:** PaperAI Automated Research Protocol",
-        text,
-        flags=re.IGNORECASE,
-    )
-    text = re.sub(
-        r"\*\*Affiliations:\*\*\s*\[(?:Institutional Affiliation|Viện nghiên cứu|.*?)\]",
-        "**Affiliations:** Open-Source Automated Science Initiative",
-        text,
-        flags=re.IGNORECASE,
-    )
-    return text
+    """Bỏ dòng Authors/Affiliations chỉ chứa giữ chỗ ([Author Names], 'PaperAI Automated Research Protocol'…).
+
+    Bản thảo gửi tạp chí không được có tác giả/đơn vị giả; người dùng tự điền tác giả thật. Dòng có tên thật giữ nguyên.
+    """
+
+    def _line(m: re.Match) -> str:
+        fields = _AUTHOR_FIELD_RE.findall(m.group(0))
+        return "" if fields and all(_is_placeholder(v) for _, v in fields) else m.group(0)
+
+    return _AUTHOR_LINE_RE.sub(_line, text)
+
+
+_VISUAL_FENCE = r"```(?P<kind>image|chart|table|mermaid)[ \t]*\n(?P<body>.*?)\n```"
+_CAPTION_THEN_BLOCK_RE = re.compile(
+    r"^\*\*(?P<label>Figure|Fig\.|Table)\s*\d+\s*[:.]\s*(?P<cap>.+?)\*\*[ \t]*\n(?:[ \t]*\n)*" + _VISUAL_FENCE,
+    re.MULTILINE | re.DOTALL | re.IGNORECASE,
+)
+
+
+def sanitize_display_captions(text: str) -> str:
+    """Bỏ dòng '**Figure N: …**' / '**Table N: …**' LLM tự viết ngay trên khối ```image/chart/table.
+
+    Khối đã có caption và renderer tự đánh số → dòng này tạo caption thứ hai, số lệch và tách khỏi hình khi sang trang.
+    Khối chưa có caption thì nhận nội dung dòng đó làm caption. Mermaid không có trường caption nên giữ nguyên.
+    """
+    import json
+
+    def _repl(m: re.Match) -> str:
+        kind, body = m.group("kind"), m.group("body")
+        block = m.group(0)[m.start("kind") - m.start() - 3 :]
+        if kind == "mermaid":
+            return m.group(0)
+        try:
+            spec = json.loads(body)
+        except ValueError:
+            return m.group(0)
+        if not isinstance(spec, dict):
+            return m.group(0)
+        if not str(spec.get("caption") or "").strip():
+            spec["caption"] = m.group("cap").strip().rstrip("*").strip()
+            return f"```{kind}\n{json.dumps(spec, ensure_ascii=False)}\n```"
+        return block
+
+    return _CAPTION_THEN_BLOCK_RE.sub(_repl, text)
 
 
 _INLINE_MATH_SPAN_RE = re.compile(r"(?<![\\$])\$(?!\$)([^$\n]+?)(?<![\\$])\$(?!\$)")
@@ -375,6 +417,9 @@ def sanitize_academic_markdown(text: str) -> str:
 
     # 2. Khử placeholder tác giả
     result = sanitize_author_placeholders(result)
+
+    # 2'. Caption '**Figure N: …**' thừa ngay trên khối hình/bảng (caption kép, số lệch)
+    result = sanitize_display_captions(result)
 
     # 2a. References còn là snippet thô → định dạng IEEE
     result = sanitize_raw_references(result)

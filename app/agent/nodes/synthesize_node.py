@@ -21,6 +21,7 @@ from typing import Any
 
 from app.agent.evidence.citation_cleaner import _local_catalog, clean_and_deduplicate_citations
 from app.agent.evidence.claim_scan import find_leaked_claims, soften_leaked_claims
+from app.agent.evidence.coverage import coverage_target, full_coverage_applies
 from app.agent.evidence.dataset_catalog import get_dataset_grounding_context
 from app.agent.evidence.quality_gate import merge_structure_issues
 from app.agent.evidence.report_structure import (
@@ -53,15 +54,18 @@ _TABLE_BLOCK_RULE = """   - QUANTITATIVE COMPARISON TABLES (results with numbers
      NOT REPORTED: the Quantitative Evidence Ledger is the only source of numbers; where it says NR (Not Reported) or has no row, write "NR" and never estimate, convert or fill the value. Never state that method A outperforms method B unless both values share dataset version, split, region, metric and unit; otherwise say the results are not directly comparable. If a DOI or other metadata is unknown, leave it out rather than guess.
 """
 
-_CHART_BLOCK_RULE = """   - FIGURES: visualize quantitative values that already appear in the draft/references with a ```chart fenced block containing JSON:
-     {"type": "bar", "caption": "What is shown (source [n])", "labels": ["A", "B"], "series": [{"name": "F1 (%)", "values": [90.0, 84.1]}], "y_label": "%"}
-     type is one of bar | barh | line | stacked_barh (parts of a whole per row, e.g. win / tie / loss %). Each series has exactly one value per label; use null (never 0) for a missing value. Optional "errors": [..] per series (same length as values; SD or 95% CI, only if the source reports it) draws error bars.
-     Pick the figure that matches the evidence (use only numbers reported in the draft/references; never invent values or samples; if there is not enough real data, omit the chart):
-       * Performance comparison (proposed vs baselines, per dataset/metric) and ablation (full model vs "w/o module"): grouped bar, with errors when multiple runs are reported.
-       * Training/convergence, 1D parameter sensitivity, scalability: {"type": "xyline", "x_label": "Epoch", "y_label": "Loss", "series": [{"name": "Train", "x": [1, 2, 3], "y": [0.9, 0.5, 0.3], "errors": [0.05, 0.04, 0.02]}]} (optional "x_scale"/"y_scale": "log").
-       * 2D sensitivity (two hyperparameters): {"type": "heatmap", "x_labels": [...], "y_labels": [...], "matrix": [[...]], "c_label": "F1"}.
-       * Feature space (PCA/t-SNE/UMAP points) : {"type": "scatter", "series": [{"name": "Class A", "x": [...], "y": [...]}]}.
-       * Distributions: {"type": "histogram" | "boxplot", "series": [{"name": "...", "samples": [...]}]}; latency/response time: {"type": "cdf", "series": [{"name": "...", "samples": [...]}], "percentiles": [95, 99]}.
+_CHART_BLOCK_RULE = """   - FIGURES: visualize quantitative values that already appear in the draft/references with a ```chart fenced block containing JSON, e.g.
+     {"type": "dot", "caption": "What is shown: metric, dataset/version, split, unit, sources [n], comparability limits", "labels": ["Method A [2]", "Method B [3]"], "series": [{"name": "F1 (%)", "values": [90.0, 84.1]}], "x_label": "F1 (%)"}
+     CHART SELECTION POLICY — every figure must answer a distinct research question and show something an existing table or figure cannot show more clearly. Choose the type from the QUESTION, not from the data shape:
+       * How do methods differ (methods x metrics/regions, same protocol)? -> "dot" (labels = methods, one series per metric/region).
+       * How do two paired conditions of the same study differ (validation vs test, with vs without a module, full vs missing input, before vs after)? -> "dumbbell" (labels = rows, exactly two series = the two conditions; the gap is drawn).
+       * How do many configurations affect a result (e.g. input subsets x regions, 2D sensitivity)? -> {"type": "heatmap", "x_labels": [...], "y_labels": [...], "matrix": [[...]], "c_label": "Δ score"}; use null for a cell that is not reported (shown as NR), never 0.
+       * Does a result change over a real ordered sequence (epochs, years, parameter values)? -> {"type": "xyline", "x_label": "Epoch", "y_label": "Loss", "series": [{"name": "Train", "x": [1, 2, 3], "y": [0.9, 0.5, 0.3]}]} (optional "x_scale"/"y_scale": "log").
+       * Trade-off between two measured quantities (accuracy vs parameters/latency): {"type": "scatter", "series": [{"name": "...", "x": [...], "y": [...]}]}.
+       * Distributions: {"type": "histogram" | "boxplot", "series": [{"name": "...", "samples": [...]}]}; latency: {"type": "cdf", "series": [...], "percentiles": [95, 99]}.
+       * "bar"/"barh" only for a single metric over a few categories, or with error bars ("errors": [..] per series, SD or 95% CI only if the source reports them; the caption then states the error type and the unit of replication). At most two bar charts in the whole manuscript.
+     MANDATORY: (1) no figure that only repeats a table — a table already shows exact values; (2) never put results from different datasets, versions, splits, metrics or units in one panel — make separate figures or skip; (3) a missing value is null (NR), never 0, never estimated; (4) never add a figure just to raise the figure count; (5) the caption is self-explanatory: metric, dataset/version, split, unit, sources [n] and any comparability limit.
+     LAYOUT (two-column PDF): figures sit in ONE column by default. Add "layout": "wide" only when labels would be unreadable in one column (e.g. a heatmap with more than 5 columns or a diagram with many horizontal nodes); never to make a figure bigger.
 """
 
 _IMAGE_BLOCK_RULE = """   - REAL FIGURES: to show a real image from the AVAILABLE FIGURES list, write a ```image fenced block containing JSON:
@@ -98,20 +102,17 @@ def _display_items_rule(state: ResearchState, mode: str) -> str:
     return _DISPLAY_ITEMS_RULE.format(targets=targets)
 
 
-# Số paper khác nhau tối thiểu mà bài phải cite (khi kho đủ nguồn).
-MIN_CITED_PAPERS = 25
-
-
 def _source_coverage_rule(state: ResearchState) -> str:
-    """Yêu cầu bài cite đủ nhiều paper khác nhau trong danh sách Available Citations."""
+    """Yêu cầu bài cite đủ nhiều paper khác nhau trong danh sách Available Citations (kho nhỏ: cite hết)."""
     available = {getattr(c, "paper_id", None) for c in state.get("citations", [])} - {None}
-    target = min(MIN_CITED_PAPERS, len(available))
+    target = coverage_target(len(available))
     if target < 2:
         return ""
+    scope = "EVERY one of them" if full_coverage_applies(len(available)) else f"at least {target} of them"
     return (
-        f"7c. SOURCE COVERAGE: Available Citations hold {len(available)} distinct papers. The manuscript as a whole MUST cite at least {target} "
-        "distinct papers, spread across sections (taxonomy, methodology families, benchmark discussion); cite a paper only for what it supports, "
-        "never add a citation just to reach the count.\n"
+        f"7c. SOURCE COVERAGE: Available Citations hold {len(available)} distinct papers. The manuscript as a whole MUST cite {scope} "
+        f"({target} distinct papers), spread across sections (taxonomy, methodology families, benchmark discussion, recent directions); cite a paper only for what it supports, "
+        "never add a citation just to reach the count; if a paper truly does not fit any section, mention it in one neutral sentence of the Related Work.\n"
     )
 
 
@@ -197,8 +198,11 @@ _STAGE_STRUCTURES: dict[str, dict[str, str]] = {
         "stage2": (
             "Sections 2 and 3 (REVIEW METHODOLOGY AND TAXONOMY)",
             "## 2. Review Methodology\n"
-            "- Describe ONLY the process that was really carried out, using the REVIEW FACTS: the corpus is a curated repository of PDFs, retrieval is hybrid search over it with the listed queries, and the papers cited are those that the retrieval returned. "
-            "Never invent databases (IEEE Xplore, PubMed, Scopus...), search dates, hit counts, screening numbers or a PRISMA flow that did not happen; say plainly that this is a narrative review of a curated corpus, not a systematic review, and state this as a limitation.\n"
+            "- Describe ONLY the process that was really carried out. If the REVIEW FACTS contain a USER-DECLARED REVIEW PROTOCOL, describe exactly that protocol "
+            "(databases, search strings and dates, criteria, flow counts, number of reviewers, quality assessment) with every number unchanged and nothing added. "
+            "Otherwise use the REVIEW FACTS as they are: the corpus is a curated repository of PDFs, retrieval is hybrid search over it with the listed queries, the papers cited are those "
+            "the retrieval returned (retrieval coverage, not screening); never invent databases (IEEE Xplore, PubMed, Scopus...), search dates, hit counts, screening numbers or a PRISMA flow that did not happen; "
+            "say plainly that this is a narrative review of a curated corpus, not a systematic review, and state this as a limitation.\n"
             "### 2.1 Research Questions\n"
             "- List the CANONICAL RESEARCH QUESTIONS from the design plan VERBATIM, one per line as '**RQ1.** ...', with the same numbers and wording as in Section 1.3 (never a different set). If the design plan lists none, write 3-4 numbered questions (RQ1...) that the later sections answer, e.g. architectural paradigms, handling of missing inputs/modalities, comparability of reported results.\n"
             "### 2.2 Corpus, Search Strategy and Selection Criteria\n"
@@ -206,10 +210,14 @@ _STAGE_STRUCTURES: dict[str, dict[str, str]] = {
             "### 2.3 Data Extraction and Quality Assessment\n"
             "- The fields extracted from each paper (architecture, dataset and version, input modalities, metrics, reported values, stated limitations) and how evidence quality is judged (peer-reviewed vs preprint, benchmark vs private data, reported variance). Include a small Markdown table '**Table 1: Data extraction scheme**' only if it adds information.\n"
             "### 2.4 Comparison with Existing Surveys\n"
-            "- Compare with earlier surveys ONLY when they are present in AVAILABLE CITATIONS (a Markdown table of what each covers); if the corpus holds no survey, state that earlier surveys were not systematically compared and name this as a limitation. Never invent surveys.\n\n"
+            "- Compare with earlier surveys ONLY when they are listed under PRIOR SURVEYS IN THE CORPUS and present in AVAILABLE CITATIONS: a Markdown table '**Table N: Positioning against prior surveys**' "
+            "with columns Survey [n] | Year | Scope covered | Not covered (gap) | What this review adds, filled only from the cited surveys. Then state, in one paragraph, which insight the analytical framework of this review "
+            "yields that the prior classifications did not (a concrete finding, not a renamed taxonomy). If no prior survey is available, say that novelty relative to earlier surveys could not be "
+            "established from the corpus, name this as a limitation, and do not claim to be the first or the most comprehensive survey. Never invent surveys.\n\n"
             "## 3. Taxonomy & Conceptual Framework\n"
             "### 3.1 Multi-Dimensional Classification\n"
-            "- Classify the surveyed approaches along 3-4 orthogonal dimensions. Include a Markdown taxonomy table with caption '**Table 2: Taxonomy of ...**'.\n"
+            "- Present a multi-axis ANALYTICAL FRAMEWORK of 3-4 axes (never claim the axes are 'orthogonal' or 'unified'). Each method appears under exactly ONE primary category per axis (e.g. a hybrid CNN-Transformer is not listed again as a pure Transformer). Method-design axes (how inputs are fused, which architecture, how absent inputs are handled) are distinct from evaluation attributes (dataset version, split, metric), which are analysis attributes, not method classes; say so. Include a Markdown taxonomy table with caption '**Table 2: Taxonomy of ...**' whose citation cells list the actual sources [n] of each row (never a range of the whole corpus).\n"
+            "- Then state what this framework reveals that a flat list does not: which axis combinations are well studied, which are empty in the corpus, and which questions about interactions between axes (e.g. does one fusion level degrade less when a given input is absent?) the evidence can or cannot answer.\n"
             "### 3.2 Architectural Pipeline\n"
             "- Include one ```mermaid flowchart (graph TD or LR) showing the typical end-to-end pipeline or the taxonomy tree, with citations [n] in labels where relevant.\n"
             "### 3.3 Gaps in Existing Work\n"
@@ -220,7 +228,9 @@ _STAGE_STRUCTURES: dict[str, dict[str, str]] = {
             "## 4. In-Depth Technical Methodologies\n"
             "- Use 3-4 subsections (### 4.1 - 4.4), one per major paradigm / mechanism family of the taxonomy.\n"
             "- For each: core mechanism, representative works [n], what problem it solves, assumptions, strengths and weaknesses. Compare families against each other.\n"
-            "- Include formulas or short pseudocode only when the cited sources give them.",
+            "- Include formulas or short pseudocode only when the cited sources give them.\n"
+            "- End with '### 4.5 Critical Comparative Analysis': a Markdown table '**Table N: Critical comparison of strategies**' (N = the next table number) with columns Strategy | When it helps (evidence [n]) | Main weakness | Open question, "
+            "followed by a paragraph that draws cross-paper conclusions (where sources agree, disagree, and why), not a per-paper description. Every cell is grounded in a cited source or says 'not reported'.",
         ),
         "stage4": (
             "Section 5 (COMPARATIVE EVIDENCE SYNTHESIS)",
@@ -229,6 +239,8 @@ _STAGE_STRUCTURES: dict[str, dict[str, str]] = {
             "- Only datasets and metrics that appear in the evidence, with dataset VERSION/year, split and what each metric measures; give them as a Markdown table '**Table 3: Datasets and evaluation metrics**'.\n"
             "### 5.2 Quantitative Comparison of Published Results\n"
             "- One ```table JSON block (method [n], paradigm, dataset+version, sub-region/class, metric, value) with results reported in the cited sources; group methods by paradigm. "
+            "UNIT RULE: one metric scale per column — never put ratios (0-1) and percentages (0-100) of the same metric in one column; use separate columns or tables and name the unit in the header; copy values exactly as reported (no conversion, no rounding). "
+            "Do not add a second results table that repeats values already shown in another table of the manuscript; write 'NR' (not reported) for missing cells, never '-', '—' or blank. "
             "COMPARABILITY RULE: values are directly comparable only under the same dataset version, split, sub-region/class (e.g. whole tumor, tumor core and enhancing tumor are three different quantities) and metric definition; keep such quantities in separate columns or tables, never average or rank across them, and mark rows from a different setting. Where conditions differ, say the results are not directly comparable.\n"
             "### 5.3 Qualitative Visual Comparison\n"
             "- At most one or two real images from AVAILABLE FIGURES. Each caption must be SPECIFIC (what is shown: method, dataset, case, what the colours/panels mean) and name the source [n], noting it is reproduced from that paper (reuse is subject to the original licence); never reuse a generic caption such as 'Qualitative Visual Comparison'. "
@@ -244,10 +256,13 @@ _STAGE_STRUCTURES: dict[str, dict[str, str]] = {
             "### 6.1 Technical Barriers & Trade-offs\n"
             "- Include a Markdown table '**Table 4: Strengths, limitations and unresolved challenges**' per method family.\n"
             "### 6.2 Generalization, Robustness & Clinical/Deployment Concerns\n"
+            "- Go beyond accuracy: treat clinical reliability as separate dimensions — external / multi-centre validation, scanner or protocol shift, uncertainty estimation and calibration, "
+            "failure / out-of-distribution detection, robustness to absent or corrupted inputs, computational cost, and reproducibility (code availability). For EACH dimension give the evidence "
+            "with [n] and the source counts from EVIDENCE LIMITS, or state that it was not found in the retrieved evidence (not found ≠ not done). Conclude which dimensions the field has not yet evidenced.\n"
             "### 6.3 Limitations of this Review\n"
-            "- Corpus-based narrative review, not exhaustive; possible selection bias; no independent re-run of the published methods. Also state every item listed under EVIDENCE LIMITS (point estimates without variance or significance tests; missing per-modality results) as a concrete limitation, and say which comparisons it prevents.\n"
+            "- Corpus-based narrative review, not exhaustive; possible selection bias; no independent re-run of the published methods. Also state every item listed under EVIDENCE LIMITS as a concrete limitation, using the same wording levels it gives (e.g. which per-input ablations exist versus which complete or cross-study matrices cannot be built), and say which comparisons it prevents. Never contradict a table or figure of the manuscript.\n"
             "### 6.4 Open Research Directions\n"
-            "- At least 4 concrete, distinct directions grounded in the evidence; say which research question (RQ) each one follows from.\n\n"
+            "- At least 4 concrete, distinct directions grounded in the evidence. For EACH give, in 2-4 sentences: the research gap (with [n]); why current methods do not solve it; a concrete approach AND how it should be evaluated (protocol, data, metrics); and which research question (RQ) it follows from. No generic directions.\n\n"
             "## 7. Conclusion\n"
             "- Answer EVERY canonical research question (RQ1, RQ2, ...) in one or two sentences each, in order and labelled with its RQ number, then give the outlook; no new claims.",
         ),
@@ -342,6 +357,24 @@ def _generate(
     return response.text.strip()
 
 
+_SURVEY_TITLE_RE = re.compile(r"\b(?:survey|review|overview|state of the art|state-of-the-art|tutorial)\b", re.IGNORECASE)
+
+
+def _prior_surveys_fact(state: ResearchState, catalog: dict[str, dict[str, Any]]) -> str:
+    """Survey/review có thật trong kho (theo tiêu đề catalog) và số [n] nếu đã được truy xuất — căn cứ duy nhất để so novelty."""
+    numbers: dict[str, int] = {}
+    for n, c in enumerate(state.get("citations", []), start=1):
+        numbers.setdefault(str(getattr(c, "paper_id", "")), n)
+    found = [(pid, meta) for pid, meta in catalog.items() if _SURVEY_TITLE_RE.search(str((meta or {}).get("title", "")))]
+    if not found:
+        return "PRIOR SURVEYS IN THE CORPUS: none. Novelty relative to earlier surveys cannot be established; do not claim it.\n\n"
+    lines = [
+        f"- {'[' + str(numbers[pid]) + ']' if pid in numbers else '(not retrieved, cannot be cited)'} {meta.get('title')} ({meta.get('year', 'n.d.')})"
+        for pid, meta in found[:12]
+    ]
+    return "PRIOR SURVEYS IN THE CORPUS (title-based; compare against these only):\n" + "\n".join(lines) + "\n\n"
+
+
 def _review_facts(state: ResearchState, mode: str) -> str:
     """Số liệu thật về quy trình thu thập nguồn, để chương Review Methodology không bịa cơ sở dữ liệu/số lượng sàng lọc."""
     if mode == "novel_research":
@@ -349,12 +382,33 @@ def _review_facts(state: ResearchState, mode: str) -> str:
     settings = get_settings()
     cited = {getattr(c, "paper_id", None) for c in state.get("citations", [])} - {None}
     queries = "; ".join(f'"{q}"' for q in (state.get("search_queries") or [])[:8]) or "(not recorded)"
-    corpus = len(_local_catalog()) or "unknown"
+    catalog = _local_catalog()
+    corpus = len(catalog) or "unknown"
+    not_retrieved = len(set(catalog) - {str(c) for c in cited}) if catalog else None
+    surveys = _prior_surveys_fact(state, catalog)
+    from app.agent.evidence.review_protocol import load_protocol, protocol_facts, validate_protocol
+
+    protocol = load_protocol()
+    if protocol and not validate_protocol(protocol, len(catalog) or None):
+        # Giao thức thật do người dùng khai báo; RAG chỉ là công cụ trích xuất bằng chứng từ các nghiên cứu đã đưa vào
+        return surveys + protocol_facts(protocol) + (
+            f"- Evidence extraction support: hybrid retrieval over the {corpus} included full texts (embedding {settings.embedding_model}, "
+            f"reranker {settings.reranker_model}); {len(cited)} of them were retrieved as evidence for this manuscript"
+            + (f" and {not_retrieved} were not retrieved by any query (state this as a coverage limitation)" if not_retrieved else "")
+            + ". Every extracted value is checked to appear verbatim in the cited PDF passage.\n"
+        )
     scope = "the curated internal PDF repository only" if not settings.external_search_enabled else "the internal repository plus an external scholarly index (OpenAlex)"
-    return (
+    return surveys + (
         "REVIEW FACTS (the only facts about the search process you may state in Section 2; do not add others):\n"
         f"- Sources searched: {scope}.\n"
         f"- Corpus size: {corpus} papers in the repository catalog; {len(cited)} distinct papers were retrieved as evidence for this manuscript.\n"
+        + (
+            f"- {not_retrieved} catalog papers were not returned by any query and are therefore not discussed. They were not excluded by a screening decision "
+            "with recorded reasons; state this plainly as a retrieval limitation (relevant work may have been missed).\n"
+            if not_retrieved
+            else ""
+        )
+        +
         f"- Search queries used (hybrid dense+sparse retrieval with reranking): {queries}.\n"
         f"- Search date: {date.today().isoformat()}.\n"
         f"- Retrieval configuration: embedding model {settings.embedding_model}, reranker {settings.reranker_model}, hybrid score weights "
@@ -379,7 +433,10 @@ def _evidence_limits_text(state: ResearchState) -> str:
     paper_to_n: dict[str, int] = {}
     for n, cit in enumerate(citations, start=1):
         paper_to_n.setdefault(cit.paper_id, n)
-    return evidence_limits(records_from_dicts(state["results"]), paper_to_n, len(paper_to_n))
+    from app.agent.evidence.study_profile import study_attributes
+
+    attrs = study_attributes(state.get("evidence", []))
+    return evidence_limits(records_from_dicts(state["results"]), paper_to_n, len(paper_to_n), attrs)
 
 
 def _research_context(state: ResearchState) -> str:
@@ -461,7 +518,7 @@ def _generate_stage_0_blueprint(
         "2. SCOPE & KEY TERMS: definitions of the 5-8 central terms and the boundaries (time span, domains) of the work.\n"
         "3. NOTATION: only symbols that will really be needed (leave empty for a purely descriptive survey).\n"
         + (
-            "4. TAXONOMY DIMENSIONS: the 3-4 orthogonal dimensions and their categories used to classify the literature.\n"
+            "4. TAXONOMY AXES: the 3-4 analysis axes (a multi-axis framework, not claimed orthogonal) and their categories; each method gets one primary category per axis.\n"
             "5. EVIDENCE MAP: which citation numbers [n] support which topic, and which quantitative results are available for the benchmark table.\n"
             if mode != "novel_research"
             else "4. PROPOSED METHOD OUTLINE: components, the gap each one addresses, and the evaluation protocol (datasets, metrics, baselines available in the evidence).\n"
@@ -470,7 +527,9 @@ def _generate_stage_0_blueprint(
         + "6. CORE CONTRIBUTIONS: 3-4 distinct, verifiable contributions."
         + (
             "\n7. RESEARCH QUESTIONS: 3-4 numbered questions, each on its own line written exactly as 'RQ1. <question>?', 'RQ2. <question>?' ... "
-            "They are the ONLY research questions of the manuscript: the Introduction and the Review Methodology will copy them verbatim and the Conclusion will answer each one."
+            "They are the ONLY research questions of the manuscript: the Introduction and the Review Methodology will copy them verbatim and the Conclusion will answer each one. "
+            "Each question must be answerable from the evidence: if EVIDENCE LIMITS show that the numbers a question would need (e.g. latency/FLOPs, results for every subset of inputs, variance) were not extracted, "
+            "phrase it as 'How do existing methods formulate and evaluate X, and what evidence gaps remain?' instead of asking for a quantity the corpus cannot provide."
             if mode != "novel_research"
             else ""
         )
@@ -495,7 +554,8 @@ def _generate_stage_1_front_matter_and_intro(
 ) -> str:
     """Stage 1: Front Matter + Section 1 (Title, Abstract, Introduction & Contributions)."""
     contributions = (
-        "(Exactly 3-4 itemized contributions using hyphen '- ', each one concrete: e.g. a unified taxonomy, a quantitative comparison, an analysis of trade-offs, a roadmap of open problems.)"
+        "(Exactly 3-4 itemized contributions using hyphen '- ', each one concrete and checkable: what is synthesised, from how many sources, and what it reveals (e.g. which evaluation settings are never reported). "
+        "Do not present a renamed taxonomy as a contribution by itself; do not claim 'first', 'unified' or 'comprehensive' unless PRIOR SURVEYS IN THE CORPUS supports it.)"
         if mode != "novel_research"
         else "(Exactly 3-4 itemized contributions using hyphen '- ': the proposed architecture/method, its formulation, and the evaluation protocol; no overclaiming.)"
     )
@@ -506,7 +566,6 @@ def _generate_stage_1_front_matter_and_intro(
         f"ESTABLISHED DESIGN PLAN:\n{blueprint}\n\n"
         "REQUIRED STRUCTURE FOR SECTION 1:\n"
         "# [Title from the design plan: at most 15 words, one line of concept + method; no subtitle after a dash]\n\n"
-        "**Authors:** PaperAI Automated Research Protocol | **Affiliations:** Open-Source Automated Science Initiative\n\n"
         "## Abstract\n"
         "(ONE self-contained paragraph of 150-220 words, no bold sub-labels, no bullet list: context & motivation, gap in existing work, approach/scope, key findings or highlights supported by the evidence, implications. No citations [n] and no display math in the abstract.)\n\n"
         "**Keywords:** k1, k2, k3, k4, k5\n\n"
@@ -758,6 +817,14 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
     # Quality Gate trên văn bản chưa đánh số lại [n]: không sửa gì, chỉ ghi validation_report; lỗi gate không làm sập graph
     validation_report = _run_quality_gate(state, raw_stitched)
 
+    # Sơ đồ luồng PRISMA từ đúng số người dùng khai báo (review_protocol.json hợp lệ); không có tệp → không có sơ đồ
+    if mode != "novel_research":
+        from app.agent.evidence.review_protocol import inject_prisma, load_protocol, prisma_block, validate_protocol
+
+        protocol = load_protocol()
+        if protocol and not validate_protocol(protocol, len(_local_catalog()) or None):
+            raw_stitched = inject_prisma(raw_stitched, prisma_block(protocol))
+
     # Phase 4: bảng Δ/ablation và scatter đánh đổi từ bản ghi đã kiểm chứng; chèn TRƯỚC khi đánh số lại [n]
     if state.get("results"):
         from app.agent.evidence.extractor import records_from_dicts
@@ -766,7 +833,10 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
         paper_to_n: dict[str, int] = {}
         for n, cit in enumerate(citations, start=1):
             paper_to_n.setdefault(cit.paper_id, n)
-        raw_stitched = inject_quant_blocks(raw_stitched, build_quant_blocks(records_from_dicts(state["results"]), paper_to_n))
+        from app.agent.evidence.study_profile import study_attributes
+
+        attrs = study_attributes(state.get("evidence", []))
+        raw_stitched = inject_quant_blocks(raw_stitched, build_quant_blocks(records_from_dicts(state["results"]), paper_to_n, attrs))
 
     # Deduplicate citations, remap numbers, and generate clean IEEE references
     updated_text, clean_references = clean_and_deduplicate_citations(citations, raw_stitched)

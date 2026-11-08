@@ -8,6 +8,7 @@ import logging
 import re
 from collections import defaultdict
 
+from app.agent.evidence.figure_policy import refine_chart_spec
 from app.agent.language import is_foreign_paragraph, language_name
 from app.ai.llm_gateway.base import LLMGateway, Message
 
@@ -191,6 +192,23 @@ def _groups_match_columns(groups, n_cols: int) -> bool:
         return False
 
 
+def _apply_chart_policy(body: str | None) -> str | None:
+    """Chart Selection Policy: đổi loại hình theo câu hỏi dữ liệu trả lời (chỉ đổi cách vẽ, giữ nguyên số)."""
+    if body is None:
+        return None
+    try:
+        spec = json.loads(body)
+    except ValueError:
+        return body
+    if not isinstance(spec, dict):
+        return body
+    refined, reason = refine_chart_spec(spec)
+    if reason is None:
+        return body
+    logger.info("Đổi biểu đồ '%s' từ %s sang %s: %s", str(spec.get("caption", ""))[:60], spec.get("type", "bar"), refined["type"], reason)
+    return json.dumps(refined, ensure_ascii=False)
+
+
 def scrub_chart_spec(body: str, draft: str) -> str | None:
     """Giữ biểu đồ nếu có ít nhất 2 giá trị có thật trong draft; giá trị không có căn cứ bị bỏ (null/loại điểm).
 
@@ -210,6 +228,8 @@ def scrub_chart_spec(body: str, draft: str) -> str | None:
 
     kind = spec.get("type", "bar")
     real = 0
+    if kind == "evidence_map":  # ô Yes/No chỉ tin khi dựng từ câu nguyên văn (derived), không tin LLM
+        return None
     if kind == "heatmap":
         matrix = spec.get("matrix")
         if not isinstance(matrix, list) or not all(isinstance(r, list) for r in matrix):
@@ -311,7 +331,9 @@ def _complete_matrix(groups: dict) -> tuple[str, str, list[str], list[str], list
 
 
 def build_ledger_charts(draft: str, limit: int = 1) -> list[str]:
-    """Dựng tối đa `limit` khối ```chart ưu tiên KHÁC LOẠI: barh (xếp hạng một metric), bar (nhóm theo vùng/metric), heatmap.
+    """Dựng tối đa `limit` khối ```chart ưu tiên KHÁC LOẠI: dot (xếp hạng một metric), heatmap (phương pháp × vùng/metric).
+
+    Mỗi bộ số chỉ vẽ một lần (không vẽ lại ma trận bằng biểu đồ cột) — Chart Selection Policy.
 
     Chỉ dùng số có thật trong ledger, mỗi biểu đồ cùng dataset và cùng họ metric."""
     groups = _ledger_groups(draft)
@@ -323,28 +345,24 @@ def build_ledger_charts(draft: str, limit: int = 1) -> list[str]:
         entries = sorted(items.items(), key=lambda kv: -kv[1][0])[:8]
         cites = ", ".join(sorted({e[1][1] for e in entries if e[1][1]}))
         out.append(json.dumps({
-            "type": "barh", "caption": f"Reported {metric} on {dataset} {cites}".strip(),
+            "type": "dot", "caption": f"Reported {metric} on {dataset} {cites}".strip(),
             "labels": [e[0][:40] for e in entries], "series": [{"name": metric, "values": [e[1][0] for e in entries]}],
         }, ensure_ascii=False))
     if matrix:
         family, dataset, metrics, methods, values, cites = matrix
         labels = [m[:40] for m in methods]
         out.append(json.dumps({
-            "type": "bar", "caption": f"Reported {family.upper() if len(family) <= 4 else family} by region/metric on {dataset} {cites}".strip(),
-            "labels": labels, "series": [{"name": x, "values": [row[j] for row in values]} for j, x in enumerate(metrics)],
-        }, ensure_ascii=False))
-        out.append(json.dumps({
             "type": "heatmap", "caption": f"Heatmap of reported {family} on {dataset} (methods x metrics) {cites}".strip(),
             "x_labels": metrics, "y_labels": labels, "matrix": values, "c_label": family,
         }, ensure_ascii=False))
-    for (metric, dataset), items in ranked[1:]:  # bù cùng loại barh nếu vẫn thiếu
+    for (metric, dataset), items in ranked[1:]:  # bù cùng loại dot nếu vẫn thiếu
         if len(out) >= limit:
             break
         if len(items) >= 3:
             entries = sorted(items.items(), key=lambda kv: -kv[1][0])[:8]
             cites = ", ".join(sorted({e[1][1] for e in entries if e[1][1]}))
             out.append(json.dumps({
-                "type": "barh", "caption": f"Reported {metric} on {dataset} {cites}".strip(),
+                "type": "dot", "caption": f"Reported {metric} on {dataset} {cites}".strip(),
                 "labels": [e[0][:40] for e in entries], "series": [{"name": metric, "values": [e[1][0] for e in entries]}],
             }, ensure_ascii=False))
     return out[:limit]
@@ -527,7 +545,8 @@ def postprocess_report(
                     fixed = None
                 used_figures.add(ref)
         else:
-            fixed = scrub_chart_spec(body, draft)
+            fixed = body if '"derived": true' in body else scrub_chart_spec(body, draft)  # số suy ra từ record đã kiểm chứng
+            fixed = _apply_chart_policy(fixed)
         if fixed is None:
             logger.warning("Dropped invalid %s block from report", kind)
             return ""

@@ -80,6 +80,9 @@ def check_display_items(text: str, paper_type: str | None) -> dict[str, Any]:
         if n and len(mentioned) < n:
             warnings.append(f"{label}: {n} khối nhưng chỉ {len(mentioned)} số được nhắc trong thân bài")
     warnings += check_figure_captions(text)
+    from app.agent.evidence.figure_policy import figure_policy_warnings
+
+    warnings += figure_policy_warnings(text)
     chart_types = []
     for m in _FENCE_RE.finditer(text):
         if m.group(1) == "chart":

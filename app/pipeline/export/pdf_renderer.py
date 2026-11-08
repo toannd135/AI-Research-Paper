@@ -20,6 +20,7 @@ from app.pipeline.export.browser_renderer import (
     launch_browser,
     prepare_report_page,
 )
+from app.pipeline.export.figure_layout import WIDE, chart_span, mermaid_span
 
 logger = logging.getLogger(__name__)
 
@@ -82,19 +83,23 @@ def _render_chart_svg(spec: dict, fmt: str = "svg") -> str | bytes:
         raise ValueError(f"Loại biểu đồ chưa được hỗ trợ: {kind}")
     horizontal = kind in ("barh", "stacked_barh")
     stacked = kind.startswith("stacked")
-    labels = [textwrap.fill(raw_labels[i], 26 if horizontal else 16) for i in keep_idx]
+    from app.pipeline.export.figure_layout import COLUMN_WIDTH_IN, chart_width
+
+    width = chart_width(spec)
+    narrow = width <= COLUMN_WIDTH_IN
+    labels = [textwrap.fill(raw_labels[i], (20 if narrow else 26) if horizontal else (11 if narrow else 16)) for i in keep_idx]
     for s in series:
         s["values"] = [s["values"][i] for i in keep_idx]
         if s["errors"]:
             s["errors"] = [s["errors"][i] or 0.0 for i in keep_idx]
     n, m = len(series), len(labels)
 
-    plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 9, "svg.fonttype": "path"})
+    plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 8 if narrow else 9, "svg.fonttype": "path"})
     if horizontal:
         per_bar = 0.55 if stacked else 0.32 * n + 0.2
-        fig, ax = plt.subplots(figsize=(6.6, max(2.2, per_bar * m + 1.0)))
+        fig, ax = plt.subplots(figsize=(width, max(2.2, per_bar * m + 1.0)))
     else:
-        fig, ax = plt.subplots(figsize=(6.6, 3.4))
+        fig, ax = plt.subplots(figsize=(width, 2.7 if narrow else 3.4))
     pos = list(range(m))
 
     if kind == "line":
@@ -270,8 +275,9 @@ def _render_image_html(body: str) -> str:
     if spec.get("source"):
         caption += f' <i>Source: {html.escape(str(spec["source"]))}</i>'
     # data-caption được chèn nguyên vào figcaption (html.escape đã escape dấu nháy) → giữ được thẻ <i>
+    span = " wide" if spec.get("layout") == WIDE else ""  # ảnh thật: một cột trừ khi chỉ định
     return (
-        f'<figure class="fig photo" data-kind="figure" data-caption="{caption}">'
+        f'<figure class="fig photo{span}" data-kind="figure" data-caption="{caption}">'
         f'<img src="data:image/png;base64,{data}" alt="" style="max-width:100%">__CAPTION__</figure>'
     )
 
@@ -288,7 +294,8 @@ def _extract_blocks(md: str) -> tuple[str, list[str]]:
     def fence(match: re.Match) -> str:
         kind, body = match.group(1), match.group(2).strip()
         if kind == "mermaid":
-            return keep(f'<figure class="fig" data-kind="figure"><pre class="mermaid">{html.escape(body)}</pre>__CAPTION__</figure>')
+            span = " wide" if mermaid_span(body) == WIDE else ""
+            return keep(f'<figure class="fig{span}" data-kind="figure"><pre class="mermaid">{html.escape(body)}</pre>__CAPTION__</figure>')
         if kind == "image":
             return keep(_render_image_html(body))
         if kind not in {"chart", "table"}:
@@ -309,8 +316,13 @@ def _extract_blocks(md: str) -> tuple[str, list[str]]:
             logger.warning("Cannot render chart: %s", exc)
             return keep(f'<div class="render-warning">Không render được biểu đồ; dữ liệu gốc:</div><pre class="render-error">{html.escape(body)}</pre>')
         caption = html.escape(spec.get("caption") or spec.get("title") or "")
-        return keep(f'<figure class="fig chart" data-kind="figure" data-caption="{caption}">{svg}__CAPTION__</figure>')
+        span = " wide" if chart_span(spec) == WIDE else ""
+        # bỏ width/height cố định của SVG gốc: chiều cao tính theo viewBox, không bị letterbox thành khoảng trắng
+        svg = re.sub(r'^(<svg\b[^>]*?)\s+width="[^"]*"\s+height="[^"]*"', r"\1", svg, count=1)
+        return keep(f'<figure class="fig chart{span}" data-kind="figure" data-caption="{caption}">{svg}__CAPTION__</figure>')
 
+    # dòng '**Figure N: ...**' ngay trên khối chart lặp caption trong JSON → bỏ, không in thành đoạn văn lạc
+    md = re.sub(r"^\*\*(?:Figure|Fig\.)\s*\d+\s*[:.][^\n]*\*\*[ \t]*\n+(?=```chart)", "", md, flags=re.M)
     md = _FENCE_RE.sub(fence, md)
     md = _DISPLAY_MATH_RE.sub(lambda m: keep(f'<div class="math">\\[{html.escape(m.group(1).strip())}\\]</div>'), md)
     md = _INLINE_MATH_RE.sub(lambda m: keep(f"\\({html.escape(m.group(1))}\\)", block=False), md)
@@ -367,6 +379,8 @@ def _number_figures_and_tables(body: str) -> str:
     return re.sub(r"</table>(?!</div>)", "</table></div>", "".join(out))
 
 
+# Tác giả/đơn vị giữ chỗ của bản cũ (giống typst_renderer/latex_renderer): không phải tác giả thật
+AUTHOR_PLACEHOLDERS = {"PaperAI Automated Research Protocol", "Open-Source Automated Science Initiative"}
 _FRONT_FIELD_RE = re.compile(r"<strong>([^<:]+):</strong>(.*?)(?=<br\s*/?>|\s*\|\s*<strong>|$)", re.DOTALL)
 
 
@@ -379,6 +393,8 @@ def _layout_front_matter(body: str) -> str:
 
     def front(m: re.Match) -> str:
         fields = {k.strip().lower(): v.strip() for k, v in _FRONT_FIELD_RE.findall(m.group(1))}
+        # Bản Markdown cũ còn tác giả/đơn vị giữ chỗ: không in lên trang đầu (giống Typst/LaTeX)
+        fields = {k: v for k, v in fields.items() if v.rstrip(" |") not in AUTHOR_PLACEHOLDERS}
         parts = []
         if fields.get("authors"):
             parts.append(f'<div class="authors">{fields.pop("authors")}</div>')
@@ -475,7 +491,10 @@ _TEMPLATE = """<!doctype html>
   @page { size: Letter; }
   body { font-family: 'Times New Roman', 'Liberation Serif', 'Nimbus Roman', 'Noto Serif', serif; font-size: 10.5pt; line-height: 1.5; color: #111; margin: 0; }
   .columns-2 { column-count: 2; column-gap: 18pt; column-fill: balance; font-size: 10pt; line-height: 1.3; }
-  .columns-2 > .tbl, .columns-2 > figure.fig { column-span: all; }
+  .columns-2 > .tbl, .columns-2 > figure.fig.wide { column-span: all; }
+  figure.fig.chart svg { display: block; width: 100%; height: auto; margin: 0 auto; }
+  figure.fig.chart.wide svg { width: 92%; }
+  .columns-1 figure.fig.chart:not(.wide) svg { width: 55%; }  /* bản một cột: hình cỡ cột, không phóng to chữ */
   .columns-2 h2 { font-size: 11pt; }
   .columns-2 h3 { font-size: 10pt; }
   .columns-2 h4 { font-size: 9.5pt; }

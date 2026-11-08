@@ -32,6 +32,8 @@ def _metric_label(rec: ResultRecord) -> str:
 
 def _notes(rec: ResultRecord) -> str:
     notes = [f"unit={rec.unit}" if rec.unit else "unit NR"]
+    if rec.spread is not None and rec.spread_type:
+        notes.append(f"±{_fmt(rec.spread)} ({rec.spread_type})")
     if rec.split:
         notes.append(f"split {rec.split}")
     if rec.source_page is not None:

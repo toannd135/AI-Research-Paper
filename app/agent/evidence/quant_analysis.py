@@ -10,6 +10,7 @@ import json
 import re
 from typing import Any
 
+from app.agent.evidence import study_profile as sp
 from app.agent.evidence.quant_check import ResultRecord, group_comparable
 from app.agent.evidence.stats import lower_is_better
 
@@ -49,12 +50,44 @@ def delta_table(records: list[ResultRecord], paper_to_n: dict[str, int]) -> str 
         best = (min if low else max)(r.value for r in items)
         for r in sorted(items, key=lambda r: r.value if low else -r.value)[:MAX_ROWS]:
             rows.append([
-                f"{r.model} [{paper_to_n[r.paper_id]}]", _setting(r), f"{sample.metric} {sample.region}", f"{r.value:g}", f"{r.value - best:+.2f}",
+                f"{r.model} [{paper_to_n[r.paper_id]}]", _setting(r), f"{sample.metric} {sample.region}", f"{r.value:g}", f"{r.value - best:+.2f}", _spread_cell(r),
             ])
     if not rows:
         return None
     caption = "Gap to the best reported value within each directly comparable setting (derived from the cited values; unit as in the sources)"
-    return _block("table", {"caption": caption, "columns": ["Method [Ref]", "Setting", "Metric", "Value", "Δ vs best"], "rows": rows, "derived": True})
+    columns = ["Method [Ref]", "Setting", "Metric", "Value", "Δ vs best", "Spread"]
+    if all(row[-1] == "NR" for row in rows):  # không nguồn nào báo sai số: bỏ cột thay vì in toàn NR
+        columns, rows = columns[:-1], [row[:-1] for row in rows]
+    else:
+        caption += "; spread = the ± value printed in the source with its stated type (SD, SE or 95% CI), NR = not reported"
+    return _block("table", {"caption": caption, "columns": columns, "rows": rows, "derived": True})
+
+
+def _spread_cell(rec: ResultRecord) -> str:
+    return f"±{rec.spread:g} ({rec.spread_type})" if rec.spread is not None and rec.spread_type else "NR"
+
+
+_EFFICIENCY_METRICS = (("params", "Params"), ("parameters", "Params"), ("gflops", "GFLOPs"), ("flops", "GFLOPs"), ("inferencetime", "Inference time"))
+
+
+def efficiency_table(records: list[ResultRecord], paper_to_n: dict[str, int]) -> str | None:
+    """Params / GFLOPs / thời gian suy luận theo phương pháp, đúng như nguồn báo; ô thiếu = NR, không ước lượng."""
+    canon = dict(_EFFICIENCY_METRICS)
+    per_model: dict[tuple[str, str], dict[str, str]] = {}
+    for r in records:
+        col = canon.get(re.sub(r"[\s_-]+", "", r.metric.lower()))
+        if col is None or r.variant or r.paper_id not in paper_to_n:
+            continue
+        per_model.setdefault((r.paper_id, r.model), {}).setdefault(col, f"{r.value:g} {r.unit or ''}".strip())
+    rows = [
+        [f"{model} [{paper_to_n[pid]}]", *(cells.get(c, "NR") for c in ("Params", "GFLOPs", "Inference time"))]
+        for (pid, model), cells in sorted(per_model.items(), key=lambda kv: (paper_to_n[kv[0][0]], kv[0][1]))
+        if model
+    ]
+    if len(rows) < 2:
+        return None
+    caption = "Computational cost as reported by each source (NR = not reported); hardware, input size and units differ between sources, so values are not directly comparable across rows"
+    return _block("table", {"caption": caption, "columns": ["Method [Ref]", "Params", "GFLOPs", "Inference time"], "rows": rows[: MAX_ROWS * 3], "derived": True})
 
 
 def ablation_table(records: list[ResultRecord], paper_to_n: dict[str, int]) -> str | None:
@@ -63,7 +96,7 @@ def ablation_table(records: list[ResultRecord], paper_to_n: dict[str, int]) -> s
     rows: list[list[str]] = []
     for r in records:
         base = full.get(_key(r)) if r.variant else None
-        if base is None or r.paper_id not in paper_to_n:
+        if base is None or r.paper_id not in paper_to_n or _variant_modalities(r.variant) is not None:
             continue
         rows.append([f"{r.model} [{paper_to_n[r.paper_id]}]", r.variant or "", f"{r.metric} {r.region or ''}".strip(), f"{base.value:g}", f"{r.value:g}", f"{r.value - base.value:+.2f}"])
     if not rows:
@@ -95,15 +128,72 @@ def tradeoff_scatter(records: list[ResultRecord], paper_to_n: dict[str, int]) ->
     return _block("chart", {"type": "scatter", "caption": caption, "x_label": f"Parameters ({p_unit})", "y_label": f"Dice {region} ({unit})", "series": series})
 
 
-_MODALITY_CANON = {"t1": "T1", "t1c": "T1c", "t1ce": "T1c", "t1gd": "T1c", "t1-gd": "T1c", "t1+c": "T1c", "t2": "T2", "flair": "FLAIR"}
 FULL_MODALITIES = frozenset({"T1", "T1c", "T2", "FLAIR"})
 _MODALITY_ORDER = ("T1", "T1c", "T2", "FLAIR")
+# Cách viết gặp trong paper -> tên chuẩn (khóa đã bỏ khoảng trắng, '-', '_', '.', '(', ')')
+_MODALITY_ALIASES = {
+    "T1": ("t1", "t1w", "t1weighted", "nativet1", "t1native", "t1pre", "t1precontrast", "precontrastt1"),
+    "T1c": (
+        "t1c", "t1ce", "t1gd", "t1+c", "t1wce", "t1cw", "cet1", "t1post", "t1postcontrast", "postcontrastt1", "t1contrast",
+        "contrastenhancedt1", "t1contrastenhanced", "t1enhanced", "t1gadolinium", "gadoliniumt1", "t1weightedcontrastenhanced",
+    ),
+    "T2": ("t2", "t2w", "t2weighted"),
+    "FLAIR": ("flair", "t2flair", "flairt2", "t2weightedflair"),
+}
+_MODALITY_CANON = {alias: canon for canon, aliases in _MODALITY_ALIASES.items() for alias in aliases}
+
+
+def canon_modality(name: str) -> str | None:
+    """Tên modality chuẩn (T1/T1c/T2/FLAIR) hoặc None nếu không nhận ra — không đoán."""
+    key = re.sub(r"[\s_\-().]|modalit(?:y|ies)|sequences?|images?|mri", "", str(name).lower())
+    return _MODALITY_CANON.get(key)
 
 
 def _modality_set(rec: ResultRecord) -> frozenset[str]:
     """Tập modality chuẩn hóa của bản ghi; rỗng nếu không có hoặc có tên không nhận ra (không đoán)."""
-    mods = {_MODALITY_CANON.get(re.sub(r"[\s_]", "", m.lower())) for m in rec.modality}
+    mods = {canon_modality(m) for m in rec.modality}
     return frozenset(mods) if mods and None not in mods else frozenset()
+
+
+_MISSING_VARIANT_RE = re.compile(
+    r"^\s*(?:missing|without|w/o|no|drop(?:ped|ping)?|absent|remov(?:e|ed|ing)|exclud(?:e|ed|ing)|minus)\b[:\s]*(?P<names>.+?)\s*$", re.IGNORECASE
+)
+_AVAILABLE_VARIANT_RE = re.compile(
+    r"^\s*(?:(?:with|using)\s+only|only|available|observed|inputs?|using)\b[:\s]*(?P<names>.+?)\s*$"
+    r"|^\s*(?P<names2>.+?)[\s-]+only\s*$",
+    re.IGNORECASE,
+)
+_FULL_VARIANT_RE = re.compile(r"^\s*(?:full|all|complete)(?:\s+(?:modalities|modality|inputs?|sequences))?\s*$", re.IGNORECASE)
+_MODALITY_SPLIT_RE = re.compile(r"\s*(?:,|;|&|/|\+|\band\b|\bor\b)\s*", re.IGNORECASE)
+
+
+def _parse_modalities(text: str) -> frozenset[str] | None:
+    """'T1, T2 and FLAIR' / 'T1ce+FLAIR' -> tập chuẩn; None nếu có tên không nhận ra."""
+    text = re.sub(r"t1\s*\+\s*c\b", "T1c", text, flags=re.IGNORECASE)  # 'T1+C' là một modality, không phải phép cộng
+    names = [n for n in _MODALITY_SPLIT_RE.split(text) if n.strip()]
+    mods = {canon_modality(n) for n in names}
+    return frozenset(mods) if mods and None not in mods else None
+
+
+def _variant_modalities(variant: str | None) -> frozenset[str] | None:
+    """Tập modality CÒN LẠI mà biến thể mô tả; None nếu biến thể không nói về modality hoặc có tên lạ (không đoán).
+
+    Nhận cả cách viết theo modality bị bỏ ('Missing T1c', 'w/o T1 and T2', 'missing T1, T2, FLAIR') lẫn theo modality còn
+    lại ('FLAIR only', 'only T1ce+FLAIR', 'available: T1, T2'). Extractor hay ghi các thí nghiệm này vào `variant`.
+    """
+    v = variant or ""
+    if _FULL_VARIANT_RE.match(v):
+        return FULL_MODALITIES
+    m = _MISSING_VARIANT_RE.match(v)
+    if m:
+        dropped = _parse_modalities(m.group("names"))
+        rest = FULL_MODALITIES - dropped if dropped else frozenset()
+        return frozenset(rest) if rest and rest != FULL_MODALITIES else None
+    m = _AVAILABLE_VARIANT_RE.match(v)
+    if m:
+        kept = _parse_modalities(m.group("names") or m.group("names2") or "")
+        return kept or None
+    return None
 
 
 def _subset_label(mods: frozenset[str]) -> str:
@@ -115,12 +205,18 @@ def _subset_label(mods: frozenset[str]) -> str:
 def _modality_groups(records: list[ResultRecord], paper_to_n: dict[str, int]) -> dict[tuple, dict[frozenset[str], ResultRecord]]:
     """Nhóm theo (paper, model, dataset, version, split, vùng, metric, đơn vị) -> {tập modality: bản ghi}; chỉ giữ nhóm có ≥2 tập."""
     groups: dict[tuple, dict[frozenset[str], ResultRecord]] = {}
+    # khóa có thí nghiệm "Missing X": bản ghi không variant cùng khóa chính là kết quả đủ 4 modality của chính nguồn đó
+    ablated = {_key(r) for r in records if _variant_modalities(r.variant) is not None}
     for r in records:
-        mods = _modality_set(r)
-        if r.variant or not mods or r.paper_id not in paper_to_n:
+        if r.paper_id not in paper_to_n:
             continue
-        key = (r.paper_id, r.model, r.dataset, r.dataset_version, r.split, r.region, r.metric, r.unit)
-        groups.setdefault(key, {}).setdefault(mods, r)
+        if r.variant:
+            mods = _variant_modalities(r.variant) or frozenset()
+        else:
+            mods = _modality_set(r) or (FULL_MODALITIES if _key(r) in ablated and not r.modality else frozenset())
+        if not mods:
+            continue
+        groups.setdefault(_key(r), {}).setdefault(mods, r)
     return {k: v for k, v in groups.items() if len(v) >= 2}
 
 
@@ -130,7 +226,19 @@ def modality_matrix_stats(records: list[ResultRecord], paper_to_n: dict[str, int
     with_full = sum(1 for g in groups.values() if FULL_MODALITIES in g)
     subsets = {s for g in groups.values() for s in g}
     singles = {next(iter(s)) for s in subsets if len(s) == 1}
-    return {"groups": len(groups), "groups_with_full": with_full, "distinct_subsets": len(subsets), "single_modalities": len(singles)}
+    settings: dict[tuple, set[str]] = {}
+    for key in groups:
+        settings.setdefault(key[2:], set()).add(key[0])  # (dataset, version, split, vùng, metric, đơn vị) -> các paper
+    return {
+        "groups": len(groups),
+        "groups_with_full": with_full,
+        "distinct_subsets": len(subsets),
+        "single_modalities": len(singles),
+        "sources": len({k[0] for k in groups}),
+        "possible_subsets": 2 ** len(FULL_MODALITIES) - 1,
+        "shared_settings": sum(1 for papers in settings.values() if len(papers) >= 2),
+        "subset_labels": sorted(_subset_label(x) for x in subsets),
+    }
 
 
 def missing_modality_table(records: list[ResultRecord], paper_to_n: dict[str, int]) -> str | None:
@@ -149,60 +257,250 @@ def missing_modality_table(records: list[ResultRecord], paper_to_n: dict[str, in
     return _block("table", {"caption": caption, "columns": ["Method [Ref]", "Setting", "Metric", "Available modalities", "Value", "Δ vs full"], "rows": rows[: MAX_ROWS * 3], "derived": True})
 
 
-def modality_degradation_chart(records: list[ResultRecord], paper_to_n: dict[str, int]) -> str | None:
-    """Biểu đồ giá trị đã báo cáo theo tập modality sẵn có, trong MỘT setting; chỉ vẽ các tập mà mọi model được vẽ đều có số (không null)."""
-    by_setting: dict[tuple, dict[str, dict[frozenset[str], ResultRecord]]] = {}
-    for key, by_mods in _modality_groups(records, paper_to_n).items():
-        by_setting.setdefault(key[2:], {})[key[0] + "|" + str(key[1])] = by_mods
-    best: tuple[list[frozenset[str]], list[dict[frozenset[str], ResultRecord]], tuple] | None = None
-    for setting, models in by_setting.items():
-        usable = [m for m in models.values() if len(m) >= 3]
-        if not usable:
-            continue
-        common = set.intersection(*(set(m) for m in usable))
-        subsets, chosen = (sorted(common, key=lambda x: (-len(x), _subset_label(x))), usable) if len(common) >= 3 else (None, None)
-        if subsets is None:
-            top = max(usable, key=len)
-            subsets, chosen = sorted(top, key=lambda x: (-len(x), _subset_label(x))), [top]
-        if best is None or len(subsets) * len(chosen) > len(best[0]) * len(best[1]):
-            best = (subsets, chosen, setting)
-    if best is None:
+MAX_MATRIX_COLUMNS = 6
+
+
+def _all_subsets() -> list[frozenset[str]]:
+    from itertools import combinations
+
+    subs = [frozenset(c) for k in range(len(_MODALITY_ORDER), 0, -1) for c in combinations(_MODALITY_ORDER, k)]
+    return sorted(subs, key=lambda x: (-len(x), [_MODALITY_ORDER.index(m) for m in sorted(x, key=_MODALITY_ORDER.index)]))
+
+
+def modality_coverage_matrix(records: list[ResultRecord], paper_to_n: dict[str, int]) -> str | None:
+    """Ma trận đủ 2^4−1 = 15 tập modality × (phương pháp, vùng, metric): giá trị đã báo hoặc NR; không nội suy ô nào.
+
+    Mỗi cột gắn nhãn bối cảnh (A, B…) = dataset/version/split/vùng/metric/đơn vị; khác nhãn = không so sánh được.
+    Δ chỉ tính so với kết quả full-modality của CHÍNH nguồn đó.
+    """
+    groups = _modality_groups(records, paper_to_n)
+    if not groups:
         return None
-    subsets, chosen, (ds, ver, split, region, metric, unit) = best
-    series = []
-    for by_mods in chosen:
-        first = next(iter(by_mods.values()))
-        series.append({"name": f"{first.model} [{paper_to_n[first.paper_id]}]", "values": [by_mods[m].value for m in subsets]})
-    cites = ", ".join(sorted({s["name"].rsplit(" ", 1)[1] for s in series}))
+    chosen = sorted(groups.items(), key=lambda kv: (-len(kv[1]), paper_to_n[kv[0][0]], str(kv[0][1]), str(kv[0][5])))[:MAX_MATRIX_COLUMNS]
+    letters: dict[tuple, str] = {}
+    for key, _ in chosen:
+        letters.setdefault(key[2:], chr(ord("A") + len(letters)))
+    columns = ["Available modalities"]
+    for key, by_mods in chosen:
+        r = next(iter(by_mods.values()))
+        columns.append(f"{r.model} [{paper_to_n[r.paper_id]}] · {r.metric} {r.region or ''} · {letters[key[2:]]}".replace("  ", " "))
+    rows: list[list[str]] = []
+    for subset in _all_subsets():
+        row = [_subset_label(subset)]
+        for _, by_mods in chosen:
+            rec, full = by_mods.get(subset), by_mods.get(FULL_MODALITIES)
+            if rec is None:
+                row.append("NR")
+            elif full is None or subset == FULL_MODALITIES:
+                row.append(f"{rec.value:g}")
+            else:
+                row.append(f"{rec.value:g} ({rec.value - full.value:+.3g})")
+        rows.append(row)
+    rows.append(["Subsets reported", *(f"{len(by_mods)}/{len(rows)}" for _, by_mods in chosen)])
+    legend = "; ".join(
+        f"{letter} = " + " ".join(x for x in (ds, ver, split and f"({split})", region, metric, unit and f"[{unit}]") if x)
+        for (ds, ver, split, region, metric, unit), letter in letters.items()
+    )
+    caption = (
+        f"Reported results for all {len(rows) - 1} non-empty subsets of the four MRI sequences: value (Δ vs. the same source's full-modality result). "
+        "NR = not reported in the results extracted from that source (it does not mean the subset was not evaluated); no cell is imputed. "
+        f"Settings: {legend}. Columns with different setting letters are not comparable."
+    )
+    return _block("table", {"caption": caption, "columns": columns, "rows": rows, "derived": True})
+
+
+MAX_HEATMAP_MODELS = 5  # số cột tối đa của heatmap (một cột trang vẫn đọc được)
+
+
+def modality_degradation_chart(records: list[ResultRecord], paper_to_n: dict[str, int]) -> str | None:
+    """Heatmap độ bền khi thiếu modality: hàng = 14 tập modality thiếu, cột = phương pháp, ô = Δ so với kết quả full-modality
+    của CHÍNH nguồn đó; ô không báo cáo = null (NR, không nội suy). Chỉ một setting (cùng dataset/version/split/vùng/metric/đơn vị)
+    để không đặt các protocol khác nhau cạnh nhau như thể so sánh được."""
+    by_setting: dict[tuple, list[dict[frozenset[str], ResultRecord]]] = {}
+    for key, by_mods in _modality_groups(records, paper_to_n).items():
+        if FULL_MODALITIES in by_mods and len(by_mods) >= 3:  # cần mốc full + ≥2 tập thiếu
+            by_setting.setdefault(key[2:], []).append(by_mods)
+    if not by_setting:
+        return None
+    setting, models = max(by_setting.items(), key=lambda kv: (sum(len(m) for m in kv[1]), len(kv[1])))
+    models = sorted(models, key=lambda m: (-len(m), paper_to_n[next(iter(m.values())).paper_id]))[:MAX_HEATMAP_MODELS]
+    subsets = [x for x in _all_subsets() if x != FULL_MODALITIES]
+    matrix = [
+        [round(m[x].value - m[FULL_MODALITIES].value, 4) if x in m else None for m in models]
+        for x in subsets
+    ]
+    labels = []
+    for m in models:
+        full = m[FULL_MODALITIES]
+        labels.append(f"{full.model} [{paper_to_n[full.paper_id]}] (full {full.value:g})")
+    ds, ver, split, region, metric, unit = setting
     setting_txt = " ".join(x for x in (ds, ver, split and f"({split})") if x)
-    caption = f"{metric} {region or ''} on {setting_txt} versus available MRI modalities {cites}".replace("  ", " ")
-    return _block("chart", {"type": "bar", "caption": caption, "labels": [_subset_label(m) for m in subsets], "series": series, "y_label": f"{metric} {region or ''} ({unit or 'as reported'})".replace("  ", " ")})
+    cites = ", ".join(f"[{n}]" for n in sorted({paper_to_n[next(iter(m.values())).paper_id] for m in models}))
+    reported = sum(v is not None for r in matrix for v in r)
+    caption = (
+        f"Missing-modality robustness: change in {metric} {region or ''} ({unit or 'as reported'}) relative to each source's own "
+        f"full-modality result, for every subset of the four MRI sequences, on {setting_txt} {cites}. "
+        f"NR = not reported in the extracted results ({reported}/{len(matrix) * len(models)} cells reported); no cell is imputed. "
+        "Only methods evaluated under this single setting are shown; results under other protocols are not comparable."
+    ).replace("  ", " ")
+    return _block("chart", {
+        "type": "heatmap", "caption": caption, "x_labels": labels, "y_labels": [_subset_label(x) for x in subsets],
+        "matrix": matrix, "c_label": f"Δ {metric}", "derived": True,
+    })
 
 
-def evidence_limits(records: list[ResultRecord], paper_to_n: dict[str, int], n_papers: int) -> str:
+def evidence_limits(
+    records: list[ResultRecord], paper_to_n: dict[str, int], n_papers: int, attrs_by_paper: dict[str, dict[str, dict[str, Any]]] | None = None
+) -> str:
     """Các giới hạn THẬT của số liệu đã trích, để chương Limitations nêu đúng thay vì bịa hoặc bỏ qua."""
     stats = modality_matrix_stats(records, paper_to_n)
     lines = ["EVIDENCE LIMITS (computed from the extracted records; state these plainly in the Limitations and wherever a claim depends on them):"]
-    lines.append(f"- {len(records)} verified numeric records were extracted from {n_papers} papers; every value is a single reported point estimate (no standard deviation, confidence interval or significance test was extracted).")
+    with_spread = sum(1 for r in records if r.spread is not None)
+    spread_txt = (
+        "every value is a single reported point estimate (no standard deviation, confidence interval or significance test was extracted)"
+        if with_spread == 0
+        else f"only {with_spread} of them report a spread (SD/SE/95% CI) and none a significance test, so most comparisons rest on point estimates"
+    )
+    lines.append(f"- {len(records)} verified numeric records were extracted from {n_papers} papers; {spread_txt}.")
+    n_sub = stats["possible_subsets"]
     if stats["groups"] == 0:
-        lines.append("- No source in the corpus reports results for subsets of the four modalities in a form that could be extracted, so no per-modality (missing T1/T1c/T2/FLAIR) degradation matrix or ΔDice/ΔHD95 can be built; say this is a limitation and do not infer it.")
-    else:
         lines.append(
-            f"- Missing-modality results were extracted for {stats['groups']} method/setting groups ({stats['groups_with_full']} also report full-modality results, "
-            f"{stats['distinct_subsets']} distinct modality subsets, {stats['single_modalities']} single-modality subsets); the matrix is therefore incomplete and Δ is only given where the same source reports both conditions."
+            "- No missing-modality result (a model evaluated with one or more MRI sequences absent) was extracted into the structured records. "
+            "Do NOT write that no source reports such results: sources may still discuss modality importance in prose (cite those passages). "
+            f"Say only that no quantitative degradation matrix (per-modality, all {n_sub} subsets, or cross-study) could be built from the extracted records."
         )
+    else:
+        cross = (
+            f"a cross-study degradation matrix is possible only for the {stats['shared_settings']} setting(s) shared by ≥2 sources"
+            if stats["shared_settings"]
+            else "no two sources share the same dataset version/split/region/metric, so no cross-study degradation matrix can be built"
+        )
+        lines.append(
+            "- Distinguish THREE levels of missing-modality evidence and never contradict the tables: "
+            f"(a) per-modality ablation results WERE extracted from {stats['sources']} source(s) ({stats['groups']} method/setting groups, "
+            f"{stats['groups_with_full']} with the same source's full-modality result; subsets observed: {', '.join(stats['subset_labels'])}); "
+            f"(b) they cover {stats['distinct_subsets']} of the {n_sub} non-empty modality subsets, so a complete combinatorial matrix cannot be built; "
+            f"(c) {cross}. Δ is given only where the same source reports both conditions."
+        )
+    if attrs_by_paper is not None:
+        a = {pid: v for pid, v in attrs_by_paper.items() if pid in paper_to_n}
+        lines.append(
+            "- Reliability evidence found as explicit sentences in the retrieved passages (other sources: not found, which is NOT the same as not done): "
+            f"external/multi-centre validation {sp.count(a, 'external_validation')}, cross-validation {sp.count(a, 'cross_validation')}, "
+            f"patient-wise split {sp.count(a, 'patient_wise_split')}, uncertainty/calibration/OOD {sp.count(a, 'uncertainty')}, "
+            f"random modality dropout {sp.count(a, 'missing_random')}, all modality subsets {sp.count(a, 'missing_all_subsets')}, "
+            f"code availability {sp.count(a, 'code_available')} of {n_papers} sources. Use these counts in the clinical-reliability and limitations discussion; "
+            "never generalise beyond them."
+        )
+    lines.append(
+        "- Statements about this review's own corpus or evidence base (counts of records, papers, what was or was not extracted) carry NO citation [n]; "
+        "never cite a range such as [1]–[14] to support them."
+    )
     return "\n".join(lines)
 
 
-def build_quant_blocks(records: list[ResultRecord], paper_to_n: dict[str, int]) -> list[str]:
+def _has(records: list[ResultRecord], pred) -> bool:
+    return any(pred(r) for r in records)
+
+
+def _missing_protocol(pid: str, groups: dict, attrs: dict[str, dict[str, Any]]) -> str:
+    """Giao thức thiếu modality: từ số tập đã báo (record) và câu nguyên văn (random dropout / mọi tổ hợp)."""
+    subsets = {m for k, g in groups.items() if k[0] == pid for m in g}
+    total = 2 ** len(FULL_MODALITIES) - 1
+    parts = []
+    for name, label in (("missing_all_subsets", "All subsets"), ("missing_random", "Random dropout")):
+        hit = attrs.get(name) or {}
+        if hit.get("value") == sp.YES:
+            parts.append(f"{label} (p. {hit['page']})" if hit.get("page") is not None else label)
+    if subsets:
+        parts.append(f"{len(subsets)}/{total} subsets reported")
+    return "; ".join(parts) or sp.NR
+
+
+def study_profile_table(
+    records: list[ResultRecord], paper_to_n: dict[str, int], attrs_by_paper: dict[str, dict[str, dict[str, Any]]] | None = None
+) -> str | None:
+    """Hồ sơ bằng chứng từng nguồn: dataset/version, thẩm định ngoài, CV, chia theo bệnh nhân, giao thức thiếu modality, sai số,
+    uncertainty, code. Ô = 'Yes/No (p. X)' từ câu nguyên văn hoặc record; NR = không tìm thấy trong đoạn/kết quả đã trích."""
+    attrs_by_paper = attrs_by_paper or {}
+    by_paper: dict[str, list[ResultRecord]] = {pid: [] for pid in attrs_by_paper if pid in paper_to_n}
+    for r in records:
+        if r.paper_id in paper_to_n:
+            by_paper.setdefault(r.paper_id, []).append(r)
+    if len(by_paper) < 3:
+        return None
+    groups = _modality_groups(records, paper_to_n)
+    rows: list[list[str]] = []
+    for pid, recs in sorted(by_paper.items(), key=lambda kv: paper_to_n[kv[0]]):
+        attrs = attrs_by_paper.get(pid, {})
+        datasets = sorted({" ".join(x for x in (r.dataset, r.dataset_version) if x) for r in recs} - {""})
+        cv = sp.cell(attrs, "cross_validation")
+        if cv == sp.NR and _has(recs, lambda r: bool(r.split and re.search(r"fold|cross", r.split, re.I))):
+            cv = "Yes (reported split)"
+        variance = "Yes (± in results)" if _has(recs, lambda r: r.spread is not None) else sp.NR
+        rows.append([
+            f"[{paper_to_n[pid]}]",
+            "; ".join(datasets[:3]) or sp.NR,
+            sp.cell(attrs, "external_validation"),
+            cv,
+            sp.cell(attrs, "patient_wise_split"),
+            _missing_protocol(pid, groups, attrs),
+            variance,
+            sp.cell(attrs, "uncertainty"),
+            sp.cell(attrs, "code_available"),
+        ])
+    caption = (
+        "Evidence profile of each source. Yes/No (p. X) = stated in a sentence of that source on page X; "
+        "NR = not found in the passages or results extracted from that source (it does not mean the study did not do it). "
+        "Independent reproduction by third parties is not assessed because it cannot be determined from the source itself. "
+        "This is descriptive support for quality appraisal, not a risk-of-bias score"
+    )
+    columns = ["Ref", "Dataset (version)", "External validation", "Cross-validation", "Patient-wise split",
+               "Missing-modality protocol", "Variance reported", "Uncertainty / calibration", "Code available"]
+    if len(rows) > MAX_PROFILE_TABLE_ROWS:
+        return _evidence_map(rows, columns)
+    return _block("table", {"caption": caption, "columns": columns, "rows": rows, "derived": True})
+
+
+MAX_PROFILE_TABLE_ROWS = 12  # nhiều nguồn hơn: bảng dài cả trang → thay bằng evidence map gọn
+
+
+def _evidence_flag(cell: str) -> str:
+    """'Yes (p. 4)' / 'Random dropout (p. 6)' / '3/15 subsets reported' → Yes; 'No (p. 2)' → No; còn lại NR."""
+    if cell.startswith("No"):
+        return sp.NO
+    return sp.NR if cell == sp.NR else sp.YES
+
+
+def _evidence_map(rows: list[list[str]], columns: list[str]) -> str:
+    """Evidence map: tiêu chí × nguồn tái lập/độ tin cậy (Yes/No/NR từ câu nguyên văn), bỏ cột dataset (văn bản tự do)."""
+    criteria = columns[2:]
+    caption = (
+        f"Evidence map of {len(rows)} sources: which reliability and reproducibility criteria each source reports. "
+        "Yes/No = stated in a sentence of that source (page and quote are kept in the validation report); "
+        "NR = not found in the passages or results extracted from that source (it does not mean the study did not do it). "
+        "Descriptive support for quality appraisal, not a risk-of-bias score"
+    )
+    # tiêu chí theo hàng, nguồn theo cột: nhiều nguồn vẫn gọn trong một dải ngang thay vì một cột cao cả trang
+    return _block("chart", {
+        "type": "evidence_map", "caption": caption, "x_labels": [r[0] for r in rows], "y_labels": criteria,
+        "matrix": [[_evidence_flag(r[2 + k]) for r in rows] for k in range(len(criteria))], "derived": True,
+    })
+
+
+def build_quant_blocks(
+    records: list[ResultRecord], paper_to_n: dict[str, int], attrs_by_paper: dict[str, dict[str, dict[str, Any]]] | None = None
+) -> list[str]:
     return [
         b
         for b in (
             delta_table(records, paper_to_n),
-            missing_modality_table(records, paper_to_n),
+            modality_coverage_matrix(records, paper_to_n),
             modality_degradation_chart(records, paper_to_n),
             ablation_table(records, paper_to_n),
             tradeoff_scatter(records, paper_to_n),
+            efficiency_table(records, paper_to_n),
+            study_profile_table(records, paper_to_n, attrs_by_paper),
         )
         if b
     ]

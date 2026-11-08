@@ -23,12 +23,34 @@ def _diversify(items: list[ScoredChunk]) -> list[ScoredChunk]:
     return first + rest
 
 
+MIN_PAPER_TOKENS = 150  # chunk đầu của một paper không cắt ngắn hơn mức này (dưới mức này đoạn trích mất nghĩa)
+
+
+def _fit_first_chunks(items: list[ScoredChunk], limit: int) -> dict[str, str]:
+    """Khi chunk tốt nhất của mọi paper cộng lại vượt `limit`: chia đều ngân sách cho từng paper và cắt ngắn
+    chunk đầu theo ranh giới từ, để context chứa đủ mọi paper (kho nhỏ phải cite hết). Trả về {chunk_id: text đã cắt}."""
+    firsts: dict[str, ScoredChunk] = {}
+    for item in items:
+        firsts.setdefault(item.chunk.paper_id, item)
+    if sum(_approx_tokens(i.chunk.text) for i in firsts.values()) <= limit:
+        return {}
+    budget_chars = max(MIN_PAPER_TOKENS, limit // len(firsts)) * 3
+    trimmed: dict[str, str] = {}
+    for item in firsts.values():
+        text = item.chunk.text
+        if len(text) > budget_chars:
+            cut = text[:budget_chars]
+            trimmed[item.chunk.id] = (cut.rsplit(None, 1)[0] if " " in cut else cut) + " …"
+    return trimmed
+
+
 def build_context(
     chunks: list[ScoredChunk], token_limit: int | None = None, diversify: bool = False
 ) -> tuple[str, list[Citation]]:
     """Dedup theo chunk id, sort theo score giảm dần, cắt tới token_limit; trả về (context_text, citations).
 
-    diversify=True: ưu tiên mỗi paper một chunk tốt nhất trước khi lấy chunk thứ hai (dùng cho bài tổng hợp nhiều nguồn).
+    diversify=True: ưu tiên mỗi paper một chunk tốt nhất trước khi lấy chunk thứ hai (dùng cho bài tổng hợp nhiều nguồn);
+    nếu chunk đầu của mọi paper không vừa limit thì cắt ngắn chúng theo ngân sách chia đều để không paper nào bị loại.
     """
     limit = token_limit or get_settings().context_token_limit
 
@@ -39,8 +61,10 @@ def build_context(
             continue
         seen.add(item.chunk.id)
         deduped.append(item)
+    trimmed: dict[str, str] = {}
     if diversify:
         deduped = _diversify(deduped)
+        trimmed = _fit_first_chunks(deduped, limit)
 
     parts: list[str] = []
     citations: list[Citation] = []
@@ -48,15 +72,15 @@ def build_context(
 
     for item in deduped:
         chunk = item.chunk
-        tokens = _approx_tokens(chunk.text)
+        text_to_include = trimmed.get(chunk.id, chunk.text)
+        tokens = _approx_tokens(text_to_include)
         if parts and used_tokens + tokens > limit:
             break
 
         # Nếu ngay chunk đầu tiên đã vượt quá token limit, cắt ngắn text của nó để không làm tràn context
-        text_to_include = chunk.text
         if tokens > limit:
             char_limit = limit * 3
-            text_to_include = chunk.text[:char_limit] + "\n... [đã cắt bớt để đảm bảo giới hạn token]"
+            text_to_include = text_to_include[:char_limit] + "\n... [đã cắt bớt để đảm bảo giới hạn token]"
             tokens = limit
 
         used_tokens += tokens

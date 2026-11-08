@@ -3,6 +3,7 @@ import time
 
 from app.agent.profiles import field_profile
 from app.agent.state import ResearchState
+from app.agent.tools.ensure_coverage import ensure_corpus_coverage
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -44,7 +45,7 @@ def search_node(state: ResearchState) -> ResearchState:
     internal_evidence = retrieve_evidence(queries)
     # Lọc bỏ các chunk thuộc phần danh mục tài liệu tham khảo (References list) để tránh trích dẫn nhầm
     clean_internal = [sc for sc in internal_evidence if not is_reference_list_chunk(sc.chunk)]
-    filtered_internal = clean_internal if clean_internal else internal_evidence
+    filtered_internal = ensure_corpus_coverage(clean_internal if clean_internal else internal_evidence, queries[0])
 
     # 2. Truy xuất tài liệu học thuật liên quan từ Internet (OpenAlex)
     external_evidence = retrieve_external_evidence(queries, count_per_query=12, max_total=50)
@@ -93,4 +94,4 @@ def _local_only_evidence(queries: list[str], max_per_paper: int) -> list:
         if count < max_per_paper:
             per_paper[sc.chunk.paper_id] = count + 1
             selected.append(sc)
-    return selected
+    return ensure_corpus_coverage(selected, queries[0] if queries else "")

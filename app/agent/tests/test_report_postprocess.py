@@ -114,13 +114,30 @@ _DRAFT3 = """analysis
 def test_ledger_charts_one_per_setting_and_min_charts_injected():
     charts = build_ledger_charts(_DRAFT3, 3)
     assert len(charts) == 3
-    assert {json.loads(c)["type"] for c in charts} == {"barh", "bar", "heatmap"}
+    # ma trận phương pháp × vùng chỉ vẽ MỘT lần (heatmap), không vẽ lại bằng biểu đồ cột
+    assert [json.loads(c)["type"] for c in charts] == ["dot", "heatmap", "dot"]
     out = postprocess_report("## 4. X\n\nText.\n\n## 5. Y\n\nDone.", _DRAFT3, None, None, "en", min_charts=3)
-    assert out.count("```chart") == 3
-    assert {json.loads(m)["type"] for m in re.findall(r"```chart\n(.*?)\n```", out, re.DOTALL)} == {"barh", "bar", "heatmap"}
+    assert out.count("```chart") == 2  # thiếu loại thứ 3 thì không vẽ trùng dữ liệu để cho đủ
+    assert {json.loads(m)["type"] for m in re.findall(r"```chart\n(.*?)\n```", out, re.DOTALL)} == {"dot", "heatmap"}
     assert out.index("```chart") < out.index("## 5.")
 
 
 def test_min_charts_not_fabricated_when_ledger_thin():
     out = postprocess_report("## 4. X\n\n## 5. Y\n\nDone.", _DRAFT, None, None, "en", min_charts=3)
     assert out.count("```chart") == 1
+
+
+def test_postprocess_turns_paired_bar_into_dumbbell_and_keeps_derived_charts():
+    paired = {"type": "bar", "caption": "Validation vs test [1]", "labels": ["WT", "TC"],
+              "series": [{"name": "Validation", "values": [90.1, 85.3]}, {"name": "Test", "values": [88.0, 80.2]}]}
+    derived = {"type": "heatmap", "x_labels": ["M [1]"], "y_labels": ["T1"], "matrix": [[-3.25]], "derived": True}
+    report = "".join(f"```chart\n{json.dumps(c)}\n```\n\n" for c in (paired, derived))
+    out = postprocess_report(report, _DRAFT + " 88.0 80.2", None, None, "en", min_charts=0)
+    specs = [json.loads(m) for m in re.findall(r"```chart\n(.*?)\n```", out, re.DOTALL)]
+    assert specs[0]["type"] == "dumbbell" and specs[0]["series"][1]["values"] == [88.0, 80.2]
+    assert specs[1]["matrix"] == [[-3.25]]  # số suy ra từ record đã kiểm chứng không bị scrub
+
+
+def test_llm_written_evidence_map_is_dropped():
+    spec = {"type": "evidence_map", "x_labels": ["[1]"], "y_labels": ["Code"], "matrix": [["Yes"]]}
+    assert scrub_chart_spec(json.dumps(spec), _DRAFT) is None

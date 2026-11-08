@@ -36,6 +36,8 @@ class ResultRecord:
     source_page: int | None = None
     source_table: str | None = None
     variant: str | None = None  # tên biến thể ablation (None = mô hình đầy đủ)
+    spread: float | None = None  # độ lệch in nguyên văn kèm giá trị (± x); None = nguồn không báo
+    spread_type: str | None = None  # "SD" | "SE" | "CI95" — chỉ có khi spread có
 
 
 def _norm(value: str | None) -> str | None:

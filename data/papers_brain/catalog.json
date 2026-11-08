@@ -246,5 +246,197 @@
     "venue": "arXiv:2109.03201",
     "doi": "",
     "url": "https://arxiv.org/abs/2109.03201"
+  },
+  "962104b3-9b9d-5d27-a067-a22816f46bef": {
+    "title": "The Brain Tumor Segmentation (BraTS) Challenge 2023: Glioma Segmentation in Sub-Saharan Africa Patient Population (BraTS-Africa)",
+    "authors": "Maruf Adewole, Jeffrey D. Rudie, Anu Gbadamosi, Oluyemisi Toyobo, Confidence Raymond, Dong Zhang, Olubukola Omidiji, Rachel Akinola, Mohammad Abba Suwaid, Adaobi Emegoakor, Nancy Ojo, Kenneth Aguh, Chinasa Kalaiwo, Gabriel Babatunde, Afolabi Ogunleye, Yewande Gbadamosi, Kator Iorpagher, Evan Calabrese, Mariam Aboian, Marius Linguraru, Jake Albrecht, Benedikt Wiestler, Florian Kofler, Anastasia Janas, Dominic LaBella, Anahita Fathi Kzerooni, Hongwei Bran Li, Juan Eugenio Iglesias, Keyvan Farahani, James Eddy, Timothy Bergquist, Verena Chung, Russell Takeshi Shinohara, Walter Wiggins, Zachary Reitman, Chunhao Wang, Xinyang Liu, Zhifan Jiang, Ariana Familiar, Koen Van Leemput, Christina Bukas, Maire Piraud, Gian-Marco Conte, Elaine Johansson, Zeke Meier, Bjoern H Menze, Ujjwal Baid, Spyridon Bakas, Farouk Dako, Abiodun Fatade, Udunna C Anazodo",
+    "year": "2023",
+    "venue": "arXiv:2305.19369",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2305.19369"
+  },
+  "3b847447-be75-5088-960a-40728863b18c": {
+    "title": "The Brain Tumor Segmentation (BraTS) Challenge 2023: Focus on Pediatrics (CBTN-CONNECT-DIPGR-ASNR-MICCAI BraTS-PEDs)",
+    "authors": "Anahita Fathi Kazerooni, Nastaran Khalili, Xinyang Liu, Debanjan Haldar, Zhifan Jiang, Syed Muhammed Anwar, Jake Albrecht, Maruf Adewole, Udunna Anazodo, Hannah Anderson, Sina Bagheri, Ujjwal Baid, Timothy Bergquist, Austin J. Borja, Evan Calabrese, Verena Chung, Gian-Marco Conte, Farouk Dako, James Eddy, Ivan Ezhov, Ariana Familiar, Keyvan Farahani, Shuvanjan Haldar, Juan Eugenio Iglesias, Anastasia Janas, Elaine Johansen, Blaise V Jones, Florian Kofler, Dominic LaBella, Hollie Anne Lai, Koen Van Leemput, Hongwei Bran Li, Nazanin Maleki, Aaron S McAllister, Zeke Meier, Bjoern Menze, Ahmed W Moawad, Khanak K Nandolia, Julija Pavaine, Marie Piraud, Tina Poussaint, Sanjay P Prabhu, Zachary Reitman, Andres Rodriguez, Jeffrey D Rudie, Mariana Sanchez-Montano, Ibraheem Salman Shaikh, Lubdha M. Shah, Nakul Sheth, Russel Taki Shinohara, Wenxin Tu, Karthik Viswanathan, Chunhao Wang, Jeffrey B Ware, Benedikt Wiestler, Walter Wiggins, Anna Zapaishchykova, Mariam Aboian, Miriam Bornhorst, Peter de Blank, Michelle Deutsch, Maryam Fouladi, Lindsey Hoffman, Benjamin Kann, Margot Lazow, Leonie Mikael, Ali Nabavizadeh, Roger Packer, Adam Resnick, Brian Rood, Arastoo Vossough, Spyridon Bakas, Marius George Linguraru",
+    "year": "2023",
+    "venue": "arXiv:2305.17033",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2305.17033"
+  },
+  "6fb521c4-4ab3-586d-88f0-dafbae167f8c": {
+    "title": "The Brain Tumor Segmentation (BraTS) Challenge 2023: Brain MR Image Synthesis for Tumor Segmentation (BraSyn)",
+    "authors": "Hongwei Bran Li, Gian Marco Conte, Qingqiao Hu, Syed Muhammad Anwar, Florian Kofler, Ivan Ezhov, Koen van Leemput, Marie Piraud, Maria Diaz, Byrone Cole, Evan Calabrese, Jeff Rudie, Felix Meissen, Maruf Adewole, Anastasia Janas, Anahita Fathi Kazerooni, Dominic LaBella, Ahmed W. Moawad, Keyvan Farahani, James Eddy, Timothy Bergquist, Verena Chung, Russell Takeshi Shinohara, Farouk Dako, Walter Wiggins, Zachary Reitman, Chunhao Wang, Xinyang Liu, Zhifan Jiang, Ariana Familiar, Elaine Johanson, Zeke Meier, Christos Davatzikos, John Freymann, Justin Kirby, Michel Bilello, Hassan M. Fathallah-Shaykh, Roland Wiest, Jan Kirschke, Rivka R. Colen, Aikaterini Kotrotsou, Pamela Lamontagne, Daniel Marcus, Mikhail Milchenko, Arash Nazeri, Marc André Weber, Abhishek Mahajan, Suyash Mohan, John Mongan, Christopher Hess, Soonmee Cha, Javier Villanueva, Meyer Errol Colak, Priscila Crivellaro, Andras Jakab, Jake Albrecht, Udunna Anazodo, Mariam Aboian, Thomas Yu, Verena Chung, Timothy Bergquist, James Eddy, Jake Albrecht, Ujjwal Baid, Spyridon Bakas, Marius George Linguraru, Bjoern Menze, Juan Eugenio Iglesias, Benedikt Wiestler",
+    "year": "2023",
+    "venue": "arXiv:2305.09011",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2305.09011"
+  },
+  "0479694d-bf2b-5dc3-b0c4-25c378f15e8b": {
+    "title": "The Brain Tumor Segmentation (BraTS-METS) Challenge 2023: Brain Metastasis Segmentation on Pre-treatment MRI",
+    "authors": "Ahmed W. Moawad, Anastasia Janas, Ujjwal Baid, Divya Ramakrishnan, Rachit Saluja, Nader Ashraf, Nazanin Maleki, Leon Jekel, Nikolay Yordanov, Pascal Fehringer, Athanasios Gkampenis, Raisa Amiruddin, Amirreza Manteghinejad, Maruf Adewole, Jake Albrecht, Udunna Anazodo, Sanjay Aneja, Syed Muhammad Anwar, Timothy Bergquist, Veronica Chiang, Verena Chung, Gian Marco Conte, Farouk Dako, James Eddy, Ivan Ezhov, Nastaran Khalili, Keyvan Farahani, Juan Eugenio Iglesias, Zhifan Jiang, Elaine Johanson, Anahita Fathi Kazerooni, Florian Kofler, Kiril Krantchev, Dominic LaBella, Koen Van Leemput, Hongwei Bran Li, Marius George Linguraru, Xinyang Liu, Zeke Meier, Bjoern H Menze, Harrison Moy, Klara Osenberg, Marie Piraud, Zachary Reitman, Russell Takeshi Shinohara, Chunhao Wang, Benedikt Wiestler, Walter Wiggins, Umber Shafique, Klara Willms, Arman Avesta, Khaled Bousabarah, Satrajit Chakrabarty, Nicolo Gennaro, Wolfgang Holler, Manpreet Kaur, Pamela LaMontagne, MingDe Lin, Jan Lost, Daniel S. Marcus, Ryan Maresca, Sarah Merkaj, Gabriel Cassinelli Pedersen, Marc von Reppert, Aristeidis Sotiras, Oleg Teytelboym, Niklas Tillmans, Malte Westerhoff, Ayda Youssef, Devon Godfrey, Scott Floyd, Andreas Rauschecker, Javier Villanueva-Meyer, Irada Pfluger, Jaeyoung Cho, Martin Bendszus, Gianluca Brugnara, Justin Cramer, Gloria J. Guzman Perez-Carillo, Derek R. Johnson, Anthony Kam, Benjamin Yin Ming Kwan, Lillian Lai, Neil U. Lall, Fatima Memon, Mark Krycia, Satya Narayana Patro, Bojan Petrovic, Tiffany Y. So, Gerard Thompson, Lei Wu, E. Brooke Schrickel, Anu Bansal, Frederik Barkhof, Cristina Besada, Sammy Chu, Jason Druzgal, Alexandru Dusoi, Luciano Farage, Fabricio Feltrin, Amy Fong, Steve H. Fung, R. Ian Gray, Ichiro Ikuta, Michael Iv, Alida A. Postma, Amit Mahajan, David Joyner, Chase Krumpelman, Laurent Letourneau-Guillon, Christie M. Lincoln, Mate E. Maros, Elka Miller, Fanny Moron, Esther A. Nimchinsky, Ozkan Ozsarlak, Uresh Patel, Saurabh Rohatgi, Atin Saha, Anousheh Sayah, Eric D. Schwartz, Robert Shih, Mark S. Shiroishi, Juan E. Small, Manoj Tanwar, Jewels Valerie, Brent D. Weinberg, Matthew L. White, Robert Young, Vahe M. Zohrabian, Aynur Azizova, Melanie Maria Theresa Bruseler, Mohanad Ghonim, Mohamed Ghonim, Abdullah Okar, Luca Pasquini, Yasaman Sharifi, Gagandeep Singh, Nico Sollmann, Theodora Soumala, Mahsa Taherzadeh, Philipp Vollmuth, Martha Foltyn-Dumitru, Ajay Malhotra, Aly H. Abayazeed, Francesco Dellepiane, Philipp Lohmann, Victor M. Perez-Garcia, Hesham Elhalawani, Maria Correia de Verdier, Sanaria Al-Rubaiey, Rui Duarte Armindo, Kholod Ashraf, Moamen M. Asla, Mohamed Badawy, Jeroen Bisschop, Nima Broomand Lomer, Jan Bukatz, Jim Chen, Petra Cimflova, Felix Corr, Alexis Crawley, Lisa Deptula, Tasneem Elakhdar, Islam H. Shawali, Shahriar Faghani, Alexandra Frick, Vaibhav Gulati, Muhammad Ammar Haider, Fatima Hierro, Rasmus Holmboe Dahl, Sarah Maria Jacobs, Kuang-chun Jim Hsieh, Sedat G. Kandemirli, Katharina Kersting, Laura Kida, Sofia Kollia, Ioannis Koukoulithras, Xiao Li, Ahmed Abouelatta, Aya Mansour, Ruxandra-Catrinel Maria-Zamfirescu, Marcela Marsiglia, Yohana Sarahi Mateo-Camacho, Mark McArthur, Olivia McDonnell, Maire McHugh, Mana Moassefi, Samah Mostafa Morsi, Alexander Munteanu, Khanak K. Nandolia, Syed Raza Naqvi, Yalda Nikanpour, Mostafa Alnoury, Abdullah Mohamed Aly Nouh, Francesca Pappafava, Markand D. Patel, Samantha Petrucci, Eric Rawie, Scott Raymond, Borna Roohani, Sadeq Sabouhi, Laura M. Sanchez-Garcia, Zoe Shaked, Pokhraj P. Suthar, Talissa Altes, Edvin Isufi, Yaseen Dhemesh, Jaime Gass, Jonathan Thacker, Abdul Rahman Tarabishy, Benjamin Turner, Sebastiano Vacca, George K. Vilanilam, Daniel Warren, David Weiss, Fikadu Worede, Sara Yousry, Wondwossen Lerebo, Alejandro Aristizabal, Alexandros Karargyris, Hasan Kassem, Sarthak Pati, Micah Sheller, Katherine E. Link, Evan Calabrese, Nourel hoda Tahon, Ayman Nada, Yuri S. Velichko, Spyridon Bakas, Jeffrey D. Rudie, Mariam Aboian",
+    "year": "2023",
+    "venue": "arXiv:2306.00838",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2306.00838"
+  },
+  "6a53e39f-12be-5a69-a311-a2aad5df9fbd": {
+    "title": "Analysis of the MICCAI Brain Tumor Segmentation -- Metastases (BraTS-METS) 2025 Lighthouse Challenge: Brain Metastasis Segmentation on Pre- and Post-treatment MRI",
+    "authors": "Nazanin Maleki, Raisa Amiruddin, Ahmed W. Moawad, Nikolay Yordanov, Athanasios Gkampenis, Pascal Fehringer, Fabian Umeh, Crystal Chukwurah, Fatima Memon, Bojan Petrovic, Justin Cramer, Mark Krycia, Elizabeth B. Shrickel, Ichiro Ikuta, Gerard Thompson, Lorenna Vidal, Vilma Kosovic, Adam E. Goldman-Yassen, Virginia Hill, Tiffany So, Sedra Mhana, Albara Alotaibi, Nathan Page, Prisha Bhatia, Melisa S. Guelen, Yasaman Sharifi, Marko Jakovljevic, Salma Abosabie, Sara Abosabie, Mohanad Ghonim, Mohamed Ghonim, Amirreza Manteghinejad, Anastasia Janas, Kiril Krantchev, Maruf Adewole, Jake Albrecht, Udunna Anazodo, Sanjay Aneja, Syed Muhammad Anwar, Timothy Bergquist, Veronica Chiang, Verena Chung, Gian Marco Conte, Farouk Dako, James Eddy, Ivan Ezhov, Nastaran Khalili, Keyvan Farahani, Juan Eugenio Iglesias, Zhifan Jiang, Elaine Johanson, Anahita Fathi Kazerooni, Florian Kofler, Dominic LaBella, Koen Van Leemput, Hongwei Bran Li, Marius George Linguraru, Xinyang Liu, Zeke Meier, Bjoern H Menze, Harrison Moy, Klara Osenberg, Marie Piraud, Zachary Reitman, Russell Takeshi Shinohara, Chunhao Wang, Benedikt Wiestler, Walter Wiggins, Umber Shafique, Klara Willms, Arman Avesta, Khaled Bousabarah, Satrajit Chakrabarty, Nicolo Gennaro, Wolfgang Holler, Manpreet Kaur, Pamela LaMontagne, MingDe Lin, Jan Lost, Daniel S. Marcus, Ryan Maresca, Sarah Merkaj, Gabriel Cassinelli Pedersen, Marc von Reppert, Aristeidis Sotiras, Oleg Teytelboym, Niklas Tillmans, Malte Westerhoff, Ayda Youssef, Devon Godfrey, Scott Floyd, Andreas Rauschecker, Javier Villanueva-Meyer, Irada Pflüger, Jaeyoung Cho, Martin Bendszus, Gianluca Brugnara, Gloria J. Guzman Perez-Carillo, Derek R. Johnson, Anthony Kam, Benjamin Yin Ming Kwan, Lillian Lai, Neil U. Lall, Satya Narayana Patro, Lei Wu, Anu Bansal, Frederik Barkhof, Cristina Besada, Sammy Chu, Jason Druzgal, Alexandru Dusoi, Luciano Farage, Fabricio Feltrin, Amy Fong, Steve H. Fung, R. Ian Gray, Michael Iv, Alida A. Postma, Amit Mahajan, David Joyner, Chase Krumpelman, Laurent Letourneau-Guillon, Christie M. Lincoln, Mate E. Maros, Elka Miller, Fanny Morón, Esther A. Nimchinsky, Ozkan Ozsarlak, Uresh Patel, Saurabh Rohatgi, Atin Saha, Anousheh Sayah, Eric D. Schwartz, Robert Shih, Mark S. Shiroishi, Juan E. Small, Manoj Tanwar, Jewels Valerie, Brent D. Weinberg, Matthew L. White, Robert Young, Vahe M. Zohrabian, Aynur Azizova, Melanie Maria Theresa Brüßeler, Abdullah Okar, Luca Pasquini, Yasaman Sharifi, Gagandeep Singh, Nico Sollmann, Theodora Soumala, Mahsa Taherzadeh, Philipp Vollmuth, Martha Foltyn-Dumitru, Ajay Malhotra, Francesco Dellepiane, Víctor M. Pérez-García, Hesham Elhalawani, Maria Correia de Verdier, Sanaria Al Rubaiey, Rui Duarte Armindo, Kholod Ashraf, Moamen M. Asla, Mohamed Badawy, Jeroen Bisschop, Nima Broomand Lomer, Jan Bukatz, Jim Chen, Petra Cimflova, Felix Corr, Alexis Crawley, Lisa Deptula, Tasneem Elakhdar, Islam H. Shawali, Shahriar Faghani, Alexandra Frick, Vaibhav Gulati, Muhammad Ammar Haider, Fátima Hierro, Rasmus Holmboe Dahl, Sarah Maria Jacobs, Kuang-chun Jim Hsieh, Sedat G. Kandemirli, Katharina Kersting, Laura Kida, Sofia Kollia, Ioannis Koukoulithras, Xiao Li, Ahmed Abouelatta, Aya Mansour, Ruxandra-Catrinel Maria-Zamfirescu, Marcela Marsiglia, Yohana Sarahi Mateo-Camacho, Mark McArthur, Olivia McDonnel, Maire McHugh, Mana Moassefi, Samah Mostafa Morsi, Alexander Munteanu, Khanak K. Nandolia, Syed Raza Naqvi, Yalda Nikanpour, Mostafa Alnoury, Abdullah Mohamed Aly Nouh, Francesca Pappafava, Markand D. Patel, Samantha Petrucci, Eric Rawie, Scott Raymond, Borna Roohani, Sadeq Sabouhi, Laura M. Sanchez Garcia, Zoe Shaked, Pokhraj P. Suthar, Talissa Altes, Edvin Isufi, Yaseen Dhemesh, Jaime Gass, Jonathan Thacker, Abdul Rahman Tarabishy, Benjamin Turner, Sebastiano Vacca, George K. Vilanilam, Daniel Warren, David Weiss, Fikadu Worede, Sara Yousry, Wondwossen Lerebo, Alejandro Aristizabal, Alexandros Karargyris, Hasan Kassem, Sarthak Pati, Micah Sheller, Katherine E. Link, Evan Calabrese, Nourel Hoda Tahon, Ayman Nada, Jeffrey D. Rudie, Janet Reid, Kassa Darge, Aly H. Abayazeed, Philipp Lohmann, Yuri S. Velichko, Spyridon Bakas, Mariam Aboian",
+    "year": "2025",
+    "venue": "arXiv:2504.12527",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2504.12527"
+  },
+  "375871bc-1250-57e3-86c4-3dea015ef876": {
+    "title": "U-Mamba: Enhancing Long-range Dependency for Biomedical Image Segmentation",
+    "authors": "Jun Ma, Feifei Li, Bo Wang",
+    "year": "2024",
+    "venue": "arXiv:2401.04722",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2401.04722"
+  },
+  "bcb5e5b0-f12c-5403-9201-f7150255dda9": {
+    "title": "SegMamba: Long-range Sequential Modeling Mamba For 3D Medical Image Segmentation",
+    "authors": "Zhaohu Xing, Tian Ye, Yijun Yang, Guang Liu, Lei Zhu",
+    "year": "2024",
+    "venue": "arXiv:2401.13560",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2401.13560"
+  },
+  "b38757b1-5fc4-54a5-9551-b6a650180521": {
+    "title": "Mamba: Linear-Time Sequence Modeling with Selective State Spaces",
+    "authors": "Albert Gu, Tri Dao",
+    "year": "2023",
+    "venue": "arXiv:2312.00752",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2312.00752"
+  },
+  "9a2e3cd8-8c5d-56cc-a68b-8e182696d3c4": {
+    "title": "Segment Anything",
+    "authors": "Alexander Kirillov, Eric Mintun, Nikhila Ravi, Hanzi Mao, Chloe Rolland, Laura Gustafson, Tete Xiao, Spencer Whitehead, Alexander C. Berg, Wan-Yen Lo, Piotr Dollár, Ross Girshick",
+    "year": "2023",
+    "venue": "arXiv:2304.02643",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2304.02643"
+  },
+  "14902141-1e13-5b88-9f83-2c38b73e8f53": {
+    "title": "Segment Anything in Medical Images",
+    "authors": "Jun Ma, Yuting He, Feifei Li, Lin Han, Chenyu You, Bo Wang",
+    "year": "2023",
+    "venue": "arXiv:2304.12306",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2304.12306"
+  },
+  "d7bec16f-a60f-528c-ae6b-2fe4fce1f4ac": {
+    "title": "SAM-Med3D: Towards General-purpose Segmentation Models for Volumetric Medical Images",
+    "authors": "Haoyu Wang, Sizheng Guo, Jin Ye, Zhongying Deng, Junlong Cheng, Tianbin Li, Jianpin Chen, Yanzhou Su, Ziyan Huang, Yiqing Shen, Bin Fu, Shaoting Zhang, Junjun He, Yu Qiao",
+    "year": "2023",
+    "venue": "arXiv:2310.15161",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2310.15161"
+  },
+  "1633ef6f-67db-515d-9cb5-0497d6ef3198": {
+    "title": "Segment Anything Model for Medical Image Analysis: an Experimental Study",
+    "authors": "Maciej A. Mazurowski, Haoyu Dong, Hanxue Gu, Jichen Yang, Nicholas Konz, Yixin Zhang",
+    "year": "2023",
+    "venue": "arXiv:2304.10517",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2304.10517"
+  },
+  "491cc72f-2ccc-58de-8353-24c8fba622fb": {
+    "title": "Denoising Diffusion Probabilistic Models",
+    "authors": "Jonathan Ho, Ajay Jain, Pieter Abbeel",
+    "year": "2020",
+    "venue": "arXiv:2006.11239",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2006.11239"
+  },
+  "f45842e9-8b47-5811-8ab4-f45c8325c9fb": {
+    "title": "Diffusion Models for Medical Image Analysis: A Comprehensive Survey",
+    "authors": "Amirhossein Kazerouni, Ehsan Khodapanah Aghdam, Moein Heidari, Reza Azad, Mohsen Fayyaz, Ilker Hacihaliloglu, Dorit Merhof",
+    "year": "2022",
+    "venue": "arXiv:2211.07804",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2211.07804"
+  },
+  "5b31da4d-1923-5c55-9169-6eeed0b782bd": {
+    "title": "CoLa-Diff: Conditional Latent Diffusion Model for Multi-Modal MRI Synthesis",
+    "authors": "Lan Jiang, Ye Mao, Xi Chen, Xiangfeng Wang, Chao Li",
+    "year": "2023",
+    "venue": "arXiv:2303.14081",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2303.14081"
+  },
+  "ad9ae7f0-cb16-57d4-8386-e1a11958c3c1": {
+    "title": "FgC2F-UDiff: Frequency-guided and Coarse-to-fine Unified Diffusion Model for Multi-modality Missing MRI Synthesis",
+    "authors": "Xiaojiao Xiao, Qinmin Vivian Hu, Guanghui Wang",
+    "year": "2025",
+    "venue": "arXiv:2501.03526",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2501.03526"
+  },
+  "4509ed48-ee93-5aab-b501-e3825db27c7d": {
+    "title": "SLaM-DiMM: Shared Latent Modeling for Diffusion Based Missing Modality Synthesis in MRI",
+    "authors": "Bhavesh Sandbhor, Bheeshm Sharma, Balamurugan Palaniappan",
+    "year": "2025",
+    "venue": "arXiv:2509.16019",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2509.16019"
+  },
+  "1ba755f8-1476-5d5d-ad54-adbbd07f6d38": {
+    "title": "Learnable Cross-modal Knowledge Distillation for Multi-modal Learning with Missing Modality",
+    "authors": "Hu Wang, Congbo Ma, Jianpeng Zhang, Yuan Zhang, Jodie Avery, Louise Hull, Gustavo Carneiro",
+    "year": "2023",
+    "venue": "arXiv:2310.01035",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2310.01035"
+  },
+  "ea02235e-0e39-5af4-9ea7-f43e4c28f31a": {
+    "title": "No Modality Left Behind: Adapting to Missing Modalities via Knowledge Distillation for Brain Tumor Segmentation",
+    "authors": "Shenghao Zhu, Yifei Chen, Weihong Chen, Shuo Jiang, Guanyu Zhou, Yuanhan Wang, Feiwei Qin, Changmiao Wang, Qiyuan Tian",
+    "year": "2025",
+    "venue": "arXiv:2509.15017",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2509.15017"
+  },
+  "02494c8f-9abd-58ab-9caf-ee286015080d": {
+    "title": "Semantic-guided Masked Mutual Learning for Multi-modal Brain Tumor Segmentation with Arbitrary Missing Modalities",
+    "authors": "Guoyan Liang, Qin Zhou, Jingyuan Chen, Bingcang Huang, Kai Chen, Lin Gu, Zhe Wang, Sai Wu, Chang Yao",
+    "year": "2025",
+    "venue": "arXiv:2507.07592",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2507.07592"
+  },
+  "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7": {
+    "title": "CCSD: Cross-Modal Compositional Self-Distillation for Robust Brain Tumor Segmentation with Missing Modalities",
+    "authors": "Dongqing Xie, Yonghuang Wu, Zisheng Ai, Jun Min, Zhencun Jiang, Shaojin Geng, Lei Wang",
+    "year": "2025",
+    "venue": "arXiv:2511.14599",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2511.14599"
+  },
+  "fcae3608-fb3d-58fc-984e-64aff34ce266": {
+    "title": "3D UX-Net: A Large Kernel Volumetric ConvNet Modernizing Hierarchical Transformer for Medical Image Segmentation",
+    "authors": "Ho Hin Lee, Shunxing Bao, Yuankai Huo, Bennett A. Landman",
+    "year": "2022",
+    "venue": "arXiv:2209.15076",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2209.15076"
+  },
+  "2ae6f908-e096-554b-986d-8c3682df14a1": {
+    "title": "MedNeXt: Transformer-driven Scaling of ConvNets for Medical Image Segmentation",
+    "authors": "Saikat Roy, Gregor Koehler, Constantin Ulrich, Michael Baumgartner, Jens Petersen, Fabian Isensee, Paul F. Jaeger, Klaus Maier-Hein",
+    "year": "2023",
+    "venue": "arXiv:2303.09975",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2303.09975"
+  },
+  "15beb82a-b8ac-53dd-b513-e664bf5818e3": {
+    "title": "nnU-Net Revisited: A Call for Rigorous Validation in 3D Medical Image Segmentation",
+    "authors": "Fabian Isensee, Tassilo Wald, Constantin Ulrich, Michael Baumgartner, Saikat Roy, Klaus Maier-Hein, Paul F. Jaeger",
+    "year": "2024",
+    "venue": "arXiv:2404.09556",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2404.09556"
   }
 }

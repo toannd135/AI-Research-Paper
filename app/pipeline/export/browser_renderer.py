@@ -125,7 +125,9 @@ def prepare_report_page(page, page_html: str) -> list[str]:
             const w = box.width || rect.width;
             const h = box.height || rect.height;
             if (!w || !h) continue;
-            const scale = Math.min(width / w, height / h);
+            // Co theo bề rộng THẬT của figure (một cột hoặc cả trang), không theo bề rộng trang.
+            const slot = svg.closest('figure')?.getBoundingClientRect().width || width;
+            const scale = Math.min(slot / w, height / h);
             svg.style.width = `${w * scale}px`;
             svg.style.height = `${h * scale}px`;
             svg.style.maxWidth = '100%';

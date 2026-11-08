@@ -44,3 +44,29 @@ def test_build_context_citation_metadata_and_tags():
     assert citations[0].page == 5
     assert citations[0].paper_id == "p1"
     assert "[1]" in text
+
+
+def _paper_chunk(pid: str, idx: int, score: float, words: int = 800) -> ScoredChunk:
+    text = " ".join(f"{pid}w{i}" for i in range(words))
+    return ScoredChunk(chunk=Chunk(id=f"{pid}-{idx}", paper_id=pid, text=text, chunk_index=idx, page=1), score=score)
+
+
+def test_diversify_trims_first_chunks_so_every_paper_fits():
+    # 55 paper x ~2900 token/chunk vượt xa limit: vẫn phải có đủ 55 paper trong context
+    chunks = [_paper_chunk(f"p{i}", 0, 1.0 - i / 100) for i in range(55)]
+    chunks += [_paper_chunk(f"p{i}", 1, 0.5 - i / 1000) for i in range(55)]
+
+    text, citations = build_context(chunks, token_limit=22000, diversify=True)
+
+    assert {c.paper_id for c in citations} == {f"p{i}" for i in range(55)}
+    assert len(text) / 3 <= 22000 * 1.1
+    assert "p0w0" in text  # cắt từ đầu chunk, giữ nguyên văn để đối chiếu với PDF
+
+
+def test_diversify_keeps_full_chunks_when_they_fit():
+    chunks = [_paper_chunk(f"p{i}", 0, 1.0 - i / 10, words=50) for i in range(3)]
+
+    text, citations = build_context(chunks, token_limit=22000, diversify=True)
+
+    assert len(citations) == 3
+    assert all(c.chunk.text in text for c in chunks)

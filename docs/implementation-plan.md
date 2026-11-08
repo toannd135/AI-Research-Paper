@@ -5,17 +5,24 @@
 ## Nguyên tắc
 Thứ tự: schema/model -> logic thuần (có test) -> node/route -> tích hợp -> doc. Mỗi bước kết thúc bằng lệnh kiểm chứng xanh rồi mới sang bước sau.
 
-## Các bước (Research Knowledge Model)
+## Các bước (Sửa lỗi hệ thống theo đánh giá Q1/Q2 lần 2)
 | # | Việc | Tệp | Kiểm chứng |
 |---|---|---|---|
-| 1 | Taxonomy + cấu trúc model (gaps/questions/claims/experiments) | `agent/research_model.py` | `pytest app/agent/tests/test_research_model.py` |
-| 2 | Validator claim↔evidence | `agent/evidence/claim_validator.py` | unit test: claim có/không evidence, evidence lạ |
-| 3 | `model_node` + state | `nodes/model_node.py`, `state.py` | test node với fake LLM, JSON sai -> fallback |
-| 4 | Nối vào graph | `graph.py` | `test_graph.py`: critique -> model -> synthesize |
-| 5 | Lưu DB + migration | `models/research_task.py`, `0008_*`, `tasks.py` | upgrade/downgrade; test model |
-| 6 | API trả `research_model` | `routes/research.py`, `schemas.py` | `pytest app/api/tests/test_research_route.py` |
-| 7 | Prompt synthesize dùng model | `synthesize_node.py`, `plan_node.py` | test synthesize + postprocess |
-| 8 | Doc + handoff | `docs/*` | đối chiếu thủ công |
+| 1 | Variant "Missing X" → tập modality; EVIDENCE LIMITS 3 mức; `study_profile_table` | `evidence/quant_analysis.py` | test: ablation thiếu modality → limits không nói "no source"; bảng profile có NR |
+| 2 | Gộp `[n]–[n]` | `evidence/citation_cleaner.py` | test |
+| 3 | Bỏ placeholder tác giả; xóa caption Figure thừa trước khối hình | `format_sanitizer.py`, `synthesize_node.py` | test sanitizer |
+| 4 | Prompt survey (taxonomy, RQ, 4.5, 6.4, đơn vị Dice, không trích corpus) + REVIEW FACTS paper không truy xuất | `nodes/synthesize_node.py` | test prompt chứa quy tắc |
+| 5 | WARNING cột Dice trộn thang | `evidence/consistency_check.py` | test |
+| 6 | Doc | `docs/architecture.md` | đối chiếu |
+
+## Các bước (đợt trước: spread/efficiency — đã xong)
+| # | Việc | Tệp | Kiểm chứng |
+|---|---|---|---|
+| 1 | Thêm `spread`, `spread_type` vào `ResultRecord` | `evidence/quant_check.py` | `test_records_roundtrip` + dữ liệu cũ không có trường |
+| 2 | Extractor yêu cầu và kiểm chứng spread nguyên văn | `evidence/extractor.py` | test: spread có/không trong chunk, loại sai số lạ |
+| 3 | `efficiency_table`, cột spread ở `delta_table`, cập nhật `evidence_limits` | `evidence/quant_analysis.py` | test bảng chỉ sinh khi đủ dữ liệu; NR cho ô thiếu |
+| 4 | Caption biểu đồ nêu loại sai số | `nodes/synthesize_node.py` (`_CHART_BLOCK_RULE`) | test prompt chứa quy tắc |
+| 5 | Doc + danh sách paper | `docs/architecture.md`, `docs/paper-wishlist.md` | đối chiếu thủ công |
 
 ## Rủi ro
 - LLM trả JSON hỏng -> luôn có fallback, không raise ra ngoài node.
@@ -98,3 +105,19 @@ Rủi ro: ép RQ bằng regex có thể ghi đè sai nếu số dòng RQ khác c
 
 ### Mở rộng extractor cho metric phát hiện deepfake (2026-11-08)
 - `evidence/extractor.py`: `_KEY_RE` + prompt thêm AUC/EER/ACC/F1/AP (region = null); `evidence/stats.py`: EER là "thấp hơn là tốt". Ma trận missing-modality vẫn chỉ cho MRI (không đổi). Kiểm chứng: `pytest app/agent/tests/test_evidence_pipeline.py` (thêm test deepfake).
+
+### References phủ đủ 55 paper (2026-11-08)
+- [x] Dọn task: không có task research đang chạy; xóa 3 dòng `research_tasks` failed; giữ 24 message `process_paper` trong `upload_queue` (nạp 24 paper pending).
+- [x] `build_context(diversify=True)`: chia ngân sách token theo paper khi chunk đầu của mọi paper vượt `context_token_limit` (trung bình ~790 token/chunk → 55 paper cần ~44k > 22000). Kiểm chứng: `pytest app/ai/tests/test_context_builder.py`.
+- [x] README: worker nghe `upload_queue,research_queue`.
+- [ ] Chạy thật: papers `done|55`, survey mới có References 55 paper (quality gate không cảnh báo `độ phủ kho`).
+
+### Chart Selection Policy + Figure Layout hai cột (2026-11-08) — theo đánh giá PDF survey_58ad3caf
+Nguyên nhân: CSS `.columns-2 > figure.fig { column-span: all }` ép mọi hình trải 2 cột → Chromium cân bằng cột trước/sau hình, sinh khoảng trắng; prompt `_CHART_BLOCK_RULE` mặc định grouped bar; renderer thiếu dot/dumbbell/evidence map; heatmap một ô NR làm mất cả hàng.
+- [x] `app/pipeline/export/figure_layout.py`: `chart_span(spec)`/`mermaid_span(code)` → `column` (mặc định) | `wide`; `chart_width(span)`. Test: `pytest app/agent/tests/test_figure_layout.py`.
+- [x] `chart_scientific.py`: thêm `dot`, `dumbbell`, `evidence_map`; heatmap giữ ô NR (xám, chữ "NR"), Δ có âm/dương → colormap phân kỳ. Kích thước theo span. Test: `test_pdf_renderer.py::test_scientific_chart_types_render`.
+- [x] `pdf_renderer.py`: figure một cột mặc định, `class="fig wide"` mới `column-span: all`; bar/line vẽ theo bề rộng cột. Typst: chart/mermaid `wide` dùng `scope: "parent"`. Test: hình một cột nằm trong 1 cột, không trải hết trang.
+- [x] `evidence/figure_policy.py`: bar 2 series dạng điều kiện ghép cặp (validation/test, with/without, full/missing) → tự đổi sang `dumbbell`; cảnh báo quality gate khi >2 biểu đồ cột hoặc biểu đồ chỉ lặp lại bảng. Test: `pytest app/agent/tests/test_figure_policy.py`.
+- [x] Prompt `_CHART_BLOCK_RULE`: chọn biểu đồ theo câu hỏi khoa học (dot/dumbbell/heatmap/evidence map/line), 5 điều kiện bắt buộc, trường `layout`. Doc: architecture.md.
+- [x] `browser_renderer.prepare_report_page`: co SVG theo bề rộng figure (trước đây theo bề rộng trang → hình một cột bị letterbox, sinh khoảng trắng).
+- [ ] Chạy thật survey mới, xem PDF: số biểu đồ cột ≤2, hình một cột không để trống cột.

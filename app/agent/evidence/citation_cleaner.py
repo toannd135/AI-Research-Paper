@@ -120,14 +120,21 @@ _BLOCK_RE = re.compile(r"(```(?:table)[ \t]*\n)(.*?)(```)", re.DOTALL)
 _FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
 
 
+_SELF_RANGE_RE = re.compile(r"\[(\d+)\]\s*[–—-]\s*\[\1\]")  # '[1]–[1]' sau khi đánh số lại
+
+
 def _collapse_cluster(m: re.Match) -> str:
     numbers = list(dict.fromkeys(re.findall(r"\d+", m.group(0))))
     return ", ".join(f"[{n}]" for n in numbers)
 
 
+def _collapse_text(text: str) -> str:
+    return _CITE_CLUSTER_RE.sub(_collapse_cluster, _SELF_RANGE_RE.sub(r"[\1]", text))
+
+
 def _collapse_in_json(value: Any) -> Any:
     if isinstance(value, str):
-        return _CITE_CLUSTER_RE.sub(_collapse_cluster, value)
+        return _collapse_text(value)
     if isinstance(value, list):
         return [_collapse_in_json(v) for v in value]
     if isinstance(value, dict):
@@ -136,7 +143,7 @@ def _collapse_in_json(value: Any) -> Any:
 
 
 def collapse_duplicate_citations(text: str) -> str:
-    """Gộp trích dẫn liền kề trùng nhau sau khi đánh số lại ('[1], [1]' -> '[1]'); giữ thứ tự xuất hiện đầu tiên.
+    """Gộp trích dẫn liền kề trùng nhau sau khi đánh số lại ('[1], [1]' -> '[1]', '[1]–[1]' -> '[1]'); giữ thứ tự xuất hiện đầu tiên.
 
     Chỉ sửa văn bản thường và chuỗi trong khối ```table (JSON); khối code/chart/mermaid giữ nguyên
     vì '[1], [2]' ở đó có thể là mảng dữ liệu.
@@ -152,11 +159,11 @@ def collapse_duplicate_citations(text: str) -> str:
     out: list[str] = []
     pos = 0
     for fence in _FENCE_RE.finditer(text):
-        out.append(_CITE_CLUSTER_RE.sub(_collapse_cluster, text[pos : fence.start()]))
+        out.append(_collapse_text(text[pos : fence.start()]))
         block = fence.group(0)
         out.append(_BLOCK_RE.sub(_table, block) if block.startswith("```table") else block)
         pos = fence.end()
-    out.append(_CITE_CLUSTER_RE.sub(_collapse_cluster, text[pos:]))
+    out.append(_collapse_text(text[pos:]))
     return "".join(out)
 
 

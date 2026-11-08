@@ -6,6 +6,7 @@ không bao giờ sửa số liệu hay nâng trạng thái bằng LLM. `blocking
 
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 from typing import Any
@@ -32,8 +33,11 @@ from app.agent.evidence.traceability import (
 )
 from app.core.config import get_settings
 
+_SURVEY_TITLE_RE = re.compile(r"\b(?:survey|review|overview|state of the art|state-of-the-art|tutorial)\b", re.IGNORECASE)
 _CHART_RE = re.compile(r"```chart\s*\n(.*?)```", re.DOTALL)
 _MAX_LISTED = 40  # số mục chi tiết tối đa trong báo cáo (tổng số vẫn đếm đủ)
+
+logger = logging.getLogger(__name__)
 
 
 def _build_sources(citations: list[Any], evidence: list[Any]) -> dict[int, dict[str, Any]]:
@@ -91,16 +95,40 @@ def run_quality_gate(state: dict[str, Any], text: str, catalog: dict[str, dict[s
     preprints = references["publication"].get(PREPRINT, 0)
     if preprints:
         warnings.append(f"{preprints}/{len(references['references'])} reference là preprint/arXiv, chưa chắc đã bình duyệt — ghi rõ khi dùng làm bằng chứng")
-    review_claims = check_review_claims(text)
+    from app.agent.evidence.review_protocol import load_protocol, validate_protocol
+
+    protocol = load_protocol()
+    protocol_problems = validate_protocol(protocol, len(catalog) or None) if protocol else []
+    if protocol_problems:
+        warnings.append(f"review_protocol.json không hợp lệ, KHÔNG dùng (bài giữ mô tả retrieval coverage): {'; '.join(protocol_problems[:6])}")
+    declared = protocol["review_type"] if protocol and not protocol_problems else None
+    review_claims = check_review_claims(text, declared)
     blocking += [f"tuyên bố sai về quy trình tổng quan: {p}" for p in review_claims]
+    if state.get("research_mode", "survey") != "novel_research" and not any(
+        _SURVEY_TITLE_RE.search(str((catalog.get(pid) or {}).get("title", ""))) for pid in cited_ids
+    ):
+        warnings.append(
+            "novelty: bài không cite survey/review trước nào (theo tiêu đề catalog) — không chứng minh được điểm mới so với các survey đã có; "
+            "thêm các survey liên quan vào kho rồi chạy lại"
+        )
     if len(cited_numbers) < 2:
         warnings.append("bài cite ít hơn 2 nguồn")
+    from app.agent.evidence.coverage import full_coverage_applies, uncited_papers
+
+    available_ids = {getattr(c, "paper_id", None) for c in citations} - {None, ""}
+    if full_coverage_applies(len(available_ids)):
+        missing = uncited_papers(citations, text)
+        if missing:
+            titles = [(catalog.get(pid) or {}).get("title") or pid for pid in missing]
+            warnings.append(f"độ phủ kho: {len(missing)}/{len(available_ids)} paper trong kho chưa được cite ({'; '.join(t[:60] for t in titles[:8])}{'…' if len(titles) > 8 else ''})")
     from app.agent.research_model import contribution_profile
 
     display = check_display_items(text, state.get("paper_type") or contribution_profile(state)["paper_type"])
     warnings += display["warnings"]
     consistency = check_consistency(text)
     warnings += [f"nhất quán: {w}" for w in consistency]
+    science_qa, study_attrs = _science_qa(state, text)
+    warnings += [f"science QA: {w}" for w in science_qa]
 
     return {
         "passed": not blocking,
@@ -114,10 +142,30 @@ def run_quality_gate(state: dict[str, Any], text: str, catalog: dict[str, dict[s
         },
         "comparability": {"chart_problems": chart_problems},
         "research_questions": {"problems": rq_problems},
-        "review_claims": {"problems": review_claims},
+        "review_claims": {"problems": review_claims, "declared_review_type": declared, "protocol_problems": protocol_problems},
         "display_items": display,
         "consistency": consistency,
+        "science_qa": science_qa,
+        # câu nguyên văn + trang làm căn cứ cho bảng hồ sơ nghiên cứu, để người dùng đối chiếu với PDF
+        "study_profile": study_attrs,
     }
+
+
+def _science_qa(state: dict[str, Any], text: str) -> tuple[list[str], dict[str, Any]]:
+    from app.agent.evidence.extractor import records_from_dicts
+    from app.agent.evidence.science_qa import run_science_qa
+    from app.agent.evidence.study_profile import study_attributes
+
+    paper_to_n: dict[str, int] = {}
+    for n, cit in enumerate(state.get("citations", []), start=1):
+        paper_to_n.setdefault(getattr(cit, "paper_id", ""), n)
+    try:
+        records = records_from_dicts(state.get("results") or [])
+    except TypeError:
+        logger.exception("results trong state sai cấu trúc, Science QA bỏ qua record")
+        records = []
+    attrs = study_attributes(state.get("evidence", []))
+    return run_science_qa(text, records, paper_to_n, attrs), attrs
 
 
 def merge_structure_issues(report: dict[str, Any] | None, blocking: list[str], warnings: list[str]) -> dict[str, Any] | None:

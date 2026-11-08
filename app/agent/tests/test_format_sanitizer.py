@@ -2,6 +2,7 @@ import pytest
 from app.agent.format_sanitizer import (
     sanitize_academic_markdown,
     sanitize_author_placeholders,
+    sanitize_display_captions,
     sanitize_code_and_algorithm_blocks,
     sanitize_latex_math,
     sanitize_mermaid_block,
@@ -70,9 +71,25 @@ Input: Pre-trained Model M
 
 def test_sanitize_author_placeholders():
     raw_text = "**Authors:** [Author Names] | **Affiliations:** [Institutional Affiliation]"
-    cleaned = sanitize_author_placeholders(raw_text)
-    assert "**Authors:** PaperAI Automated Research Protocol" in cleaned
-    assert "**Affiliations:** Open-Source Automated Science Initiative" in cleaned
+    assert sanitize_author_placeholders(raw_text + "\n\n## Abstract") == "\n## Abstract"
+    legacy = "# T\n\n**Authors:** PaperAI Automated Research Protocol | **Affiliations:** Open-Source Automated Science Initiative\n\n## Abstract"
+    assert "PaperAI" not in sanitize_author_placeholders(legacy) and "Science Initiative" not in sanitize_author_placeholders(legacy)
+    real = "**Authors:** Jane Doe | **Affiliations:** Hanoi University\n"
+    assert sanitize_author_placeholders(real) == real
+
+
+def test_sanitize_display_captions_drops_duplicate_figure_caption():
+    text = (
+        "Para.\n\n**Figure 4: Segmentation result [1].**\n\n"
+        '```image\n{"ref": "F1", "caption": "Triple cascaded framework [1]."}\n```\n\n'
+        "**Figure 5: Effect of fusion [1].**\n\n"
+        '```chart\n{"type": "bar", "labels": ["ET"], "series": []}\n```\n\n'
+        "**Figure 6: Pipeline**\n\n```mermaid\ngraph TD\nA-->B\n```\n"
+    )
+    out = sanitize_display_captions(text)
+    assert "**Figure 4" not in out and '"caption": "Triple cascaded framework [1]."' in out
+    assert "**Figure 5" not in out and '"caption": "Effect of fusion [1]."' in out
+    assert "**Figure 6: Pipeline**" in out  # mermaid không có caption riêng: giữ
 
 
 def test_sanitize_academic_markdown_full():
@@ -92,7 +109,7 @@ graph TD
 ```
 """
     cleaned = sanitize_academic_markdown(full_text)
-    assert "PaperAI Automated Research Protocol" in cleaned
+    assert "PaperAI Automated Research Protocol" not in cleaned and "[Author Names]" not in cleaned
     assert "$$\nx = y + z\n$$" in cleaned
     assert "```python\nx = 1" in cleaned
     assert 'A["Test<br/>Node"]' in cleaned

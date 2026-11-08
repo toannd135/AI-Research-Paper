@@ -70,20 +70,28 @@ uvicorn app.main:app --port 8000
 source venv/bin/activate
 export UPLOAD_DIR=data/papers_brain EXTERNAL_SEARCH_ENABLED=false CONTEXT_TOKEN_LIMIT=22000
 # export EMBEDDING_DEVICE=cuda   # tùy chọn: embedding/rerank trên GPU (mặc định tự dò, lùi về CPU)
-celery -A app.workers.celery_app worker -Q research_queue -c 1 -l info
+celery -A app.workers.celery_app worker -Q upload_queue,research_queue -c 1 -l info
 ```
+`upload_queue` nạp PDF mới (paper `pending` → `done`); bỏ queue này thì paper mới thêm không vào Qdrant và không được cite.
+Kiểm tra trước khi gửi task: `docker exec paperai_bt-postgres-1 psql -U paperai -d paperai -tAc "select status,count(*) from papers group by status"` phải là `done|55`.
 Thấy dòng `ready` là sẵn sàng. Log `Trích xuất lô N/M` cho biết tiến độ trích xuất số liệu (không có timeout, chạy đủ mọi lô).
 
 ### Terminal 3 — Gửi task và theo dõi
 ```bash
 set -a; . ./.env; set +a
 cat > /tmp/req.json <<'JSON'
-{"question":"Deep Learning-Based Brain Tumor Segmentation with Multi-Modal MRI: Fusion Strategies and Missing-Modality Robustness","audience":"lecturer","field":"computer_vision","contribution_type":"survey",
+{"question":"How do deep learning methods perform multimodal fusion of T1, T1ce, T2, and FLAIR MRI for BraTS glioma segmentation, and how effectively do these methods maintain segmentation performance under single- and multiple-missing-modality scenarios? What are the trade-offs among fusion strategies in terms of segmentation accuracy, modality robustness, computational efficiency, and clinical reliability?",
+ "audience":"lecturer","field":"computer_vision","contribution_type":"survey",
+ "target_venue":"Journal paper (8-12 pages)",
  "clarification_answers":{
-  "What is the primary goal or output of this research report?":"Comprehensive literature review/survey paper",
-  "Which specific tumor types or segmentation tasks are in scope?":"Glioma (whole tumor, core, enhancing core) per BraTS",
-  "Which MRI modalities and preprocessing aspects should be emphasized?":"Standard 4-modality (T1, T1ce, T2, FLAIR) + fusion strategies; missing modality robustness",
-  "What is the intended audience and approximate length of the final report?":"Journal paper (8-12 pages, technical depth)"}}
+  "What is the primary goal or output of this research report?":"A critical literature survey comparing multimodal MRI fusion strategies and missing-modality learning methods for BraTS glioma segmentation. Synthesize reported experimental evidence, identify methodological limitations, compare competing approaches, and derive evidence-supported research gaps. Use reported results from original studies only; do not invent, estimate, or infer missing numerical results. Describe the review scope accurately as a survey of the provided corpus; do not call it a systematic review unless a database search and screening were actually performed.",
+  "Which specific tumor types or segmentation tasks are in scope?":"Glioma segmentation using the BraTS benchmark, focusing on whole tumor (WT), tumor core (TC), and enhancing tumor (ET).",
+  "Which MRI modalities and preprocessing aspects should be emphasized?":"The four standard BraTS MRI modalities: T1, T1ce (T1c), T2, and FLAIR. Emphasize multimodal fusion strategies, including early fusion, late fusion, hybrid fusion, attention-based fusion, modality-specific encoders, and adaptive fusion. Discuss preprocessing and data harmonization only when supported by the reviewed studies.",
+  "Which missing-modality scenarios and methodological families should be analyzed?":"Analyze single-modality and multiple-modality missing scenarios. Examine modality dropout, modality-specific encoding, shared latent representations, knowledge distillation, modality synthesis or reconstruction, and adaptive missing-modality-aware fusion. Distinguish methods evaluated on arbitrary modality subsets from methods evaluated only on predefined missing-modality scenarios. Do not assume that every method supports all possible modality combinations or that every family has BraTS evidence in the corpus.",
+  "How should reported experimental results be compared?":"Use only numerical results explicitly reported in original papers. Record BraTS edition, dataset, evaluation split, validation or test setting, segmentation metrics, missing-modality configuration, and reported uncertainty where available. Distinguish full-modality performance from missing-modality performance. Do not directly rank or quantitatively compare studies with incompatible datasets or evaluation protocols. Preserve original Dice scales and units (ratio vs percentage) and mark unavailable information as NR.",
+  "Which analytical dimensions should guide the comparison?":"Compare methods across four dimensions: segmentation performance, robustness to missing modalities, computational efficiency, and clinical reliability. Discuss computational cost only when supported by reported parameters, FLOPs, memory usage, inference time, or other explicit measurements. Discuss clinical reliability in terms of external validation, uncertainty estimation, calibration, and failure detection when evidence is available.",
+  "What are the expected scientific contributions of the survey?":"Develop an evidence-based analytical framework that connects fusion mechanisms, missing-modality handling strategies, and evaluation protocols. Compare strengths and limitations of existing approaches, identify gaps in experimental evaluation, and formulate specific future research directions. Keep three kinds of content separate: findings supported by the original papers, evidence gaps where the corpus lacks data, and research proposals by the authors.",
+  "What is the intended audience and approximate length of the final report?":"Researchers in medical image analysis, computer vision, and biomedical engineering. Target an 8-12 page journal manuscript with sufficient technical depth, critical comparison, concise evidence tables, and a clearly stated review methodology; length must not limit the analysis."}}
 JSON
 TOKEN=$(curl -s localhost:8000/auth/login -H 'content-type: application/json' \
   -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" | jq -r '.access_token // .token')
@@ -94,6 +102,11 @@ curl -s localhost:8000/research/ -H "authorization: Bearer $TOKEN" \
 docker exec paperai_bt-postgres-1 psql -U paperai -d paperai -tAc \
   "select id,status,length(coalesce(report,'')) from research_tasks"
 ```
+Yêu cầu hợp lệ theo `ResearchRequest` (`app/core/schemas.py`): `question` là câu hỏi nghiên cứu hoàn chỉnh (không phải tiêu đề);
+`clarification_answers` đã đủ nên API không trả lại `needs_clarification`. Đổi đề tài thì sửa cả các câu trả lời cho khớp.
+`audience` chỉ nhận `lecturer|student|professional`; `lecturer` là giá trị gần "researcher" nhất, phần đối tượng nghiên cứu nằm ở câu trả lời cuối.
+Yêu cầu chỉ định hướng nội dung; tính mới Q1/Q2 vẫn phải đối chiếu với các survey đã xuất bản.
+
 Khi `status = done`: kết quả kiểm chứng ở `data/papers_brain/validation/<task_id>.json`; xuất PDF bằng
 `curl -s -H "authorization: Bearer $TOKEN" "localhost:8000/research/<task_id>/pdf?draft=true" -o survey.pdf`.
 

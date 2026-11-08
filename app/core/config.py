@@ -87,6 +87,8 @@ class Settings(BaseSettings):
     reference_external_verify: bool = False
     # Chế độ chỉ-nội-bộ: số chunk tối đa mỗi paper đưa vào evidence, để context phủ được nhiều bài.
     local_max_chunks_per_paper: int = 2
+    # Kho nội bộ có ≤ N paper thì BẮT BUỘC mọi paper có evidence và được bài cite (survey phủ trọn kho). 0 = tắt.
+    full_corpus_coverage_limit: int = 80
 
     # --- PDF export ---
     mermaid_ink_enabled: bool = True

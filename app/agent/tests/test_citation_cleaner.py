@@ -49,6 +49,8 @@ def test_clean_and_deduplicate_citations():
 def test_collapse_duplicate_citations_in_text():
     assert collapse_duplicate_citations("as shown in [1], [1] and [2][2], [3], [1].") == "as shown in [1] and [2], [3], [1]."
     assert collapse_duplicate_citations("only [1] and [2].") == "only [1] and [2]."
+    assert collapse_duplicate_citations("| Evaluation | 2012–2021 | [1]–[1] |") == "| Evaluation | 2012–2021 | [1] |"
+    assert collapse_duplicate_citations("see [1]–[14] and [3]-[3]") == "see [1]–[14] and [3]"
 
 
 def test_collapse_keeps_code_blocks_but_fixes_table_cells():

@@ -77,6 +77,21 @@ def delete_paper(paper_id: str, collection: str | None = None) -> None:
     invalidate(paper_id)
 
 
+def list_paper_ids(collection: str | None = None) -> set[str]:
+    """Mọi paper_id đang có vector trong collection (duyệt payload, không tải vector)."""
+    client = get_client()
+    name = collection or get_settings().qdrant_collection
+    if not client.collection_exists(name):
+        return set()
+    ids: set[str] = set()
+    offset = None
+    while True:
+        points, offset = client.scroll(collection_name=name, limit=512, offset=offset, with_payload=["paper_id"], with_vectors=False)
+        ids.update(str(p.payload["paper_id"]) for p in points if p.payload and p.payload.get("paper_id"))
+        if offset is None:
+            return ids
+
+
 def search(
     query_vector: list[float],
     top_k: int = 10,

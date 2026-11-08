@@ -194,6 +194,11 @@ def test_large_diagram_and_long_table_fit_pdf(tmp_path):
     {"type": "histogram", "series": [{"name": "d", "samples": [1, 2, 2, 3, 5]}], "bins": 4},
     {"type": "boxplot", "series": [{"name": "a", "samples": [1, 2, 3, 9]}, {"name": "b", "samples": [2, 3, 4]}]},
     {"type": "heatmap", "x_labels": ["0.1", "0.2"], "y_labels": ["16", "32"], "matrix": [[0.8, 0.82], [0.85, "0.9"]]},
+    {"type": "heatmap", "x_labels": ["M1", "M2"], "y_labels": ["T1", "T2"], "matrix": [[-3.2, None], [1.5, "NR"]]},
+    {"type": "dot", "labels": ["A", "B", "C"], "series": [{"name": "WT", "values": [90, None, 85]}, {"name": "ET", "values": [80, 78, 76]}]},
+    {"type": "dumbbell", "labels": ["WT", "TC"], "series": [{"name": "Val", "values": [90, 85]}, {"name": "Test", "values": [88, 80]}]},
+    {"type": "evidence_map", "x_labels": [f"[{i}]" for i in range(30)], "y_labels": ["Code", "External"],
+     "matrix": [["Yes", "NR", "No"] * 10, ["No (p. 2)", "Yes (p. 4)", "NR"] * 10]},
 ])
 def test_scientific_chart_types_render(spec):
     from app.pipeline.export.pdf_renderer import _render_chart_svg
@@ -240,3 +245,30 @@ def test_padded_inline_math_is_tightened_but_currency_is_kept():
     assert sanitize_padded_inline_math(money) == money
     prose = "Prose keeps $ x $ untouched"
     assert sanitize_padded_inline_math(prose) == prose
+
+
+def test_dumbbell_requires_two_series():
+    from app.pipeline.export.pdf_renderer import _render_chart_svg
+
+    with pytest.raises(ValueError):
+        _render_chart_svg({"type": "dumbbell", "labels": ["WT"], "series": [{"name": "a", "values": [1]}]})
+
+
+def test_single_column_figure_stays_in_one_column(browser):
+    chart = {"type": "bar", "caption": "Dice [1]", "labels": ["WT", "TC", "ET"], "series": [{"name": "Dice", "values": [90, 85, 80]}]}
+    wide = {"type": "heatmap", "caption": "Many [1]", "x_labels": [f"M{i}" for i in range(8)], "y_labels": ["A", "B"],
+            "matrix": [[float(i) for i in range(8)], [float(i) for i in range(8)]]}
+    report = "# Layout\n\n## 1. Introduction\n\n" + "Research paragraph with evidence. " * 60
+    report += f"\n\n```chart\n{json.dumps(chart)}\n```\n\n" + "More text. " * 60
+    report += f"\n\n```chart\n{json.dumps(wide)}\n```\n"
+    page = browser.new_page()
+    try:
+        assert not prepare_report_page(page, report_to_html(report, columns=2))
+        body = page.locator(".paper-body").bounding_box()["width"]
+        narrow, full = page.locator("figure.fig.chart").all()
+        assert "wide" not in (narrow.get_attribute("class") or "")
+        assert narrow.bounding_box()["width"] <= body * 0.55  # nằm trong một cột, không chiếm cả trang
+        assert "wide" in (full.get_attribute("class") or "")
+        assert full.bounding_box()["width"] >= body * 0.95
+    finally:
+        page.close()

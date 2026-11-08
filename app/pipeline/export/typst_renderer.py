@@ -24,6 +24,7 @@ from typing import Any
 
 import typst
 
+from app.pipeline.export.figure_layout import WIDE, chart_span, mermaid_span
 from app.pipeline.figures import resolve_figure_path
 
 logger = logging.getLogger(__name__)
@@ -574,7 +575,8 @@ def markdown_to_typst(
             raw_caption = spec.get("caption") or spec.get("title") or f"Evaluation Metric Plot"
             clean_caption = re.sub(r"^(?:Figure|Fig\.|Biểu đồ)\s*\d+[:\.]?\s*", "", str(raw_caption).strip(), flags=re.IGNORECASE)
             clean_caption = _escape_typst_references(clean_caption)
-            return save_block(f'#figure(\n  image("{svg_name}", width: 100%),\n  caption: [{clean_caption}]\n)')
+            place = 'placement: auto, scope: "parent", ' if chart_span(spec) == WIDE else ""  # mặc định một cột
+            return save_block(f'#figure({place}\n  image("{svg_name}", width: 100%),\n  caption: [{clean_caption}]\n)')
         except Exception as e:
             raise ValueError(f"Không render được biểu đồ: {e}") from e
     body_md = re.sub(r"```chart[ \t]*\n(.*?)```", repl_chart, body_md, flags=re.DOTALL)
@@ -609,7 +611,8 @@ def markdown_to_typst(
         svg_path = work_dir / svg_name
         render_mermaid_to_svg(code, svg_path)
         caption = _escape_typst_references(_format_table_inline((m.group(1) or "").strip()))
-        return save_block(f'#figure(\n  image("{svg_name}", width: 100%),\n  caption: [{caption}]\n)')
+        place = 'placement: auto, scope: "parent", ' if mermaid_span(code) == WIDE else ""
+        return save_block(f'#figure({place}\n  image("{svg_name}", width: 100%),\n  caption: [{caption}]\n)')
     body_md = re.sub(
         r"(?:^[ \t]*\*\*(?:Figure|Fig\.|Hình)\s*\d+\s*[:.]\s*([^\n]*?)\*\*[ \t]*\n+)?```mermaid[ \t]*\n(.*?)```",
         repl_mermaid, body_md, flags=re.DOTALL | re.MULTILINE,
