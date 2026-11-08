@@ -46,6 +46,20 @@ def _item(**kw):
     return base | kw
 
 
+# ---- P1 (deepfake: AUC/EER, không có region)
+def test_extract_deepfake_metrics_without_region_and_eer_is_lower_better():
+    from app.agent.evidence.stats import lower_is_better
+
+    ev = [_chunk("pD", 6, "Table 3. Cross-dataset on Celeb-DF. Ours AUC 96.4 EER 8.7 acc 91.2")]
+    items = [
+        _item(paper_id="pD", dataset="Celeb-DF", dataset_version=None, split=None, region=None, metric="AUC", value="96.4", table="Table 3"),
+        _item(paper_id="pD", dataset="Celeb-DF", dataset_version=None, split=None, region=None, metric="EER", value="8.7", table="Table 3"),
+    ]
+    recs = extract_results(ev, _GW(items))
+    assert [(r.metric, r.region, r.value) for r in recs] == [("AUC", None, 96.4), ("EER", None, 8.7)]
+    assert lower_is_better("EER") and not lower_is_better("AUC")
+
+
 # ---- P1
 def test_extract_keeps_only_values_verbatim_in_source_and_nulls_unseen_fields():
     items = [

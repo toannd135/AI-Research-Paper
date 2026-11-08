@@ -23,14 +23,20 @@ BATCH_SIZE = 3  # số paper mỗi lần gọi LLM (lô nhỏ → ít bị timeo
 MAX_CHUNKS_PER_PAPER = 4
 MAX_ATTEMPTS = 3  # thử lại khi LLM lỗi; KHÔNG đặt timeout/ngân sách thời gian: phải chạy đủ mọi lô
 MAX_CHARS_PER_CHUNK = 1800
-_KEY_RE = re.compile(r"\b(dice|hd95|hausdorff|iou|params?|parameters|gflops|flops|inference|latency)\b", re.I)
+_KEY_RE = re.compile(
+    r"\b(dice|hd95|hausdorff|iou|params?|parameters|gflops|flops|inference|latency"
+    r"|auc|auroc|eer|acc|accuracy|f1|average precision)\b",
+    re.I,
+)
 _NUM_RE = re.compile(r"\d+(?:\.\d+)?")
 _REGIONS = {"wt": "WT", "tc": "TC", "et": "ET", "whole tumor": "WT", "tumor core": "TC", "enhancing tumor": "ET", "avg": "AVG", "average": "AVG", "mean": "AVG"}
 
 _PROMPT = (
     "Extract quantitative results from the passages. Return ONLY a JSON list; each item: "
     '{"paper_id","model","dataset","dataset_version","split","region","metric","value","unit","variant","modality","table"}. '
-    "metric is one of Dice, HD95, Params, GFLOPs, InferenceTime, IoU. region is WT/TC/ET/AVG or null. unit is ratio|percent|mm|M|G|ms. "
+    "metric is one of Dice, HD95, IoU, AUC, EER, ACC, F1, AP, Params, GFLOPs, InferenceTime. region is WT/TC/ET/AVG or null "
+    "(null for non-segmentation metrics). unit is ratio|percent|mm|M|G|ms. "
+    "For detection tasks, put the evaluation setting (e.g. 'cross-dataset', 'in-domain', 'frame-level') in split only if printed. "
     "value must be the number EXACTLY as printed in the passage. Use null for any field the passage does not state; "
     "never guess, convert or compute. variant = ablation variant name (e.g. 'w/o X') or null for the full model. "
     "If there are no numeric results, return []."

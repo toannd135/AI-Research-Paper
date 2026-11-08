@@ -95,3 +95,6 @@ DOI đúng nhưng title sai · citation không hỗ trợ claim · Dice WT gán 
 | 7 | Doc + handoff | `docs/architecture.md`, `docs/handoff/` | đối chiếu thủ công |
 
 Rủi ro: ép RQ bằng regex có thể ghi đè sai nếu số dòng RQ khác chuẩn -> chỉ ép khi số RQ khớp, ngược lại để nguyên và gate báo lỗi. Không bịa số để lấp ma trận.
+
+### Mở rộng extractor cho metric phát hiện deepfake (2026-11-08)
+- `evidence/extractor.py`: `_KEY_RE` + prompt thêm AUC/EER/ACC/F1/AP (region = null); `evidence/stats.py`: EER là "thấp hơn là tốt". Ma trận missing-modality vẫn chỉ cho MRI (không đổi). Kiểm chứng: `pytest app/agent/tests/test_evidence_pipeline.py` (thêm test deepfake).

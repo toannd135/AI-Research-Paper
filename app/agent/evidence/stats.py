@@ -6,7 +6,7 @@ import math
 from typing import Any
 
 ALPHA = 0.05
-_LOWER_IS_BETTER = ("hd95", "hausdorff", "latency", "loss", "error", "time", "cost", "rmse", "mae", "mse", "fid", "lpips", "memory", "flops", "params", "overhead", "fpr")
+_LOWER_IS_BETTER = ("hd95", "hausdorff", "latency", "loss", "error", "time", "cost", "rmse", "mae", "mse", "fid", "lpips", "memory", "flops", "params", "overhead", "fpr", "eer")
 
 
 def lower_is_better(metric: str | None) -> bool:
