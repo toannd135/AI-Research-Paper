@@ -1,0 +1,11 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Fig. 1. Overview of the proposed mmFormer, which is composed of four hybrid modality-speciﬁc encoders, a modality-correlated encoder, and a convolutional decoder. Meanwhile, auxiliary regularizers are introduced in both encoder and decoder. The skip connections between the convolutional encoder and decoder are hidden for clear display.",
+  "kind": "vector",
+  "width": 720,
+  "height": 514,
+  "source_title": "5695a1e0-d789-5bbf-86b2-a99973fd53b5.pdf"
+ }
+]

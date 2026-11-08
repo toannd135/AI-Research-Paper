@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 7,
+  "caption": "Fig. 1: Glioma sub-regions considered in the RSNA-ASNR-MICCAI BraTS 2021 challenge. Image panels with the tumor sub-regions annotated in the diﬀerent mpMRI scans. The image panels A-C denote the regions considered for the performance evaluation of the participating algorithms and speciﬁcally highlight (from left to right): the enhancing tumor (ET - yellow) visible in a T1Gd scan, surrounding the c",
+  "kind": "raster",
+  "width": 722,
+  "height": 343,
+  "source_title": "b859a356-dfc5-52ef-b123-00cb8eb55e90.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 11,
+  "caption": "Fig. 2: Common errors expected from the automatic segmentations.",
+  "kind": "raster",
+  "width": 578,
+  "height": 369,
+  "source_title": "b859a356-dfc5-52ef-b123-00cb8eb55e90.pdf"
+ }
+]

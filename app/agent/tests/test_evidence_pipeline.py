@@ -159,30 +159,31 @@ def test_external_verify_upgrades_or_conflicts_without_network():
     assert re.search("Crossref", " ".join(out["references"][2]["issues"]))
 
 
-def test_extract_skips_slow_batch_and_respects_budget(monkeypatch):
-    import time as _t
-
+def test_extract_runs_every_batch_and_retries_on_error(monkeypatch):
     from app.agent.evidence import extractor as ex
+    from app.ai.llm_gateway.base import LLMGatewayError
 
-    monkeypatch.setattr(ex, "BATCH_TIMEOUT_S", 0.2)
-
-    class _Slow:
+    class _Flaky:
         calls = 0
 
         def generate(self, messages, model_name=None):
             self.calls += 1
             if self.calls == 1:
-                _t.sleep(1.0)
+                raise LLMGatewayError("lỗi thoáng qua")
             return SimpleNamespace(text=json.dumps([_item()]), model="fake")
 
     many = [_chunk("pA" if i == 0 else f"p{i}", 5, "Dice WT 90.5 BraTS 2020 validation") for i in range(ex.BATCH_SIZE + 1)]
-    gw = _Slow()
+    gw = _Flaky()
     recs = ex.extract_results(many, gw)
-    assert gw.calls == 3 and len(recs) == 1  # lô 1 quá giờ → thử lại thành công; lô 2 vẫn chạy
-    monkeypatch.setattr(ex, "MAX_ATTEMPTS", 1)
-    gw1 = _Slow()
-    ex.extract_results(many, gw1)
-    assert gw1.calls == 2  # không retry: lô 1 bị bỏ, lô 2 vẫn chạy
-    monkeypatch.setattr(ex, "TOTAL_BUDGET_S", -1)
-    gw2 = _Slow()
-    assert ex.extract_results(many, gw2) == [] and gw2.calls == 0
+    assert gw.calls == 3 and len(recs) == 1  # lô 1 lỗi → thử lại thành công; lô 2 vẫn chạy đủ
+
+    class _AlwaysFail:
+        calls = 0
+
+        def generate(self, messages, model_name=None):
+            self.calls += 1
+            raise LLMGatewayError("hỏng")
+
+    bad = _AlwaysFail()
+    assert ex.extract_results(many, bad) == []
+    assert bad.calls == 2 * ex.MAX_ATTEMPTS  # mọi lô đều được thử đủ số lần, không dừng giữa chừng

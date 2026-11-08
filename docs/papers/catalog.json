@@ -1,0 +1,250 @@
+{
+  "5695a1e0-d789-5bbf-86b2-a99973fd53b5": {
+    "title": "mmFormer: Multimodal Medical Transformer for Incomplete Multimodal Learning of Brain Tumor Segmentation",
+    "authors": "Yao Zhang, Nanjun He, Jiawei Yang, Yuexiang Li, Dong Wei, Yawen Huang, Yang Zhang, Zhiqiang He, Yefeng Zheng",
+    "year": "2022",
+    "venue": "arXiv:2206.02425",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2206.02425"
+  },
+  "ec18533d-52b1-5c32-b395-a74c3c070396": {
+    "title": "TransBTS: Multimodal Brain Tumor Segmentation Using Transformer",
+    "authors": "Wenxuan Wang, Chen Chen, Meng Ding, Jiangyun Li, Hong Yu, Sen Zha",
+    "year": "2021",
+    "venue": "arXiv:2103.04430",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2103.04430"
+  },
+  "12e0ab26-e069-5048-8e24-fbea34dd3c10": {
+    "title": "Attention U-Net: Learning Where to Look for the Pancreas",
+    "authors": "Ozan Oktay, Jo Schlemper, Loic Le Folgoc, Matthew Lee, Mattias Heinrich, Kazunari Misawa, Kensaku Mori, Steven McDonagh, Nils Y Hammerla, Bernhard Kainz, Ben Glocker, Daniel Rueckert",
+    "year": "2018",
+    "venue": "arXiv:1804.03999",
+    "doi": "",
+    "url": "https://arxiv.org/abs/1804.03999"
+  },
+  "1bfead36-f4cc-58f3-9eb9-ae619c74772d": {
+    "title": "Robust Multimodal Brain Tumor Segmentation via Feature Disentanglement and Gated Fusion",
+    "authors": "Cheng Chen, Qi Dou, Yueming Jin, Hao Chen, Jing Qin, Pheng-Ann Heng",
+    "year": "2020",
+    "venue": "arXiv:2002.09708",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2002.09708"
+  },
+  "b5895376-8243-58fb-b03e-fc9ffd10e765": {
+    "title": "Brain tumor segmentation with missing modalities via latent multi-source correlation representation",
+    "authors": "Tongxue Zhou, Stéphane Canu, Pierre Vera, Su Ruan",
+    "year": "2020",
+    "venue": "MICCAI 2020 pp. 533-541",
+    "doi": "10.1007/978-3-030-59719-1_52",
+    "url": "https://arxiv.org/abs/2003.08870"
+  },
+  "7153f889-932f-5704-b2d2-1e5d4c9e2904": {
+    "title": "nnU-Net: Self-adapting Framework for U-Net-Based Medical Image Segmentation",
+    "authors": "Fabian Isensee, Jens Petersen, Andre Klein, David Zimmerer, Paul F. Jaeger, Simon Kohl, Jakob Wasserthal, Gregor Koehler, Tobias Norajitra, Sebastian Wirkert, Klaus H. Maier-Hein",
+    "year": "2018",
+    "venue": "arXiv:1809.10486",
+    "doi": "",
+    "url": "https://arxiv.org/abs/1809.10486"
+  },
+  "751375f1-c9aa-5463-afc4-7eead39473b7": {
+    "title": "Missing MRI Pulse Sequence Synthesis using Multi-Modal Generative Adversarial Network",
+    "authors": "Anmol Sharma, Ghassan Hamarneh",
+    "year": "2019",
+    "venue": "arXiv:1904.12200",
+    "doi": "",
+    "url": "https://arxiv.org/abs/1904.12200"
+  },
+  "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5": {
+    "title": "Swin UNETR: Swin Transformers for Semantic Segmentation of Brain Tumors in MRI Images",
+    "authors": "Ali Hatamizadeh, Vishwesh Nath, Yucheng Tang, Dong Yang, Holger Roth, Daguang Xu",
+    "year": "2022",
+    "venue": "arXiv:2201.01266",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2201.01266"
+  },
+  "51ab6624-90c8-5904-bcce-21e1fc2f6e0e": {
+    "title": "HeMIS: Hetero-Modal Image Segmentation",
+    "authors": "Mohammad Havaei, Nicolas Guizard, Nicolas Chapados, Yoshua Bengio",
+    "year": "2016",
+    "venue": "arXiv:1607.05194",
+    "doi": "",
+    "url": "https://arxiv.org/abs/1607.05194"
+  },
+  "9ff4701d-dc59-533b-8f81-662b422aa407": {
+    "title": "3D U-Net: Learning Dense Volumetric Segmentation from Sparse Annotation",
+    "authors": "Özgün Çiçek, Ahmed Abdulkadir, Soeren S. Lienkamp, Thomas Brox, Olaf Ronneberger",
+    "year": "2016",
+    "venue": "arXiv:1606.06650",
+    "doi": "",
+    "url": "https://arxiv.org/abs/1606.06650"
+  },
+  "1e3809fd-f5bc-5bb8-a2ca-31c045126404": {
+    "title": "UNet++: A Nested U-Net Architecture for Medical Image Segmentation",
+    "authors": "Zongwei Zhou, Md Mahfuzur Rahman Siddiquee, Nima Tajbakhsh, Jianming Liang",
+    "year": "2018",
+    "venue": "arXiv:1807.10165",
+    "doi": "",
+    "url": "https://arxiv.org/abs/1807.10165"
+  },
+  "6a620f46-3d57-5e17-8f19-3403ff11f91f": {
+    "title": "SMU-Net: Style matching U-Net for brain tumor segmentation with missing modalities",
+    "authors": "Reza Azad, Nika Khosravi, Dorit Merhof",
+    "year": "2022",
+    "venue": "arXiv:2204.02961",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2204.02961"
+  },
+  "846a4576-9186-5828-b5f1-f62cc4417c97": {
+    "title": "Brain Tumor Segmentation on MRI with Missing Modalities",
+    "authors": "Yan Shen, Mingchen Gao",
+    "year": "2019",
+    "venue": "arXiv:1904.07290",
+    "doi": "",
+    "url": "https://arxiv.org/abs/1904.07290"
+  },
+  "af9e8061-7ae7-5701-8d22-55ee60f2bd08": {
+    "title": "M3AE: Multimodal Representation Learning for Brain Tumor Segmentation with Missing Modalities",
+    "authors": "Hong Liu, Dong Wei, Donghuan Lu, Jinghan Sun, Liansheng Wang, Yefeng Zheng",
+    "year": "2023",
+    "venue": "AAAI 2023",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2303.05302"
+  },
+  "4cce1762-0486-55fa-ad6c-de87810a4e5d": {
+    "title": "Identifying the Best Machine Learning Algorithms for Brain Tumor Segmentation, Progression Assessment, and Overall Survival Prediction in the BRATS Challenge",
+    "authors": "Spyridon Bakas, Mauricio Reyes, Andras Jakab, Stefan Bauer, Markus Rempfler, Alessandro Crimi, Russell Takeshi Shinohara, Christoph Berger, Sung Min Ha, Martin Rozycki, Marcel Prastawa, Esther Alberts, Jana Lipkova, John Freymann, Justin Kirby, Michel Bilello, Hassan Fathallah-Shaykh, Roland Wiest, Jan Kirschke, Benedikt Wiestler, Rivka Colen, Aikaterini Kotrotsou, Pamela Lamontagne, Daniel Marcus, Mikhail Milchenko, Arash Nazeri, Marc-Andre Weber, Abhishek Mahajan, Ujjwal Baid, Elizabeth Gerstner, Dongjin Kwon, Gagan Acharya, Manu Agarwal, Mahbubul Alam, Alberto Albiol, Antonio Albiol, Francisco J. Albiol, Varghese Alex, Nigel Allinson, Pedro H. A. Amorim, Abhijit Amrutkar, Ganesh Anand, Simon Andermatt, Tal Arbel, Pablo Arbelaez, Aaron Avery, Muneeza Azmat, Pranjal B., W Bai, Subhashis Banerjee, Bill Barth, Thomas Batchelder, Kayhan Batmanghelich, Enzo Battistella, Andrew Beers, Mikhail Belyaev, Martin Bendszus, Eze Benson, Jose Bernal, Halandur Nagaraja Bharath, George Biros, Sotirios Bisdas, James Brown, Mariano Cabezas, Shilei Cao, Jorge M. Cardoso, Eric N Carver, Adrià Casamitjana, Laura Silvana Castillo, Marcel Catà, Philippe Cattin, Albert Cerigues, Vinicius S. Chagas, Siddhartha Chandra, Yi-Ju Chang, Shiyu Chang, Ken Chang, Joseph Chazalon, Shengcong Chen, Wei Chen, Jefferson W Chen, Zhaolin Chen, Kun Cheng, Ahana Roy Choudhury, Roger Chylla, Albert Clérigues, Steven Colleman, Ramiro German Rodriguez Colmeiro, Marc Combalia, Anthony Costa, Xiaomeng Cui, Zhenzhen Dai, Lutao Dai, Laura Alexandra Daza, Eric Deutsch, Changxing Ding, Chao Dong, Shidu Dong, Wojciech Dudzik, Zach Eaton-Rosen, Gary Egan, Guilherme Escudero, Théo Estienne, Richard Everson, Jonathan Fabrizio, Yong Fan, Longwei Fang, Xue Feng, Enzo Ferrante, Lucas Fidon, Martin Fischer, Andrew P. French, Naomi Fridman, Huan Fu, David Fuentes, Yaozong Gao, Evan Gates, David Gering, Amir Gholami, Willi Gierke, Ben Glocker, Mingming Gong, Sandra González-Villá, T. Grosges, Yuanfang Guan, Sheng Guo, Sudeep Gupta, Woo-Sup Han, Il Song Han, Konstantin Harmuth, Huiguang He, Aura Hernández-Sabaté, Evelyn Herrmann, Naveen Himthani, Winston Hsu, Cheyu Hsu, Xiaojun Hu, Xiaobin Hu, Yan Hu, Yifan Hu, Rui Hua, Teng-Yi Huang, Weilin Huang, Sabine Van Huffel, Quan Huo, Vivek HV, Khan M. Iftekharuddin, Fabian Isensee, Mobarakol Islam, Aaron S. Jackson, Sachin R. Jambawalikar, Andrew Jesson, Weijian Jian, Peter Jin, V Jeya Maria Jose, Alain Jungo, B Kainz, Konstantinos Kamnitsas, Po-Yu Kao, Ayush Karnawat, Thomas Kellermeier, Adel Kermi, Kurt Keutzer, Mohamed Tarek Khadir, Mahendra Khened, Philipp Kickingereder, Geena Kim, Nik King, Haley Knapp, Urspeter Knecht, Lisa Kohli, Deren Kong, Xiangmao Kong, Simon Koppers, Avinash Kori, Ganapathy Krishnamurthi, Egor Krivov, Piyush Kumar, Kaisar Kushibar, Dmitrii Lachinov, Tryphon Lambrou, Joon Lee, Chengen Lee, Yuehchou Lee, M Lee, Szidonia Lefkovits, Laszlo Lefkovits, James Levitt, Tengfei Li, Hongwei Li, Wenqi Li, Hongyang Li, Xiaochuan Li, Yuexiang Li, Heng Li, Zhenye Li, Xiaoyu Li, Zeju Li, XiaoGang Li, Wenqi Li, Zheng-Shen Lin, Fengming Lin, Pietro Lio, Chang Liu, Boqiang Liu, Xiang Liu, Mingyuan Liu, Ju Liu, Luyan Liu, Xavier Llado, Marc Moreno Lopez, Pablo Ribalta Lorenzo, Zhentai Lu, Lin Luo, Zhigang Luo, Jun Ma, Kai Ma, Thomas Mackie, Anant Madabushi, Issam Mahmoudi, Klaus H. Maier-Hein, Pradipta Maji, CP Mammen, Andreas Mang, B. S. Manjunath, Michal Marcinkiewicz, S McDonagh, Stephen McKenna, Richard McKinley, Miriam Mehl, Sachin Mehta, Raghav Mehta, Raphael Meier, Christoph Meinel, Dorit Merhof, Craig Meyer, Robert Miller, Sushmita Mitra, Aliasgar Moiyadi, David Molina-Garcia, Miguel A. B. Monteiro, Grzegorz Mrukwa, Andriy Myronenko, Jakub Nalepa, Thuyen Ngo, Dong Nie, Holly Ning, Chen Niu, Nicholas K Nuechterlein, Eric Oermann, Arlindo Oliveira, Diego D. C. Oliveira, Arnau Oliver, Alexander F. I. Osman, Yu-Nian Ou, Sebastien Ourselin, Nikos Paragios, Moo Sung Park, Brad Paschke, J. Gregory Pauloski, Kamlesh Pawar, Nick Pawlowski, Linmin Pei, Suting Peng, Silvio M. Pereira, Julian Perez-Beteta, Victor M. Perez-Garcia, Simon Pezold, Bao Pham, Ashish Phophalia, Gemma Piella, G. N. Pillai, Marie Piraud, Maxim Pisov, Anmol Popli, Michael P. Pound, Reza Pourreza, Prateek Prasanna, Vesna Prkovska, Tony P. Pridmore, Santi Puch, Élodie Puybareau, Buyue Qian, Xu Qiao, Martin Rajchl, Swapnil Rane, Michael Rebsamen, Hongliang Ren, Xuhua Ren, Karthik Revanuru, Mina Rezaei, Oliver Rippel, Luis Carlos Rivera, Charlotte Robert, Bruce Rosen, Daniel Rueckert, Mohammed Safwan, Mostafa Salem, Joaquim Salvi, Irina Sanchez, Irina Sánchez, Heitor M. Santos, Emmett Sartor, Dawid Schellingerhout, Klaudius Scheufele, Matthew R. Scott, Artur A. Scussel, Sara Sedlar, Juan Pablo Serrano-Rubio, N. Jon Shah, Nameetha Shah, Mazhar Shaikh, B. Uma Shankar, Zeina Shboul, Haipeng Shen, Dinggang Shen, Linlin Shen, Haocheng Shen, Varun Shenoy, Feng Shi, Hyung Eun Shin, Hai Shu, Diana Sima, M Sinclair, Orjan Smedby, James M. Snyder, Mohammadreza Soltaninejad, Guidong Song, Mehul Soni, Jean Stawiaski, Shashank Subramanian, Li Sun, Roger Sun, Jiawei Sun, Kay Sun, Yu Sun, Guoxia Sun, Shuang Sun, Yannick R Suter, Laszlo Szilagyi, Sanjay Talbar, Dacheng Tao, Dacheng Tao, Zhongzhao Teng, Siddhesh Thakur, Meenakshi H Thakur, Sameer Tharakan, Pallavi Tiwari, Guillaume Tochon, Tuan Tran, Yuhsiang M. Tsai, Kuan-Lun Tseng, Tran Anh Tuan, Vadim Turlapov, Nicholas Tustison, Maria Vakalopoulou, Sergi Valverde, Rami Vanguri, Evgeny Vasiliev, Jonathan Ventura, Luis Vera, Tom Vercauteren, C. A. Verrastro, Lasitha Vidyaratne, Veronica Vilaplana, Ajeet Vivekanandan, Guotai Wang, Qian Wang, Chiatse J. Wang, Weichung Wang, Duo Wang, Ruixuan Wang, Yuanyuan Wang, Chunliang Wang, Guotai Wang, Ning Wen, Xin Wen, Leon Weninger, Wolfgang Wick, Shaocheng Wu, Qiang Wu, Yihong Wu, Yong Xia, Yanwu Xu, Xiaowen Xu, Peiyuan Xu, Tsai-Ling Yang, Xiaoping Yang, Hao-Yu Yang, Junlin Yang, Haojin Yang, Guang Yang, Hongdou Yao, Xujiong Ye, Changchang Yin, Brett Young-Moxon, Jinhua Yu, Xiangyu Yue, Songtao Zhang, Angela Zhang, Kun Zhang, Xuejie Zhang, Lichi Zhang, Xiaoyue Zhang, Yazhuo Zhang, Lei Zhang, Jianguo Zhang, Xiang Zhang, Tianhao Zhang, Sicheng Zhao, Yu Zhao, Xiaomei Zhao, Liang Zhao, Yefeng Zheng, Liming Zhong, Chenhong Zhou, Xiaobing Zhou, Fan Zhou, Hongtu Zhu, Jin Zhu, Ying Zhuge, Weiwei Zong, Jayashree Kalpathy-Cramer, Keyvan Farahani, Christos Davatzikos, Koen van Leemput, Bjoern Menze",
+    "year": "2018",
+    "venue": "arXiv:1811.02629",
+    "doi": "",
+    "url": "https://arxiv.org/abs/1811.02629"
+  },
+  "0b3bf03d-ea46-5408-b1d6-6154a9b34fcc": {
+    "title": "Metrics reloaded: Recommendations for image analysis validation",
+    "authors": "Lena Maier-Hein, Annika Reinke, Patrick Godau, Minu D. Tizabi, Florian Buettner, Evangelia Christodoulou, Ben Glocker, Fabian Isensee, Jens Kleesiek, Michal Kozubek, Mauricio Reyes, Michael A. Riegler, Manuel Wiesenfarth, A. Emre Kavur, Carole H. Sudre, Michael Baumgartner, Matthias Eisenmann, Doreen Heckmann-Nötzel, Tim Rädsch, Laura Acion, Michela Antonelli, Tal Arbel, Spyridon Bakas, Arriel Benis, Matthew Blaschko, M. Jorge Cardoso, Veronika Cheplygina, Beth A. Cimini, Gary S. Collins, Keyvan Farahani, Luciana Ferrer, Adrian Galdran, Bram van Ginneken, Robert Haase, Daniel A. Hashimoto, Michael M. Hoffman, Merel Huisman, Pierre Jannin, Charles E. Kahn, Dagmar Kainmueller, Bernhard Kainz, Alexandros Karargyris, Alan Karthikesalingam, Hannes Kenngott, Florian Kofler, Annette Kopp-Schneider, Anna Kreshuk, Tahsin Kurc, Bennett A. Landman, Geert Litjens, Amin Madani, Klaus Maier-Hein, Anne L. Martel, Peter Mattson, Erik Meijering, Bjoern Menze, Karel G. M. Moons, Henning Müller, Brennan Nichyporuk, Felix Nickel, Jens Petersen, Nasir Rajpoot, Nicola Rieke, Julio Saez-Rodriguez, Clara I. Sánchez, Shravya Shetty, Maarten van Smeden, Ronald M. Summers, Abdel A. Taha, Aleksei Tiulpin, Sotirios A. Tsaftaris, Ben Van Calster, Gaël Varoquaux, Paul F. Jäger",
+    "year": "2022",
+    "venue": "Nature methods, 1-18 (2024)",
+    "doi": "10.1038/s41592-023-02151-z",
+    "url": "https://arxiv.org/abs/2206.01653"
+  },
+  "f7f5d237-2215-54d5-887a-06f70c5259e5": {
+    "title": "3D MRI brain tumor segmentation using autoencoder regularization",
+    "authors": "Andriy Myronenko",
+    "year": "2018",
+    "venue": "arXiv:1810.11654",
+    "doi": "",
+    "url": "https://arxiv.org/abs/1810.11654"
+  },
+  "2879ced4-852d-5bca-a2cf-350ccbfb96a2": {
+    "title": "Hetero-Modal Variational Encoder-Decoder for Joint Modality Completion and Segmentation",
+    "authors": "Reuben Dorent, Samuel Joutard, Marc Modat, Sébastien Ourselin, Tom Vercauteren",
+    "year": "2019",
+    "venue": "arXiv:1907.11150",
+    "doi": "10.1007/978-3-030-32245-8_9",
+    "url": "https://arxiv.org/abs/1907.11150"
+  },
+  "283cea40-6b7e-5a72-9502-73d4d5585276": {
+    "title": "ACN: Adversarial Co-training Network for Brain Tumor Segmentation with Missing Modalities",
+    "authors": "Yixin Wang, Yang Zhang, Yang Liu, Zihao Lin, Jiang Tian, Cheng Zhong, Zhongchao Shi, Jianping Fan, Zhiqiang He",
+    "year": "2021",
+    "venue": "arXiv:2106.14591",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2106.14591"
+  },
+  "2c7f7129-1278-579f-b95d-55854a5ab7e5": {
+    "title": "UNETR: Transformers for 3D Medical Image Segmentation",
+    "authors": "Ali Hatamizadeh, Yucheng Tang, Vishwesh Nath, Dong Yang, Andriy Myronenko, Bennett Landman, Holger Roth, Daguang Xu",
+    "year": "2021",
+    "venue": "arXiv:2103.10504",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2103.10504"
+  },
+  "bc635452-5fc5-55c9-8ccf-a9bb07ba8564": {
+    "title": "Multi-modal Learning with Missing Modality via Shared-Specific Feature Modelling",
+    "authors": "Hu Wang, Yuanhong Chen, Congbo Ma, Jodie Avery, Louise Hull, Gustavo Carneiro",
+    "year": "2023",
+    "venue": "CVPR2023",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2307.14126"
+  },
+  "07f7d522-2cc2-55e6-96ae-4d8b99cca9a2": {
+    "title": "nnU-Net for Brain Tumor Segmentation",
+    "authors": "Fabian Isensee, Paul F. Jaeger, Peter M. Full, Philipp Vollmuth, Klaus H. Maier-Hein",
+    "year": "2020",
+    "venue": "arXiv:2011.00848",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2011.00848"
+  },
+  "6ccaf6ea-14bd-5a7e-ad03-053dca5bc1bc": {
+    "title": "U-Net: Convolutional Networks for Biomedical Image Segmentation",
+    "authors": "Olaf Ronneberger, Philipp Fischer, Thomas Brox",
+    "year": "2015",
+    "venue": "arXiv:1505.04597",
+    "doi": "",
+    "url": "https://arxiv.org/abs/1505.04597"
+  },
+  "4e2e7dfc-7edc-5ffa-81d7-30a929511c91": {
+    "title": "Efficient Multi-Scale 3D CNN with Fully Connected CRF for Accurate Brain Lesion Segmentation",
+    "authors": "Konstantinos Kamnitsas, Christian Ledig, Virginia F. J. Newcombe, Joanna P. Simpson, Andrew D. Kane, David K. Menon, Daniel Rueckert, Ben Glocker",
+    "year": "2016",
+    "venue": "arXiv:1603.05959",
+    "doi": "10.1016/j.media.2016.10.004",
+    "url": "https://arxiv.org/abs/1603.05959"
+  },
+  "672322a2-af8e-5089-b0fa-87a594af23ee": {
+    "title": "V-Net: Fully Convolutional Neural Networks for Volumetric Medical Image Segmentation",
+    "authors": "Fausto Milletari, Nassir Navab, Seyed-Ahmad Ahmadi",
+    "year": "2016",
+    "venue": "arXiv:1606.04797",
+    "doi": "",
+    "url": "https://arxiv.org/abs/1606.04797"
+  },
+  "b859a356-dfc5-52ef-b123-00cb8eb55e90": {
+    "title": "The RSNA-ASNR-MICCAI BraTS 2021 Benchmark on Brain Tumor Segmentation and Radiogenomic Classification",
+    "authors": "Ujjwal Baid, Satyam Ghodasara, Suyash Mohan, Michel Bilello, Evan Calabrese, Errol Colak, Keyvan Farahani, Jayashree Kalpathy-Cramer, Felipe C. Kitamura, Sarthak Pati, Luciano M. Prevedello, Jeffrey D. Rudie, Chiharu Sako, Russell T. Shinohara, Timothy Bergquist, Rong Chai, James Eddy, Julia Elliott, Walter Reade, Thomas Schaffter, Thomas Yu, Jiaxin Zheng, Ahmed W. Moawad, Luiz Otavio Coelho, Olivia McDonnell, Elka Miller, Fanny E. Moron, Mark C. Oswood, Robert Y. Shih, Loizos Siakallis, Yulia Bronstein, James R. Mason, Anthony F. Miller, Gagandeep Choudhary, Aanchal Agarwal, Cristina H. Besada, Jamal J. Derakhshan, Mariana C. Diogo, Daniel D. Do-Dai, Luciano Farage, John L. Go, Mohiuddin Hadi, Virginia B. Hill, Michael Iv, David Joyner, Christie Lincoln, Eyal Lotan, Asako Miyakoshi, Mariana Sanchez-Montano, Jaya Nath, Xuan V. Nguyen, Manal Nicolas-Jilwan, Johanna Ortiz Jimenez, Kerem Ozturk, Bojan D. Petrovic, Chintan Shah, Lubdha M. Shah, Manas Sharma, Onur Simsek, Achint K. Singh, Salil Soman, Volodymyr Statsevych, Brent D. Weinberg, Robert J. Young, Ichiro Ikuta, Amit K. Agarwal, Sword C. Cambron, Richard Silbergleit, Alexandru Dusoi, Alida A. Postma, Laurent Letourneau-Guillon, Gloria J. Guzman Perez-Carrillo, Atin Saha, Neetu Soni, Greg Zaharchuk, Vahe M. Zohrabian, Yingming Chen, Milos M. Cekic, Akm Rahman, Juan E. Small, Varun Sethi, Christos Davatzikos, John Mongan, Christopher Hess, Soonmee Cha, Javier Villanueva-Meyer, John B. Freymann, Justin S. Kirby, Benedikt Wiestler, Priscila Crivellaro, Rivka R. Colen, Aikaterini Kotrotsou, Daniel Marcus, Mikhail Milchenko, Arash Nazeri, Hassan Fathallah-Shaykh, Roland Wiest, Andras Jakab, Marc-Andre Weber, Abhishek Mahajan, Bjoern Menze, Adam E. Flanders, Spyridon Bakas",
+    "year": "2021",
+    "venue": "arXiv:2107.02314",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2107.02314"
+  },
+  "92e311e0-aa46-5e4c-9f4f-3fe4557ef629": {
+    "title": "Brain Tumor Segmentation with Deep Neural Networks",
+    "authors": "Mohammad Havaei, Axel Davy, David Warde-Farley, Antoine Biard, Aaron Courville, Yoshua Bengio, Chris Pal, Pierre-Marc Jodoin, Hugo Larochelle",
+    "year": "2015",
+    "venue": "arXiv:1505.03540",
+    "doi": "10.1016/j.media.2016.05.004",
+    "url": "https://arxiv.org/abs/1505.03540"
+  },
+  "3b54afea-d9b8-5c98-9371-b3953db3b746": {
+    "title": "Automatic Brain Tumor Segmentation using Cascaded Anisotropic Convolutional Neural Networks",
+    "authors": "Guotai Wang, Wenqi Li, Sebastien Ourselin, Tom Vercauteren",
+    "year": "2017",
+    "venue": "arXiv:1709.00382",
+    "doi": "10.1007/978-3-319-75238-9_16",
+    "url": "https://arxiv.org/abs/1709.00382"
+  },
+  "677bfa1c-eecb-5873-bb3b-780d2d724931": {
+    "title": "Ensembles of Multiple Models and Architectures for Robust Brain Tumour Segmentation",
+    "authors": "Konstantinos Kamnitsas, Wenjia Bai, Enzo Ferrante, Steven McDonagh, Matthew Sinclair, Nick Pawlowski, Martin Rajchl, Matthew Lee, Bernhard Kainz, Daniel Rueckert, Ben Glocker",
+    "year": "2017",
+    "venue": "arXiv:1711.01468",
+    "doi": "",
+    "url": "https://arxiv.org/abs/1711.01468"
+  },
+  "b480e2eb-b7cf-515d-9645-6debf6d36d15": {
+    "title": "Brain Tumor Segmentation and Radiomics Survival Prediction: Contribution to the BRATS 2017 Challenge",
+    "authors": "Fabian Isensee, Philipp Kickingereder, Wolfgang Wick, Martin Bendszus, Klaus H. Maier-Hein",
+    "year": "2018",
+    "venue": "arXiv:1802.10508",
+    "doi": "",
+    "url": "https://arxiv.org/abs/1802.10508"
+  },
+  "264dfab4-fb58-534a-bb94-511cfe88c2e3": {
+    "title": "nnFormer: Interleaved Transformer for Volumetric Segmentation",
+    "authors": "Hong-Yu Zhou, Jiansen Guo, Yinghao Zhang, Lequan Yu, Liansheng Wang, Yizhou Yu",
+    "year": "2021",
+    "venue": "arXiv:2109.03201",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2109.03201"
+  }
+}

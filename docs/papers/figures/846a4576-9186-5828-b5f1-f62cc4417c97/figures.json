@@ -1,0 +1,38 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 4,
+  "caption": "Fig. 1. The architecture of our 4 channel input segmentation network",
+  "kind": "raster",
+  "width": 722,
+  "height": 406,
+  "source_title": "846a4576-9186-5828-b5f1-f62cc4417c97.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 6,
+  "caption": "Fig. 2. Training of our brain separation networks on missing channel. Encoded feature maps from 4 separate channels are connected to decoding path in full channel input. Encoded feature maps from residue channels are connected on decoding path in missing channel input. We randomly drop one channel in a training step. Our training objective function include the reconstruction loss on full channel i",
+  "kind": "raster",
+  "width": 722,
+  "height": 470,
+  "source_title": "846a4576-9186-5828-b5f1-f62cc4417c97.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 9,
+  "caption": "Fig. 3. Examples of the segmentation masks with missing modality compared to the ground truth. The edema area is labeled in green color. The non-enhancing core area is labeled in red color. The enhancing core area is labeled in yellow color.",
+  "kind": "raster",
+  "width": 722,
+  "height": 447,
+  "source_title": "846a4576-9186-5828-b5f1-f62cc4417c97.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 11,
+  "caption": "Fig. 4. Visualization of segmentation decision on diﬀerent channels, using prediction relevance analysis. Red color represents positive evidence, and blue color represents negative evidence of that region.",
+  "kind": "raster",
+  "width": 722,
+  "height": 306,
+  "source_title": "846a4576-9186-5828-b5f1-f62cc4417c97.pdf"
+ }
+]

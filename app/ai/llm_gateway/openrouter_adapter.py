@@ -6,6 +6,8 @@ from app.ai.llm_gateway.base import LLMGateway, LLMGatewayError, LLMResponse, Me
 from app.ai.llm_gateway.retry import call_with_retry
 from app.core.config import get_settings
 
+# Chờ model trả lời tối đa 15 phút (model free hay xếp hàng); kết nối/ghi vẫn giới hạn ngắn để lỗi mạng báo sớm.
+_HTTP_TIMEOUT = httpx.Timeout(900.0, connect=15.0, write=60.0, pool=15.0)
 DEFAULT_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
 DEFAULT_FALLBACK_MODELS = [
     "nvidia/nemotron-3-ultra-550b-a55b:free",
@@ -59,7 +61,7 @@ class OpenRouterAdapter(LLMGateway):
         }
 
         try:
-            with httpx.Client(timeout=90.0) as client:
+            with httpx.Client(timeout=_HTTP_TIMEOUT) as client:
                 res = client.post(url, headers=headers, json=payload)
 
                 if res.status_code == 401:

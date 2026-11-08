@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Fig. 1. The proposed triple cascaded framework for brain tumor segmentation. Three networks are proposed to hierarchically segment whole tumor (WNet), tumor core (TNet) and enhancing tumor core (ENet) sequentially.",
+  "kind": "vector",
+  "width": 730,
+  "height": 573,
+  "source_title": "3b54afea-d9b8-5c98-9371-b3953db3b746.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 8,
+  "caption": "Fig. 5. Segmentation result of the brain tumor (LGG) from a training image. Green: edema; Red: non-enhancing tumor core; Yellow: enhancing tumor core. (c) shows the result when only networks in axial view are used, with mis-segmentations highlighted by white arrows. (d) shows the result with multi-view fusion.",
+  "kind": "raster",
+  "width": 740,
+  "height": 216,
+  "source_title": "3b54afea-d9b8-5c98-9371-b3953db3b746.pdf"
+ }
+]

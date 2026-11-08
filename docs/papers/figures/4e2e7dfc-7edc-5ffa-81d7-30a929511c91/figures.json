@@ -1,0 +1,92 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 15,
+  "caption": "Figure 5: Multi-scale 3D CNN with two convolutional pathways. The kernels of the two pathways are here of size 53 (for illustration only to reduce the number of layers in the ﬁgure). The neurons of the last layers of the two pathways thus have receptive ﬁelds of size 173 voxels. The inputs of the two pathways are centered at the same image location, but the second segment is extracted from a down-",
+  "kind": "raster",
+  "width": 811,
+  "height": 250,
+  "source_title": "4e2e7dfc-7edc-5ffa-81d7-30a929511c91.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 18,
+  "caption": "Figure 6: Comparison of the commonly used methods for training on patches uniformly sampled from the brain region (Puni) and equally sampled from lesion and background (Peq) against our proposed scheme (S-d) on cubic segments of side length d, also equally sampled from lesion and background. We varied d to observe its eﬀect. From left to right: percentage of training samples extracted from the les",
+  "kind": "raster",
+  "width": 811,
+  "height": 218,
+  "source_title": "4e2e7dfc-7edc-5ffa-81d7-30a929511c91.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 19,
+  "caption": "Figure 7: Mean accuracy over validation samples and DSC for the segmen- tations of the validation images, as obtained from the “Shallow” baseline and “Deep” variant with smaller kernels. Training of the plain deeper model fails (cf. Sec. 3.3). This is overcome by adopting the initialization scheme of (He et al. (2015)), which further combined with Batch Normalization leads to the enhanced (+) vari",
+  "kind": "raster",
+  "width": 406,
+  "height": 237,
+  "source_title": "4e2e7dfc-7edc-5ffa-81d7-30a929511c91.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 20,
+  "caption": "Figure 8: Mean accuracy over validation samples and DSC for the seg- mentation of the validation images, as obtained by a single-scale model (Deep+) and our dual pathway architecture (DeepMedic). We also trained a single-scale model with larger capacity (BigDeep+), similar to the capac- ity of DeepMedic. DeepMedic yields best performance by capturing greater context, while BigDeep+ seems to suﬀer ",
+  "kind": "raster",
+  "width": 406,
+  "height": 242,
+  "source_title": "4e2e7dfc-7edc-5ffa-81d7-30a929511c91.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 22,
+  "caption": "Figure 9: (Rows) Two cases from the severe TBI dataset, showing represen- tative improvements when using the multi-scale CNN approach. (Columns) From left to right: the MRI FLAIR sequence with the manually labeled le- sions, predicted soft segmentation map obtained from a single-scale model (Deep+) and the prediction of the multi-scale DeepMedic model. The incor- poration of greater context enable",
+  "kind": "raster",
+  "width": 689,
+  "height": 586,
+  "source_title": "4e2e7dfc-7edc-5ffa-81d7-30a929511c91.pdf"
+ },
+ {
+  "file": "fig_6.png",
+  "page": 26,
+  "caption": "Figure 10: (Top) DSC achieved by our ensemble of three networks on each of the 61 TBI datasets. (Bottom) Manually segmented (black) and predicted lesion volumes (red). Note here the logarithmic scale. Continuous lines represent mean values. The outlying subject 12 presents small TBI lesions, which are successfully segmented, but also vascular ischemia. Because it is the only case in the database w",
+  "kind": "raster",
+  "width": 811,
+  "height": 297,
+  "source_title": "4e2e7dfc-7edc-5ffa-81d7-30a929511c91.pdf"
+ },
+ {
+  "file": "fig_7.png",
+  "page": 27,
+  "caption": "Figure 11: Three examples from the application of our system on the TBI database. It is capable of precise segmentation of both small and large lesions. Second row depicts one of the common mistakes observed. A contusion near the edge of the brain is under-segmented, possibly mistaken for background. Bottom row shows one of the worst cases, representative of the challenges in segmenting TBI. Post-",
+  "kind": "raster",
+  "width": 811,
+  "height": 623,
+  "source_title": "4e2e7dfc-7edc-5ffa-81d7-30a929511c91.pdf"
+ },
+ {
+  "file": "fig_8.png",
+  "page": 30,
+  "caption": "Figure 12: Examples of DeepMedic’s segmentation from its evaluation on the training datasets of BRATS 2015. cyan: necrotic core, green: oedema, orange: non-enhancing core, red: enhancing core. (top and middle) Sat- isfying segmentation of the tumor, regardless motion artefacts in certain sequences. (bottom) One of the worst cases of over-segmentation observed. False segmentation of FLAIR hyper-int",
+  "kind": "raster",
+  "width": 811,
+  "height": 623,
+  "source_title": "4e2e7dfc-7edc-5ffa-81d7-30a929511c91.pdf"
+ },
+ {
+  "file": "fig_9.png",
+  "page": 33,
+  "caption": "Figure 13: Examples of segmentations performed by our system on the train- ing datasets of (SISS) ISLES 2015. (top and middle) The system is capable of satisfying segmentation of both large and smaller lesions. (bottom) Common mistakes are performed due to the challenge of diﬀerentiating stroke lesions from White Matter lesions.",
+  "kind": "raster",
+  "width": 811,
+  "height": 625,
+  "source_title": "4e2e7dfc-7edc-5ffa-81d7-30a929511c91.pdf"
+ },
+ {
+  "file": "fig_10.png",
+  "page": 36,
+  "caption": "Figure 14: (First row) GE scan and DeepMedic’s segmentation. (Second row) FMs of earlier and (third row) deeper layers of the ﬁrst convolutional path- way. (Fourth row) Features learnt in the low-resolution pathway. (Last row) FMs of the two last hidden layers, which combine multi-resolution features towards the ﬁnal segmentation.",
+  "kind": "raster",
+  "width": 770,
+  "height": 947,
+  "source_title": "4e2e7dfc-7edc-5ffa-81d7-30a929511c91.pdf"
+ }
+]

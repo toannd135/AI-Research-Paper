@@ -1,0 +1,29 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Fig. 1. Illustration of the Hetero-Modal Image Segmentation architecture. Modalities available at inference time, Mk, are provided to independent modality-speciﬁc con- volutional layers in the back end. Feature maps statistics (ﬁrst & second moments) are computed in the abstraction layer, which after concatenation are processed by further convolutional layers in the front end, yielding pixelwise c",
+  "kind": "raster",
+  "width": 722,
+  "height": 389,
+  "source_title": "51ab6624-90c8-5904-bcce-21e1fc2f6e0e.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 7,
+  "caption": "Fig. 2. MLP-imputed FLAIR for an MS patient. The ﬁgure shows from left to right the original modality and the predicted FLAIR given other modalities.",
+  "kind": "raster",
+  "width": 614,
+  "height": 210,
+  "source_title": "51ab6624-90c8-5904-bcce-21e1fc2f6e0e.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 9,
+  "caption": "Fig. 3. Example of HeMIS segmentation results on BRATS and MS subjects for dif- ferent combinations of input modalities. For both cohorts, an axial FLAIR slice of a subject is overlaid with the results where for BRATS (ﬁrst row) the segmentation col- ors describe necrosis (blue), non-enhancing (yellow), active core (orange) and edema (green). For the MS case, the lesions are highlighted in red. Th",
+  "kind": "raster",
+  "width": 614,
+  "height": 306,
+  "source_title": "51ab6624-90c8-5904-bcce-21e1fc2f6e0e.pdf"
+ }
+]

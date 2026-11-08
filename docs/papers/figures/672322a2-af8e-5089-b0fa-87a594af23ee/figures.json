@@ -1,0 +1,29 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 2,
+  "caption": "Fig. 1. Slices from MRI volumes depicting prostate. This data is part of the PROMISE2012 challenge dataset [7].",
+  "kind": "raster",
+  "width": 682,
+  "height": 229,
+  "source_title": "672322a2-af8e-5089-b0fa-87a594af23ee.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 3,
+  "caption": "Fig. 2. Schematic representation of our network architecture. Our custom imple- mentation of Caﬀe [5] processes 3D data by performing volumetric convolutions. Best viewed in electronic format.",
+  "kind": "vector",
+  "width": 899,
+  "height": 633,
+  "source_title": "672322a2-af8e-5089-b0fa-87a594af23ee.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 9,
+  "caption": "Fig. 6. Qualitative comparison between the results obtained using the Dice co- eﬃcient based loss (green) and re-weighted soft-max with loss (yellow).",
+  "kind": "raster",
+  "width": 717,
+  "height": 212,
+  "source_title": "672322a2-af8e-5089-b0fa-87a594af23ee.pdf"
+ }
+]

@@ -1,0 +1,56 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 4,
+  "caption": "Figure 1: A single convolution layer block showing computa- tions for a single feature map. The input patch (here 7 × 7), is convolved with series of kernels (here 3 × 3) followed by Max- out and max-pooling.",
+  "kind": "vector",
+  "width": 402,
+  "height": 235,
+  "source_title": "92e311e0-aa46-5e4c-9f4f-3fe4557ef629.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 6,
+  "caption": "Figure 2: Two-pathway CNN architecture (TwoPathCNN). The ﬁgure shows the input patch going through two paths of convolu- tional operations. The feature-maps in the local and global paths are shown in yellow and orange respectively. The convolutional layers used to produce these feature-maps are indicated by dashed lines in the ﬁgure. The green box embodies the whole model which in later architectu",
+  "kind": "vector",
+  "width": 845,
+  "height": 268,
+  "source_title": "92e311e0-aa46-5e4c-9f4f-3fe4557ef629.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 10,
+  "caption": "Figure 5: Randomly selected ﬁlters from the ﬁrst layer of the model. From left to right the ﬁgure shows visualization of fea- tures from the ﬁrst layer of the global and local path respec- tively. Features in the local path include more edge detectors while the global path contains more localized features.",
+  "kind": "raster",
+  "width": 905,
+  "height": 433,
+  "source_title": "92e311e0-aa46-5e4c-9f4f-3fe4557ef629.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 10,
+  "caption": "Figure 8: Visual results from our top performing model, In- putCascadeCNN* on Coronal and Sagittal views. The subjects are the same as in Figure 7. In every sub-ﬁgure, the top row represents the Sagital view and the bottom row represents the Coronal view. The color codes are as follows: ■edema, ■ enhanced tumor, ■necrosis, ■non-enhanced tumor.",
+  "kind": "raster",
+  "width": 631,
+  "height": 360,
+  "source_title": "92e311e0-aa46-5e4c-9f4f-3fe4557ef629.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 12,
+  "caption": "Figure 7: Visual results from our CNN architectures from the Axial view. For each sub-ﬁgure, the top row from left to right shows T1C modality, the conventional one path CNN, the Conventional CNN with two training phases, and the TwoPathCNN model. The second row from left to right shows the ground truth, LocalCascadeCNN model, the MFCascadeCNN model and the InputCascadeCNN. The color codes are as ",
+  "kind": "raster",
+  "width": 1241,
+  "height": 915,
+  "source_title": "92e311e0-aa46-5e4c-9f4f-3fe4557ef629.pdf"
+ },
+ {
+  "file": "fig_6.png",
+  "page": 13,
+  "caption": "Figure 9: Visual segmentation results from our top performing model, InputCascadeCNN*, on examples of the BRATS2013 test dataset in Saggital (top) and Axial (bottom) views. The color codes are as follows: ■edema, ■enhanced tumor, ■ necrosis, ■non-enhanced tumor.",
+  "kind": "vector",
+  "width": 429,
+  "height": 594,
+  "source_title": "92e311e0-aa46-5e4c-9f4f-3fe4557ef629.pdf"
+ }
+]

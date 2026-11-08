@@ -1,0 +1,11 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 4,
+  "caption": "Fig. 2. Overview of our proposed ACN, consisting of a multimodal path, a unimodal path and three modules: (a) an entropy adversarial learning module (EnA); (b) a knowl- edge adversarial learning module (KnA); (c) a modality-mutual information knowledge transfer module (MMI). In (a), given full modality and missing modality, Den is trained to predict domain label based on entropy map {Imulti, Iuni}",
+  "kind": "vector",
+  "width": 725,
+  "height": 409,
+  "source_title": "283cea40-6b7e-5a72-9502-73d4d5585276.pdf"
+ }
+]
