@@ -79,7 +79,7 @@ def prepare_report_page(page, page_html: str) -> list[str]:
         const warnings = [];
         const {normalizeMermaidMath} = await import(assetOrigin + '/mermaid-math.js');
         mermaid.initialize({startOnLoad: false, theme: 'neutral', securityLevel: 'strict', htmlLabels: true,
-            fontFamily: 'Arial, sans-serif', flowchart: {htmlLabels: true, useMaxWidth: false, rankSpacing: 65}});
+            fontFamily: 'Arial, sans-serif', flowchart: {htmlLabels: true, useMaxWidth: false, rankSpacing: 65, wrappingWidth: 320}});
         let index = 0;
         for (const pre of document.querySelectorAll('pre.mermaid')) {
             const id = `pdf-mermaid-${++index}`;

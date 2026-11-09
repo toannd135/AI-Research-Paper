@@ -14,6 +14,7 @@ Sửa hệ thống biểu đồ/sơ đồ để paper survey qua phản biện Q
 - Chart `timeline` (năm phải khớp References) + prompt roadmap Gap→Direction→Evaluation (mục 6.4).
 - `pytest app/agent app/pipeline` pass; ruff không thêm lỗi mới.
 - Nạp DB: `papers_brain` 50/50 done; `papers_deepfake` 50/50 done (20 paper mới tải, `_manifest.json` đã cập nhật).
+- Sửa thêm: caption ảnh thật in thành tiêu đề mục (regex `<figure[^>]*>` cắt ở `<i>` trong data-caption) — `pdf_renderer._number_figures_and_tables`; taxonomy >12 lá gộp thành ô danh sách mỗi trục (`report_postprocess._compact_taxonomy`), nhãn mermaid căn trái + wrappingWidth 320 (`browser_renderer`).
 - PDF xem trước (áp hậu xử lý mới lên report cũ, không chạy lại agent): `survey_c5d84302_v2.pdf`.
 
 ## Quyết định đã chốt
@@ -29,8 +30,7 @@ ADR `docs/decisions/0008-hinh-theo-khoi-va-chan-tron-protocol.md`. Không sinh �
 
 ## Việc còn lại
 1. Người dùng chạy migration 0009 rồi restart worker, sau đó chạy lại survey brain → kiểm panels/corpus flow/timeline/roadmap trên PDF thật.
-2. Chưa rõ vì sao chú thích ảnh thật in "Qualitative Visual Comparison" (đã có từ PDF gốc).
-3. Corpus deepfake nằm chung DB với brain: research nên giới hạn theo workspace để không lẫn chủ đề.
+2. Corpus deepfake nằm chung DB với brain: research nên giới hạn theo workspace để không lẫn chủ đề.
 
 ## Đang chờ
 Người dùng: `alembic upgrade head` (DB thật chưa có cột `research_tasks.workspace_id`) + commit.

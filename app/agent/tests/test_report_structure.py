@@ -199,3 +199,22 @@ def test_timeline_years_must_match_references_and_render():
     assert [e["label"] for e in spec["events"]] == ["A [1]", "B [2]", "C [3]", "D [4]"]  # năm sai / 2 trích dẫn → bỏ
     assert "```chart" not in postprocess_report(block, "", None, None, "en", min_charts=0)  # không có References → không tin
     assert render_scientific_svg(spec).startswith("<svg")
+
+
+def test_big_taxonomy_tree_compacts_leaves_per_axis():
+    from app.agent.report_postprocess import orient_mermaid, validate_mermaid
+
+    tree = "graph TD\n" + "\n".join(
+        f'    R["Root"] --> X{i}["Axis {i}"]\n' + "\n".join(f'    X{i} --> L{i}{j}["Leaf {i}.{j}<br/>[{j + 1}]"]' for j in range(3)) for i in range(6)
+    )
+    out = orient_mermaid(tree)
+    assert out.startswith("graph LR") and validate_mermaid(out) == []
+    assert '"• Leaf 0.0 [1]<br/>• Leaf 0.1 [2]<br/>• Leaf 0.2 [3]"' in out and "L00" not in out
+
+
+def test_image_caption_with_source_tag_is_used_as_figcaption(tmp_path, monkeypatch):
+    from app.pipeline.export.pdf_renderer import _number_figures_and_tables
+
+    body = '<figure class="fig photo" data-kind="figure" data-caption="Arch overview <i>Source: [3]</i>"><img>__CAPTION__</figure>'
+    out = _number_figures_and_tables("<h3>5.3 Qualitative</h3>" + body)
+    assert "<b>Figure 1.</b> Arch overview <i>Source: [3]</i>" in out

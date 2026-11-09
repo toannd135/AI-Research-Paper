@@ -369,7 +369,8 @@ def _number_figures_and_tables(body: str) -> str:
         body,
         flags=re.DOTALL,
     )
-    token_re = re.compile(r"<h[2-4][^>]*>(.*?)</h[2-4]>|<table[^>]*>|<figure[^>]*>", re.DOTALL)
+    # thuộc tính trong ngoặc kép có thể chứa '>' (data-caption giữ thẻ <i>Source</i>) → không cắt thẻ ở '>' bên trong ngoặc
+    token_re = re.compile(r'<h[2-4][^>]*>(.*?)</h[2-4]>|<table(?:[^>"]|"[^"]*")*>|<figure(?:[^>"]|"[^"]*")*>', re.DOTALL)
     pos = 0
     for m in token_re.finditer(body):
         out.append(body[pos : m.start()])
@@ -528,6 +529,7 @@ _TEMPLATE = """<!doctype html>
   h3 { font-size: 11pt; margin: 12pt 0 4pt; break-after: avoid; }
   h4 { font-size: 10.5pt; font-style: italic; margin: 10pt 0 4pt; break-after: avoid; }
   p, li { text-align: justify; hyphens: auto; }
+  .mermaid p, .mermaid span, .mermaid div { text-align: left; hyphens: none; }  /* nhãn sơ đồ: không căn đều hai bên */
   p { margin: 0 0 6pt; }
   ul, ol { margin: 0 0 6pt; padding-left: 18pt; }
   .tbl { margin: 10pt 0 12pt; break-inside: auto; }

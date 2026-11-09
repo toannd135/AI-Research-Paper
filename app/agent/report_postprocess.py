@@ -99,8 +99,43 @@ def orient_mermaid(code: str) -> str:
         widest = max(widest, len(level))
     if widest <= MAX_TD_LEVEL_WIDTH:
         return code
+    compact = _compact_taxonomy(code, children, roots)
+    if compact:
+        logger.info("Gộp lá của cây taxonomy thành danh sách mỗi trục (tầng rộng nhất %d nút)", widest)
+        return compact
     logger.info("Đổi sơ đồ mermaid TD → LR: tầng rộng nhất %d nút", widest)
     return _MERMAID_TD_RE.sub(r"\1LR", code, count=1)
+
+
+_MERMAID_LABEL_RE = re.compile(r"([A-Za-z][\w-]*)\s*\[\s*\"([^\"\n]*)\"\s*\]")
+MAX_COMPACT_LEAVES = 12  # cây gốc→trục→lá có nhiều lá hơn: mỗi ô lá tốn khung + khoảng cách → co cả hình thành chữ li ti
+
+
+def _compact_taxonomy(code: str, children: dict[str, list[str]], roots: list[str]) -> str | None:
+    """Cây đúng 3 tầng (gốc → trục → lá) nhiều lá → LR với MỘT ô danh sách lá mỗi trục (giữ nguyên nhãn và trích dẫn [n]).
+
+    Không phải dạng đó (lá có con, nút nhiều cha, thiếu nhãn) → None, giữ sơ đồ của tác giả."""
+    if len(roots) != 1:
+        return None
+    labels = dict(_MERMAID_LABEL_RE.findall(code))
+    root = roots[0]
+    axes = children.get(root, [])
+    parents: dict[str, int] = {}
+    for kids in children.values():
+        for k in kids:
+            parents[k] = parents.get(k, 0) + 1
+    leaves = [leaf for a in axes for leaf in children.get(a, [])]
+    if len(leaves) <= MAX_COMPACT_LEAVES or any(parents.get(n, 0) != 1 for n in axes + leaves):
+        return None
+    if any(children.get(leaf) for leaf in leaves) or any(n not in labels for n in [root, *axes, *leaves]):
+        return None
+    out = ["graph LR", f'    {root}["{labels[root]}"]']
+    for i, a in enumerate(axes):
+        out.append(f'    {root} --> {a}["{labels[a]}"]')
+        items = [re.sub(r"\s*<br\s*/?>\s*", " ", labels[leaf]).strip() for leaf in children.get(a, [])]
+        if items:
+            out.append(f'    {a} --> L{i}["' + "<br/>".join(f"• {t}" for t in items) + '"]')
+    return "\n".join(out)
 
 
 def fix_mermaid_block(code: str, gateway: LLMGateway | None, model_name: str | None, retries: int = 2) -> str | None:
