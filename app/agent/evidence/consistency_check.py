@@ -207,3 +207,19 @@ def check_review_claims(text: str, declared_type: str | None = None) -> list[str
         if claim_re.search(sentence) and not _NEGATION_RE.search(sentence):
             problems.append(f"'{sentence.strip()[:120]}'")
     return problems[:5]
+
+
+_PAPER_COUNT_RE = re.compile(
+    r"\b(\d{1,4})\s+(?:distinct\s+|unique\s+|included\s+|primary\s+|reviewed\s+|retrieved\s+|surveyed\s+|selected\s+)?"
+    r"(?:papers|studies|articles|publications|works|sources)\b",
+    re.I,
+)
+
+
+def check_paper_counts(text: str, max_papers: int) -> list[str]:
+    """'N papers/studies' với N lớn hơn số paper thật trong kho/evidence (vd. LLM suy '73 papers' từ chỉ số [73] của đoạn trích)."""
+    if max_papers <= 0:
+        return []
+    body = _FENCE_RE.sub("", text.split("\n## References", 1)[0])
+    bad = sorted({int(m.group(1)) for m in _PAPER_COUNT_RE.finditer(body) if int(m.group(1)) > max_papers})
+    return [f"bài nói {n} paper/nghiên cứu nhưng kho chỉ có {max_papers} paper" for n in bad]

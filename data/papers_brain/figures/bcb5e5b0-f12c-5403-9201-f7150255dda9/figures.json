@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Fig. 1. An overview of the proposed SegMamba. The encoder comprises a stem layer and multiple TSMamba blocks designed to extract multi-scale features. Within each TSMamba block, a gated spatial convolution (GSC) module models the spatial features, and a tri-orientated Mamba (ToM) module represents global information from various directions. Furthermore, we develop a feature-level uncertainty estim",
+  "kind": "vector",
+  "width": 694,
+  "height": 332,
+  "source_title": "bcb5e5b0-f12c-5403-9201-f7150255dda9.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 5,
+  "caption": "Fig. 3. The data visualization for CRC-500 dataset.",
+  "kind": "raster",
+  "width": 584,
+  "height": 259,
+  "source_title": "bcb5e5b0-f12c-5403-9201-f7150255dda9.pdf"
+ }
+]

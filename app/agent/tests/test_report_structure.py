@@ -112,3 +112,10 @@ def test_finalize_structure_report_returns_all_three():
     fixed, dangling, low = finalize_structure_report("**Table 3: A**\n\nSee Table 3 and Table 6.")
     assert "**Table 1: A**" in fixed and "Table 1 and Table 6" in fixed
     assert dangling and not low
+
+
+def test_strip_dangling_inside_cluster_keeps_valid_marker():
+    from app.agent.evidence.report_structure import strip_dangling_citations
+
+    assert strip_dangling_citations("synthesis [7, 73].", 36) == ("synthesis [7].", [73])
+    assert strip_dangling_citations("methods [73, 7] work", 36) == ("methods [7] work", [73])

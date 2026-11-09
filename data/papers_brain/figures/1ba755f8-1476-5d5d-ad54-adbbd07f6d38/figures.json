@@ -1,0 +1,29 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 4,
+  "caption": "Fig. 1: LCKD model framework for training and testing. The N modalities {x(i)N",
+  "kind": "vector",
+  "width": 604,
+  "height": 322,
+  "source_title": "1ba755f8-1476-5d5d-ad54-adbbd07f6d38.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 12,
+  "caption": "Fig. 5: Percentage of different modalities selected as teachers for LCKD-s and LCKD-m models. We perform the teacher election procedure every 5000 itera- tions. T1 and T2 are not selected as teachers in the whole process, so they have been selected 0% of time.",
+  "kind": "vector",
+  "width": 442,
+  "height": 314,
+  "source_title": "1ba755f8-1476-5d5d-ad54-adbbd07f6d38.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 14,
+  "caption": "Fig. 2: Percentage of different modalities selected as teachers for LCKD-s and LCKD-m models. We perform the teacher election procedure every 5000 itera- tions. T1 and T2 are not selected as teachers in the whole process, so they have been selected 0% of time.",
+  "kind": "vector",
+  "width": 442,
+  "height": 315,
+  "source_title": "1ba755f8-1476-5d5d-ad54-adbbd07f6d38.pdf"
+ }
+]

@@ -81,3 +81,60 @@ def test_nr_needs_definition():
 def test_run_science_qa_clean_text_has_no_warnings():
     text = "## Abstract\nWe review fusion methods reported in [1].\n\n## 7. Conclusion\nEvidence remains limited.\n\n## References\n[1] A, 2024.\n"
     assert run_science_qa(text, ABLATION, P2N, {}) == []
+
+
+def test_internal_contradiction_about_all_subsets_is_flagged():
+    from app.agent.evidence.science_qa import check_internal_contradictions
+
+    bad = (
+        "## 3. Taxonomy\n\nNo method in the corpus reports evaluation on all 15 modality subsets.\n\n"
+        "## 5. Discussion\n\nmmFormer [20], SMML [22] and Chen et al. [28] evaluate on all 15 non-empty subsets.\n"
+    )
+    assert check_internal_contradictions(bad)
+    only_negative = "No method in the corpus reports evaluation on all 15 modality subsets.\n"
+    only_positive = "mmFormer [20] evaluates on all 15 non-empty subsets.\n"
+    assert check_internal_contradictions(only_negative) == [] and check_internal_contradictions(only_positive) == []
+    # nói về MA TRẬN đầy đủ không phải là khẳng định về từng phương pháp
+    matrix = "No complete matrix over all 15 subsets can be built from the corpus. SMML [22] evaluates all 15 subsets.\n"
+    assert check_internal_contradictions(matrix) == []
+
+
+def test_ledger_claims_exhaustive_and_wrong_paper_denominator():
+    from app.agent.evidence.science_qa import check_ledger_claims
+
+    recs = [_r(), _r("Missing FLAIR", 0.6)]  # 2 bản ghi, cả hai từ pA
+    p2n = {"pA": 1, "pB": 2, "pC": 3}
+    text = "The ledger exhaustively records 2 reported scalars from 3 papers.\n"
+    warnings = check_ledger_claims(text, recs, p2n)
+    assert any("exhaustive" in w for w in warnings) and any("từ 1 paper, không phải 3" in w for w in warnings)
+    assert check_ledger_claims("The ledger holds 2 values from 1 paper.\n", recs, p2n) == []
+    assert check_ledger_claims(text, [], p2n) == []
+
+
+def test_single_missing_modality_record_still_contradicts_absence_claim():
+    """Một bản ghi thiếu-modality lẻ (chưa thành nhóm ma trận ≥2 tập) vẫn làm câu 'no missing-modality result' sai."""
+    lone = [_r("Missing FLAIR", 0.6)]
+    text = "No missing-modality results were extracted from the sources.\n"
+    assert check_absence_claims(text, lone, P2N, {})
+
+
+def test_body_absolutes_flagged_unless_scoped_or_cited():
+    from app.agent.evidence.science_qa import check_body_absolutes
+
+    bad = "## 5. Discussion\n\nCross-attention is necessary for robust fusion.\n\nThe design guarantees zero robustness loss.\n"
+    assert len(check_body_absolutes(bad)) == 2
+    ok = (
+        "## 5. Discussion\n\nCross-attention is necessary in [3] for the reported setting.\n\n"
+        "No method in the corpus always wins.\n"
+    )
+    assert check_body_absolutes(ok) == []
+
+
+def test_scope_flags_abstract_range_shorter_than_reference_years():
+    text = (
+        "# T\n\n## Abstract\n\nWe review BraTS 2012–2021 methods.\n\n## 1. Intro\n\nx\n\n"
+        "## References\n\n[1] A. B, 2019.\n[2] C. D, 2025.\n"
+    )
+    out = check_scope(text)
+    assert out and "2019–2025" in out[0]
+    assert check_scope(text.replace("2012–2021", "2019–2025")) == []

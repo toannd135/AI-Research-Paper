@@ -218,6 +218,17 @@ def test_extract_runs_every_batch_and_retries_on_error(monkeypatch):
     assert ex.extract_results(many, bad) == []
     assert bad.calls == 2 * ex.MAX_ATTEMPTS  # mọi lô đều được thử đủ số lần, không dừng giữa chừng
 
+    # Hết ngân sách thời gian: bỏ các lô còn lại, trả về phần đã trích được.
+    class _Ok:
+        calls = 0
+
+        def generate(self, messages, model_name=None):
+            self.calls += 1
+            return SimpleNamespace(text=json.dumps([_item()]), model="fake")
+
+    ok = _Ok()
+    assert ex.extract_results(many, ok, max_seconds=-1) == [] and ok.calls == 0
+
 
 def _mrec(model, mods, value, paper="pA", region="WT", metric="Dice", split="validation"):
     return ResultRecord(paper_id=paper, model=model, dataset="BraTS", dataset_version="2018", split=split, region=region, metric=metric,
@@ -405,3 +416,25 @@ def test_consistency_warns_on_mixed_dice_scale():
     assert any("trộn Dice" in w for w in check_consistency(per_row))
     same_scale = '```table\n{"caption": "T", "columns": ["Method", "Metric", "Value"], "rows": [["A", "Dice WT", "89.1"], ["C", "HD95", "4.1"]]}\n```'
     assert not any("trộn Dice" in w for w in check_consistency(same_scale))
+
+
+def test_extract_results_dung_cache_theo_lo(monkeypatch):
+    """Chạy lại cùng evidence thì không gọi LLM nữa; kết quả vẫn được kiểm chứng lại như cũ."""
+    monkeypatch.setattr("app.agent.evidence.extractor.CACHE_ENABLED", True)
+    first = extract_results(EVIDENCE, _GW([_item()]))
+    second = extract_results(EVIDENCE, _GW([]))  # gateway rỗng: nếu gọi LLM sẽ không ra bản ghi nào
+    assert first and second == first
+
+
+def test_evidence_limits_counts_papers_with_records_not_cited_papers():
+    """Bản thảo c5d84302 viết '417 records from 40 papers' vì n_papers là số paper được cite, không phải số paper có bản ghi."""
+    text = evidence_limits([_mrec("X", [], 70.0)], P2N, 2)
+    assert "from 1 of the 2 cited papers" in text and "the other 1 contributed no record" in text
+    assert "never call it exhaustive" in text
+
+
+def test_evidence_limits_zero_subset_count_means_not_observed():
+    """Số đếm 0 từ regex trên đoạn truy xuất phải được diễn đạt là 'không thấy', không phải 'không nghiên cứu nào'."""
+    text = evidence_limits(MISSING_RECORDS, P2N, 2, {"pA": {}})
+    assert "not observed in the retrieved passages" in text and "never 'no study does this'" in text
+    assert "no method/setting group with all 15 subsets" in text

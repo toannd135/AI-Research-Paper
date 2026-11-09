@@ -6,6 +6,8 @@
 - overclaim: Abstract/Conclusion dùng "significant", "outperform", "state-of-the-art"… khi không có kiểm định/không cùng giao thức.
 - taxonomy: một nguồn [n] nằm ở nhiều nhóm của CÙNG một trục mà không giải thích.
 - NR: bảng có ô NR nhưng không định nghĩa NR (NR ≠ "không thực hiện").
+- mâu thuẫn nội bộ: "không phương pháp nào đánh giá đủ 15 tập" cùng bài với "[n] đánh giá đủ 15 tập".
+- sổ cái: "exhaustive"/số bản ghi gắn sai với số paper có bản ghi (số paper được cite ≠ số paper có số liệu).
 Tất cả là cảnh báo (WARNING) để người viết sửa; không sửa văn bản.
 """
 
@@ -46,10 +48,13 @@ _EFF = re.compile(r"^(?:params|parameters|gflops|flops|inferencetime)$")
 
 
 def _evidence_counts(records: list[ResultRecord], paper_to_n: dict[str, int], attrs: dict[str, dict[str, dict[str, Any]]]) -> dict[str, int]:
-    from app.agent.evidence.quant_analysis import modality_matrix_stats
+    from app.agent.evidence.quant_analysis import missing_modality_record_count, modality_matrix_stats
 
     return {
-        "missing-modality results": modality_matrix_stats(records, paper_to_n)["groups"] if paper_to_n else 0,
+        # nhóm ma trận cần ≥2 tập; bản ghi lẻ thiếu-modality cũng là bằng chứng nên câu "no missing-modality result" vẫn sai
+        "missing-modality results": (
+            max(modality_matrix_stats(records, paper_to_n)["groups"], missing_modality_record_count(records, paper_to_n)) if paper_to_n else 0
+        ),
         "variance (SD/CI)": sum(1 for r in records if r.spread is not None),
         "computational cost": sum(1 for r in records if _EFF.match(re.sub(r"[\s_-]+", "", r.metric.lower()))),
         "external validation": sp.count(attrs, "external_validation"),
@@ -77,6 +82,59 @@ def check_absence_claims(text: str, records: list[ResultRecord], paper_to_n: dic
         topic = next((t for t, rx in _TOPICS.items() if counts[t] and any(rx.search(w) for w in windows)), None)
         if topic:
             out.append(f"claim–evidence: '{sentence[:140]}' phủ nhận {topic} nhưng có {counts[topic]} bằng chứng đã trích/xác minh")
+    return out[:MAX_ITEMS]
+
+
+# ---------- mâu thuẫn nội bộ về "đủ 15 tập modality" ----------
+_ALL_SUBSETS_RE = re.compile(
+    r"\ball (?:15|fifteen)(?: non-empty)?(?: modality)? (?:subsets?|combinations?)|\ball modality (?:subsets?|combinations?)|"
+    r"\bevery (?:possible )?modality (?:subset|combination)",
+    re.I,
+)
+_EVAL_VERB_RE = re.compile(r"\b(?:evaluat\w*|tests?|tested|testing|report\w*|assess\w*|cover\w*|support\w*)\b", re.I)
+_MATRIX_TALK_RE = re.compile(r"\bmatri(?:x|ces)\b|\bcross-study\b|\bcan(?:not)? be (?:built|constructed)\b|\bpooled\b|\bstandardi[sz]ed\b", re.I)
+
+
+def check_internal_contradictions(text: str) -> list[str]:
+    """Bài vừa nói "không phương pháp nào đánh giá đủ 15 tập" vừa nói "[n] đánh giá đủ 15 tập" (hoặc ngược lại)."""
+    negative: list[str] = []
+    positive: list[str] = []
+    for sentence in _sentences(_body(text)):
+        if not _ALL_SUBSETS_RE.search(sentence) or not _EVAL_VERB_RE.search(sentence) or _MATRIX_TALK_RE.search(sentence):
+            continue
+        if _ABSENCE_RE.search(sentence) or re.search(r"\b(?:only|merely)\b.*\b(?:predefined|single|partial)", sentence, re.I):
+            negative.append(sentence)
+        elif re.search(r"\[\d+\]", sentence):
+            positive.append(sentence)
+    if negative and positive:
+        return [f"mâu thuẫn nội bộ: '{negative[0][:110]}' ↔ '{positive[0][:110]}' — một trong hai sai, đối chiếu từng paper gốc"]
+    return []
+
+
+# ---------- sổ cái bản ghi ----------
+_EXHAUSTIVE_RE = re.compile(r"\bexhaustive(?:ly)?\b|\bcomplete (?:record|ledger|extraction)\b", re.I)
+_LEDGER_COUNT_RE = re.compile(
+    r"\b(\d[\d,]*)\s+(?:[a-z\-]+\s+){0,3}?(?:records?|scalars?|values|measurements)\b[^.\n]{0,80}?\b(?:from|across|over)\s+(?:all\s+|the\s+)?(\d+)\s+(?:papers|studies|sources)",
+    re.I,
+)
+
+
+def check_ledger_claims(text: str, records: list[ResultRecord], paper_to_n: dict[str, int]) -> list[str]:
+    """Mô tả sổ cái phải khớp số thật: không 'exhaustive'; 'N bản ghi từ M paper' phải dùng M = số paper CÓ bản ghi."""
+    if not records:
+        return []
+    out: list[str] = []
+    body = _body(text)
+    with_records = len({r.paper_id for r in records if r.paper_id in paper_to_n})
+    for m in _EXHAUSTIVE_RE.finditer(body):
+        around = body[max(0, m.start() - 90) : m.end() + 90]
+        if re.search(r"ledger|records?|extract|evidence|scalars?", around, re.I):
+            out.append(f"sổ cái: '…{around.strip()[:150]}…' — sổ cái chỉ gồm số liệu in nguyên văn trong đoạn truy xuất, không phải 'exhaustive'")
+            break
+    for m in _LEDGER_COUNT_RE.finditer(body):
+        n_records, n_papers = int(m.group(1).replace(",", "")), int(m.group(2))
+        if n_records == len(records) and n_papers != with_records:
+            out.append(f"sổ cái: viết '{m.group(0)[:100]}' nhưng {len(records)} bản ghi đến từ {with_records} paper, không phải {n_papers}")
     return out[:MAX_ITEMS]
 
 
@@ -126,6 +184,11 @@ def check_scope(text: str) -> list[str]:
         end = int(m.group(2) or m.group(3))
         if end > latest:
             out.append(f"phạm vi: Abstract/tiêu đề nêu '{m.group(0)}' nhưng nguồn mới nhất trong References là {latest} — thu hẹp phạm vi hoặc bổ sung nguồn")
+        elif m.group(2) and latest - end >= 2:
+            out.append(
+                f"phạm vi: Abstract nêu '{m.group(0)}' nhưng References kéo dài tới {latest} — nói rõ đó là phạm vi dataset hay phạm vi xuất bản "
+                f"(năm của corpus: {min(ref_years)}–{latest})"
+            )
     return out
 
 
@@ -147,6 +210,28 @@ def check_overclaims(text: str, records: list[ResultRecord]) -> list[str]:
                 out.append(f"overclaim ({name}): '{sentence[:120]}' — không có kiểm định/sai số nào được trích, không dùng 'significant'")
             elif _RANK_RE.search(sentence) and not _SCOPED_RE.search(sentence):
                 out.append(f"overclaim ({name}): '{sentence[:120]}' — xếp hạng/khẳng định mạnh không gắn với cùng giao thức đánh giá")
+    return out[:MAX_ITEMS]
+
+
+_ABSOLUTE_RE = re.compile(
+    r"\bnecessar(?:y|ily)\b|\balways\b|\bnever\b|\binvariably\b|\bguarantee[sd]?\b|\bimpossible\b|\bwithout exception\b|"
+    r"\bzero\b[^.]{0,40}\b(?:robustness|degradation|loss|failure)|\bany (?:method|model) (?:must|will|cannot)\b|\bsolves?\b|\bresolves?\b",
+    re.I,
+)
+_CORPUS_SCOPE_RE = re.compile(r"\b(?:in|within|across|among) (?:the |this )?(?:reviewed |included |retrieved |extracted )?(?:corpus|sources|studies|papers|evidence)\b|\bin (?:the )?(?:extracted|retrieved) ", re.I)
+
+
+def check_body_absolutes(text: str) -> list[str]:
+    """Câu tuyệt đối ở thân bài (necessary/always/guarantee/zero robustness…) không gắn phạm vi corpus hay nguồn cụ thể."""
+    body = _FENCE_RE.sub("", _body(text))
+    body = re.split(r"\n#{1,3}\s*References\b", body, maxsplit=1)[0]
+    out = []
+    for sentence in _sentences(body):
+        if sentence.lstrip().startswith(("|", "#")) or not _ABSOLUTE_RE.search(sentence):
+            continue
+        if _SCOPED_RE.search(sentence) or _CORPUS_SCOPE_RE.search(sentence) or re.search(r"\[\d+\]", sentence):
+            continue
+        out.append(f"khẳng định tuyệt đối ở thân bài: '{sentence[:120]}' — hạ giọng (may/suggests) hoặc gắn nguồn/phạm vi corpus")
     return out[:MAX_ITEMS]
 
 
@@ -205,6 +290,9 @@ def run_science_qa(
     attrs = attrs or {}
     return (
         check_absence_claims(text, records, paper_to_n, attrs)
+        + check_body_absolutes(text)
+        + check_internal_contradictions(text)
+        + check_ledger_claims(text, records, paper_to_n)
         + check_terminology(text)
         + check_scope(text)
         + check_overclaims(text, records)

@@ -1,0 +1,11 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Fig. 1: Schematic diagram of CoLa-Diﬀ. During the forward diﬀusion, Original images x0 are compressed using encoder E to get κ0, and after t steps of adding noise, the images turn into κt. During the reverse diﬀusion, the latent space network ϵθ (κt, t, y) predicts the added noise, and other available modalities and anatomical masks as structural guidance are encoded to y, then processed by the au",
+  "kind": "raster",
+  "width": 722,
+  "height": 386,
+  "source_title": "5b31da4d-1923-5c55-9169-6eeed0b782bd.pdf"
+ }
+]

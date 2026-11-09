@@ -48,3 +48,11 @@ def test_ignores_common_stopwords_in_citations():
     draft = "As shown in Table [1] and Section [1], the result is valid."
 
     assert find_citation_misattributions(draft, citations) == []
+
+
+def test_invalid_number_inside_cluster_is_detected():
+    from app.agent.evidence.citation_validator import expand_citation_clusters
+
+    cits = [Citation(paper_id=f"p{i}", chunk_id=f"c{i}") for i in range(36)]
+    assert find_invalid_citations("synthesis [7, 73] and [35–37]", cits) == [37, 73]
+    assert expand_citation_clusters("scale [1-100], code [0]") == "scale [1-100], code [0]"

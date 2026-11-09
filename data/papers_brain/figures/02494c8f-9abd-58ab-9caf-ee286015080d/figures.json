@@ -1,0 +1,29 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Figure 1: Overview of the proposed Semantic-guided Masked Mutual Learning (SMML) framework.",
+  "kind": "raster",
+  "width": 862,
+  "height": 580,
+  "source_title": "02494c8f-9abd-58ab-9caf-ee286015080d.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 5,
+  "caption": "Figure 2: Illustration of the Feature-level Relational Constraint (FRC) module.",
+  "kind": "raster",
+  "width": 873,
+  "height": 427,
+  "source_title": "02494c8f-9abd-58ab-9caf-ee286015080d.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 7,
+  "caption": "Figure 3: The first row shows full-modal inputs for two samples. Below are predicted segmentation masks for various missing modality settings. Green: peritumoral edema; blue: enhancing tumor; red: necrotic and non-enhancing tumor core.",
+  "kind": "raster",
+  "width": 945,
+  "height": 381,
+  "source_title": "02494c8f-9abd-58ab-9caf-ee286015080d.pdf"
+ }
+]

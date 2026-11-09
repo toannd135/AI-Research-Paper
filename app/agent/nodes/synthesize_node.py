@@ -19,11 +19,12 @@ import re
 from datetime import date
 from typing import Any
 
-from app.agent.evidence.citation_cleaner import _local_catalog, clean_and_deduplicate_citations
+from app.agent.evidence.citation_cleaner import _local_catalog, clean_and_deduplicate_citations_ex
 from app.agent.evidence.claim_scan import find_leaked_claims, soften_leaked_claims
 from app.agent.evidence.coverage import coverage_target, full_coverage_applies
 from app.agent.evidence.dataset_catalog import get_dataset_grounding_context
-from app.agent.evidence.quality_gate import merge_structure_issues
+from app.agent.evidence.quality_gate import merge_structure_issues, trace_text_records
+from app.agent.evidence.redact import redact_untraced_cells
 from app.agent.evidence.report_structure import (
     finalize_structure_report,
     source_diversity_warning,
@@ -150,6 +151,7 @@ STRICT PEER-REVIEW PUBLICATION STANDARDS (MANDATORY ACROSS ALL SECTIONS):
 6. ACADEMIC MODESTY & HONESTY:
    - Avoid hype ('first', 'novel breakthrough', 'proves') unless supported by the evidence. Prefer 'we propose', 'we hypothesize', 'the evidence suggests'.
    - Acknowledge limitations, heterogeneity of the evidence and threats to validity candidly.
+   - HEDGING: do not write absolute statements ('necessary', 'always', 'never', 'guarantees', 'solves', 'zero robustness loss') about methods or the field. Scope every general claim to the reviewed corpus or to a cited study ('in the reviewed corpus', 'as reported in [n]') and use 'may', 'suggests' or 'is associated with'.
 7. FORMATTING RULES:
    - Use hyphen '- ' for unordered lists. Never put two list items on one line.
    - Display math $$...$$ MUST be on its own line with empty lines before and after.
@@ -176,19 +178,73 @@ STRICT PEER-REVIEW PUBLICATION STANDARDS (MANDATORY ACROSS ALL SECTIONS):
     return rules
 
 
-def _collect_figures(citations: list[Any]) -> list[dict]:
-    """Hình thật của các paper nội bộ được trích dẫn, theo thứ tự trích dẫn; id F1..Fn, cite = số [n] đầu tiên."""
+_FIG_WORD_RE = re.compile(r"[a-z][a-z0-9+]{2,}")
+_FIG_STOP = frozenset(
+    {
+        "the", "and", "for", "with", "from", "that", "this", "these", "those", "their", "into", "over", "under", "between",
+        "across", "using", "based", "via", "than", "are", "was", "were", "how", "what", "which", "when", "where", "why",
+        "does", "can", "its", "our", "your", "study", "studies", "method", "methods", "approach", "approaches", "model",
+        "models", "result", "results", "figure", "fig", "comparison", "compared", "proposed", "different", "various", "example",
+        "examples", "show", "shows", "shown", "network", "networks", "performance", "analysis", "evaluation", "trade", "offs",
+        "terms", "effectively", "maintain",
+    }
+)
+MIN_FIGURE_TOPIC_OVERLAP = 2  # caption phải chung ≥2 từ nội dung với câu hỏi (1 từ chung như 'segmentation' chưa đủ)
+
+
+def _topic_words(text: str) -> set[str]:
+    return {w for w in _FIG_WORD_RE.findall(text.lower()) if w not in _FIG_STOP}
+
+
+MIN_POOL_FOR_ANCHOR = 6  # pool hình nhỏ hơn mức này thì thống kê độ hiếm không đáng tin → không neo miền
+ANCHOR_MAX_DF = 0.3  # từ của câu hỏi xuất hiện ở <30% caption trong pool = từ đặc trưng miền (vd. brain, glioma, BraTS)
+_GENERIC_FIG_RE = re.compile(r"\b(?:architecture|overview|framework|pipeline|overall|workflow|schematic|diagram)\b", re.I)
+
+
+def _domain_anchors(topic_words: set[str], captions: list[str]) -> set[str]:
+    """Từ của câu hỏi hiếm trong caption của pool (IDF cao): dùng để loại hình của miền khác dù caption chung 'segmentation/MRI'."""
+    if len(captions) < MIN_POOL_FOR_ANCHOR:
+        return set()
+    word_sets = [_topic_words(c) for c in captions]
+    anchors = set()
+    for w in topic_words:
+        df = sum(1 for s in word_sets if w in s) / len(word_sets)
+        if 0 < df <= ANCHOR_MAX_DF:
+            anchors.add(w)
+    return anchors
+
+
+def _collect_figures(citations: list[Any], topic: str = "") -> list[dict]:
+    """Hình thật của các paper nội bộ được trích dẫn, theo thứ tự trích dẫn; id F1..Fn, cite = số [n] đầu tiên.
+
+    Có `topic` (câu hỏi nghiên cứu) thì chỉ giữ hình có caption liên quan: tránh đưa hình của bài toán khác (vd. phân đoạn tế bào/gan
+    trong survey u não) vào bài chỉ vì paper chứa nó được trích dẫn. Ngoài trùng ≥2 từ, hình kết quả/định tính còn phải chứa
+    ít nhất một từ đặc trưng miền của câu hỏi (hình kiến trúc/tổng quan được miễn).
+    """
+    topic_words = _topic_words(topic)
     first_cite: dict[str, int] = {}
     for i, c in enumerate(citations, start=1):
         pid = getattr(c, "paper_id", "") or (c.get("paper_id") if isinstance(c, dict) else "")
         if pid and pid not in first_cite:
             first_cite[pid] = i
+    pool = [(pid, cite, fig) for pid, cite in first_cite.items() for fig in load_figures(pid)]
+    anchors = _domain_anchors(topic_words, [str(f.get("caption", "")) for _, _, f in pool]) if topic_words else set()
     figures: list[dict] = []
-    for pid, cite in first_cite.items():
-        for fig in load_figures(pid):
-            if len(figures) >= MAX_PROMPT_FIGURES:
-                return figures
-            figures.append({**fig, "id": f"F{len(figures) + 1}", "cite": cite})
+    dropped = 0
+    for _pid, cite, fig in pool:
+        if len(figures) >= MAX_PROMPT_FIGURES:
+            break
+        caption = str(fig.get("caption", ""))
+        words = _topic_words(caption)
+        if topic_words and len(words & topic_words) < MIN_FIGURE_TOPIC_OVERLAP:
+            dropped += 1
+            continue
+        if anchors and not (words & anchors) and not _GENERIC_FIG_RE.search(caption):
+            dropped += 1
+            continue
+        figures.append({**fig, "id": f"F{len(figures) + 1}", "cite": cite})
+    if dropped:
+        logger.info("Bỏ %d hình có chú thích không liên quan tới câu hỏi nghiên cứu", dropped)
     return figures
 
 
@@ -375,6 +431,24 @@ def _prior_surveys_fact(state: ResearchState, catalog: dict[str, dict[str, Any]]
     return "PRIOR SURVEYS IN THE CORPUS (title-based; compare against these only):\n" + "\n".join(lines) + "\n\n"
 
 
+# Chỉ số [n] trong evidence đánh theo đoạn trích (nhiều đoạn/paper); LLM từng suy "73 papers" từ [73] trong khi kho có 40 paper.
+def _year_range_fact(catalog: dict, cited: set) -> str:
+    """Dải năm xuất bản thật của các paper được cite (từ catalog); rỗng nếu catalog không có năm."""
+    years = [int(y) for pid in cited if (y := str((catalog.get(str(pid)) or {}).get("year", ""))).isdigit()]
+    if not years:
+        return ""
+    return (
+        f"- Publication years of the cited papers: {min(years)}-{max(years)}. State this as the publication range; a dataset's own "
+        "year range (e.g. a challenge's editions) is a different scope and must be labelled as such.\n"
+    )
+
+
+_CITATION_COUNT_RULE = (
+    "- Citation markers [n] index retrieved passages (several per paper), NOT papers: never derive a paper or study count "
+    "from the largest [n]. The only paper counts you may state are the ones given above.\n"
+)
+
+
 def _review_facts(state: ResearchState, mode: str) -> str:
     """Số liệu thật về quy trình thu thập nguồn, để chương Review Methodology không bịa cơ sở dữ liệu/số lượng sàng lọc."""
     if mode == "novel_research":
@@ -396,12 +470,15 @@ def _review_facts(state: ResearchState, mode: str) -> str:
             f"reranker {settings.reranker_model}); {len(cited)} of them were retrieved as evidence for this manuscript"
             + (f" and {not_retrieved} were not retrieved by any query (state this as a coverage limitation)" if not_retrieved else "")
             + ". Every extracted value is checked to appear verbatim in the cited PDF passage.\n"
+            + _CITATION_COUNT_RULE
         )
     scope = "the curated internal PDF repository only" if not settings.external_search_enabled else "the internal repository plus an external scholarly index (OpenAlex)"
     return surveys + (
         "REVIEW FACTS (the only facts about the search process you may state in Section 2; do not add others):\n"
         f"- Sources searched: {scope}.\n"
         f"- Corpus size: {corpus} papers in the repository catalog; {len(cited)} distinct papers were retrieved as evidence for this manuscript.\n"
+        + _CITATION_COUNT_RULE
+        + _year_range_fact(catalog, cited)
         + (
             f"- {not_retrieved} catalog papers were not returned by any query and are therefore not discussed. They were not excluded by a screening decision "
             "with recorded reasons; state this plainly as a retrieval limitation (relevant work may have been missed).\n"
@@ -724,16 +801,48 @@ def _generate_audience_appendix(
     return _generate(system_prompt, user_prompt, gateway, model_name)
 
 
-def _run_quality_gate(state: ResearchState, text: str) -> dict | None:
+def _run_quality_gate(state: ResearchState, text: str, numbered_citations: list | None = None) -> dict | None:
     from app.agent.evidence.quality_gate import run_quality_gate
 
     try:
-        report = run_quality_gate(state, text)
+        report = run_quality_gate(state, text, numbered_citations=numbered_citations)
     except (KeyError, ValueError, TypeError, AttributeError, OSError):
         logger.exception("Quality Gate lỗi, bỏ qua validation_report")
         return None
     logger.info("Quality Gate: passed=%s, %d lỗi chặn, %d cảnh báo", report["passed"], len(report["blocking"]), len(report["warnings"]))
     return report
+
+
+def _verify_final_report(
+    state: ResearchState,
+    report: str,
+    numbered_citations: list,
+    draft_gate: dict | None,
+    structure_blocking: list[str],
+    structure_warnings: list[str],
+) -> tuple[str, dict | None]:
+    """Kiểm chứng và sửa trên ĐÚNG chuỗi sẽ xuất ra (gate lần 1 chạy trên bản thô, trước khi chèn bảng/đánh số lại [n]).
+
+    1. gỡ ô số không truy vết được khỏi bảng (thay bằng NR); 2. chạy lại gate với ánh xạ [n] mới → paper;
+    3. `validation_report` mô tả bản cuối, kèm `draft_gate` (số lỗi của bản thô) và `redacted_cells`.
+    Lỗi bất ngờ ở bước này không làm sập graph: giữ báo cáo + gate của bản thô.
+    """
+    try:
+        records = trace_text_records(state, report, numbered_citations)
+        report, redacted = redact_untraced_cells(report, records)
+    except (KeyError, ValueError, TypeError, AttributeError, OSError):
+        logger.exception("Gỡ ô số không truy vết được lỗi, giữ nguyên báo cáo")
+        redacted = []
+    final_gate = _run_quality_gate(state, report, numbered_citations)
+    if final_gate is None:
+        return report, merge_structure_issues(draft_gate, structure_blocking, structure_warnings)
+    final_gate = merge_structure_issues(final_gate, structure_blocking, structure_warnings)
+    summary = (
+        {"passed": draft_gate["passed"], "blocking": len(draft_gate["blocking"]), "warnings": len(draft_gate["warnings"])}
+        if draft_gate
+        else None
+    )
+    return report, {**final_gate, "draft_gate": summary, "redacted_cells": redacted}
 
 
 class InsufficientEvidenceError(ValueError):
@@ -746,7 +855,7 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
     if not citations:
         raise InsufficientEvidenceError("Không có nguồn nào để trích dẫn: không tạo paper khi References rỗng")
     references_prompt = _format_references_prompt(citations)
-    state = {**state, "figures": _collect_figures(citations)}
+    state = {**state, "figures": _collect_figures(citations, str(state.get("question", "")))}
     mode = state.get("research_mode", "survey")
 
     gateway, model_name = get_default_agent_gateway(llm)
@@ -839,7 +948,7 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
         raw_stitched = inject_quant_blocks(raw_stitched, build_quant_blocks(records_from_dicts(state["results"]), paper_to_n, attrs))
 
     # Deduplicate citations, remap numbers, and generate clean IEEE references
-    updated_text, clean_references = clean_and_deduplicate_citations(citations, raw_stitched)
+    updated_text, clean_references, numbered_citations = clean_and_deduplicate_citations_ex(citations, raw_stitched)
     updated_text = postprocess_report(
         updated_text, state.get("draft", ""), gateway, model_name, state.get("language", "en"), state["figures"],
         evidence_text=" ".join(str(getattr(c, "text_snippet", "") or "") for c in citations),
@@ -854,11 +963,8 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
     updated_text, dangling_refs, low_confidence_refs = finalize_structure_report(updated_text)
     if low_confidence_refs:
         logger.warning("Tham chiếu bảng/hình gán theo vị trí (không khớp nội dung): %s", low_confidence_refs)
-    validation_report = merge_structure_issues(
-        validation_report,
-        [f"tham chiếu tài liệu: {p}" for p in dangling_refs],
-        [f"tham chiếu bảng/hình gán theo vị trí gần nhất, cần kiểm tra: {r}" for r in low_confidence_refs],
-    )
+    structure_blocking = [f"tham chiếu tài liệu: {p}" for p in dangling_refs]
+    structure_warnings = [f"tham chiếu bảng/hình gán theo vị trí gần nhất, cần kiểm tra: {r}" for r in low_confidence_refs]
     research_model = state.get("research_model")
     if research_model and research_model.get("claims"):
         leaks = find_leaked_claims(updated_text, research_model["claims"])
@@ -872,5 +978,8 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
         final_text_with_refs += "\n\n## References\n\n" + "\n".join(clean_references)
 
     clean_report = sanitize_academic_markdown(final_text_with_refs)
+    clean_report, validation_report = _verify_final_report(
+        state, clean_report, numbered_citations, validation_report, structure_blocking, structure_warnings
+    )
     logger.info(f"Synthesized comprehensive 10-page paper: {len(clean_report):,} chars")
     return {**state, "report": clean_report, "validation_report": validation_report}

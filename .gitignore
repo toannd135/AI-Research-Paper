@@ -29,3 +29,6 @@ node_modules/
 # *.log
 # celerybeat-schedule*
 # dump.rdb
+
+# Cache phản hồi LLM của bước trích xuất (sinh lại được)
+data/cache/

@@ -78,3 +78,22 @@ def test_openrouter_upstream_error_raises_gateway_error(mock_httpx_cls):
     with pytest.raises(LLMGatewayError) as exc_info:
         adapter.generate([Message(role="user", content="Hi")])
     assert "OpenRouter upstream error" in str(exc_info.value)
+
+
+@patch("app.ai.llm_gateway.openrouter_adapter.httpx.Client")
+def test_openrouter_429_raises_rate_limit_error_with_retry_after(mock_httpx_cls):
+    from app.ai.llm_gateway.base import LLMRateLimitError
+    from app.ai.llm_gateway.openrouter_adapter import OpenRouterAdapter
+
+    mock_res = MagicMock()
+    mock_res.status_code = 429
+    mock_res.text = "rate limited"
+    mock_res.headers = {"retry-after": "12"}
+    mock_client = MagicMock()
+    mock_client.post.return_value = mock_res
+    mock_httpx_cls.return_value.__enter__.return_value = mock_client
+
+    adapter = OpenRouterAdapter(api_key="sk-or-fake-key")
+    with pytest.raises(LLMRateLimitError) as exc_info:
+        adapter.generate([Message(role="user", content="Hi")])
+    assert exc_info.value.retry_after == 12.0

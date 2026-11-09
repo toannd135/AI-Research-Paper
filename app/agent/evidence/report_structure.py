@@ -10,6 +10,8 @@ import logging
 import re
 from collections import Counter
 
+from app.agent.evidence.citation_validator import expand_citation_clusters
+
 logger = logging.getLogger(__name__)
 
 _FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
@@ -17,6 +19,7 @@ _H2_NUM_RE = re.compile(r"^(##\s+)(\d+)\.(\s+.*)$")
 _H3_NUM_RE = re.compile(r"^(###\s+)(\d+)\.(\d+)(\s+.*)$")
 _CAPTION_RE = re.compile(r"^(\*\*)(Table|Figure)\s+(\d+)([:.]\s*)", re.MULTILINE)
 _CITE_RE = re.compile(r"\[(\d+)\]")
+_CITE_SEP_RE = re.compile(r"(,[ \t]*)?\[(\d+)\]")
 
 
 def _split_fences(text: str) -> list[tuple[bool, str]]:
@@ -135,7 +138,7 @@ def strip_dangling_citations(text: str, n_refs: int) -> tuple[str, list[int]]:
     removed: list[int] = []
 
     def _drop(m: re.Match) -> str:
-        n = int(m.group(1))
+        n = int(m.group(2))
         if 1 <= n <= n_refs:
             return m.group(0)
         removed.append(n)
@@ -146,7 +149,10 @@ def strip_dangling_citations(text: str, n_refs: int) -> tuple[str, list[int]]:
         if is_code:
             out.append(chunk)
             continue
-        cleaned = _CITE_RE.sub(_drop, chunk)
+        # Xóa marker kèm dấu phẩy nối phía trước: '[7], [73].' -> '[7].'
+        cleaned = _CITE_SEP_RE.sub(_drop, expand_citation_clusters(chunk))
+        # Marker đầu cụm bị xóa để lại dấu phẩy mồ côi: 'methods , [7]' -> 'methods [7]'
+        cleaned = re.sub(r"([\s(])[ \t]*,[ \t]*(?=\[\d+\])", r"\1", cleaned)
         cleaned = re.sub(r"[ \t]+([,.;:])", r"\1", cleaned)
         cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
         out.append(cleaned)

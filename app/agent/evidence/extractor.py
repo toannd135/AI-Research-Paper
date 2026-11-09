@@ -7,11 +7,13 @@ Metric hiệu quả (Params, GFLOPs, inference time) là bản ghi riêng. Thi�
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import re
 import time
 from dataclasses import asdict
+from pathlib import Path
 from typing import Any
 
 from app.agent.evidence.quant_check import ResultRecord
@@ -21,8 +23,12 @@ logger = logging.getLogger(__name__)
 
 BATCH_SIZE = 3  # số paper mỗi lần gọi LLM (lô nhỏ → ít bị timeout, đầu ra JSON ngắn hơn)
 MAX_CHUNKS_PER_PAPER = 4
-MAX_ATTEMPTS = 3  # thử lại khi LLM lỗi; KHÔNG đặt timeout/ngân sách thời gian: phải chạy đủ mọi lô
+MAX_ATTEMPTS = 3  # thử lại khi LLM lỗi; không đặt timeout từng lệnh gọi (chờ LLM trả lời đủ từng lô)
+# Ngân sách tổng cho cả bước trích xuất: quá mức này thì bỏ các lô còn lại để graph đi tiếp
+# (tránh task bị Celery kill khi LLM bị rate limit). Quyết định 2026-11-09, thay cho "chạy đủ mọi lô".
+MAX_TOTAL_SECONDS = 1500.0
 MAX_CHARS_PER_CHUNK = 1800
+CACHE_ENABLED = True  # cache phản hồi LLM thô theo lô (khóa = prompt + model + đoạn văn); test tắt mặc định
 _KEY_RE = re.compile(
     r"\b(dice|hd95|hausdorff|iou|params?|parameters|gflops|flops|inference|latency"
     r"|auc|auroc|eer|acc|accuracy|f1|average precision)\b",
@@ -121,35 +127,92 @@ def _verify(item: dict[str, Any], chunks: list[dict[str, Any]]) -> ResultRecord 
     )
 
 
-def extract_results(evidence: list[Any], gateway: LLMGateway, model_name: str | None = None) -> list[ResultRecord]:
-    """Trích các `ResultRecord` đã kiểm chứng nguyên văn; lỗi LLM/parse của một lô không làm hỏng lô khác."""
+def _cache_dir() -> Path:
+    from app.core.config import get_settings
+
+    return Path(get_settings().upload_dir).parent / "cache" / "extract"
+
+
+def _cache_key(passages: str, model_name: str | None) -> str:
+    return hashlib.sha256("\x00".join((_PROMPT, model_name or "", passages)).encode("utf-8")).hexdigest()
+
+
+def _cache_get(key: str) -> str | None:
+    """Đọc phản hồi LLM thô đã lưu của lô; không đọc được thì coi như chưa có cache."""
+    if not CACHE_ENABLED:
+        return None
+    try:
+        return (_cache_dir() / f"{key}.txt").read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+
+def _cache_put(key: str, text: str) -> None:
+    """Lưu phản hồi LLM thô (ghi nguyên tử); lỗi ghi không làm hỏng việc trích xuất."""
+    if not CACHE_ENABLED:
+        return
+    try:
+        d = _cache_dir()
+        d.mkdir(parents=True, exist_ok=True)
+        tmp = d / f"{key}.tmp"
+        tmp.write_text(text, encoding="utf-8")
+        tmp.replace(d / f"{key}.txt")
+    except OSError:
+        logger.warning("Không ghi được cache trích xuất", exc_info=True)
+
+
+def _call_llm(gateway: LLMGateway, passages: str, model_name: str | None, no: int, n_batches: int) -> str | None:
+    for attempt in range(1, MAX_ATTEMPTS + 1):  # không đặt giới hạn thời gian: chờ LLM trả lời đủ từng lô
+        try:
+            resp = gateway.generate(
+                messages=[Message(role="system", content=_PROMPT), Message(role="user", content=passages)],
+                model_name=model_name,
+            )
+            return resp.text
+        except (LLMGatewayError, RuntimeError, ValueError, OSError):
+            logger.exception("Trích xuất lô %d/%d lỗi (lần %d/%d)", no, n_batches, attempt, MAX_ATTEMPTS)
+    return None
+
+
+def extract_results(
+    evidence: list[Any],
+    gateway: LLMGateway,
+    model_name: str | None = None,
+    max_seconds: float | None = MAX_TOTAL_SECONDS,
+) -> list[ResultRecord]:
+    """Trích các `ResultRecord` đã kiểm chứng nguyên văn; lỗi LLM/parse của một lô không làm hỏng lô khác.
+
+    Quá `max_seconds` (None = không giới hạn) thì bỏ các lô còn lại và trả về những gì đã trích được.
+    """
     by_paper = _paper_chunks(evidence)
     ids = list(by_paper)
     records: list[ResultRecord] = []
     n_batches = -(-len(ids) // BATCH_SIZE)
+    start = time.monotonic()
     for i in range(0, len(ids), BATCH_SIZE):
         no = i // BATCH_SIZE + 1
+        if max_seconds is not None and time.monotonic() - start > max_seconds:
+            logger.warning("Trích xuất: quá ngân sách %.0fs, bỏ %d lô còn lại (từ lô %d/%d)", max_seconds, n_batches - no + 1, no, n_batches)
+            break
         batch = ids[i : i + BATCH_SIZE]
         passages = "\n\n".join(
             f"[paper_id={pid}] (page {c['page']})\n{c['text'][:MAX_CHARS_PER_CHUNK]}" for pid in batch for c in by_paper[pid]
         )
         t0 = time.monotonic()
         logger.info("Trích xuất lô %d/%d (%d paper, %d ký tự)...", no, n_batches, len(batch), len(passages))
-        resp = None
-        for attempt in range(1, MAX_ATTEMPTS + 1):  # không đặt giới hạn thời gian: chờ LLM trả lời đủ từng lô
-            try:
-                resp = gateway.generate(
-                    messages=[Message(role="system", content=_PROMPT), Message(role="user", content=passages)],
-                    model_name=model_name,
-                )
-                break
-            except (LLMGatewayError, RuntimeError, ValueError, OSError):
-                logger.exception("Trích xuất lô %d/%d lỗi (lần %d/%d)", no, n_batches, attempt, MAX_ATTEMPTS)
-        if resp is None:
-            logger.warning("Trích xuất lô %d/%d: lỗi sau %d lần thử, bỏ lô này", no, n_batches, MAX_ATTEMPTS)
-            continue
+        key = _cache_key(passages, model_name)
+        cached = _cache_get(key)
+        if cached is not None:
+            logger.info("Trích xuất lô %d/%d: dùng cache", no, n_batches)
+            text = cached
+        else:
+            text = _call_llm(gateway, passages, model_name, no, n_batches)
+            if text is None:
+                logger.warning("Trích xuất lô %d/%d: lỗi sau %d lần thử, bỏ lô này", no, n_batches, MAX_ATTEMPTS)
+                continue
+            _cache_put(key, text)
         got = 0
-        for item in _parse_json_list(resp.text):
+        for item in _parse_json_list(text):
             pid = str(item.get("paper_id") or "")
             if pid not in by_paper:
                 continue

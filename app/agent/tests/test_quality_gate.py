@@ -211,3 +211,37 @@ def test_prior_surveys_fact_lists_only_real_catalog_surveys():
     fact = _prior_surveys_fact(state, catalog)
     assert "[1] A Review of MRI Fusion (2022)" in fact and "(not retrieved, cannot be cited) Deep Survey of X" in fact and "UNet" not in fact
     assert "none" in _prior_surveys_fact(state, {"p3": {"title": "UNet"}})
+
+
+def test_paper_count_above_corpus_is_flagged():
+    from app.agent.evidence.consistency_check import check_paper_counts
+
+    text = "We analyze 73 studies.\n\nThe repository has 40 papers; 34 distinct papers were retrieved.\n\n## References\n[1] 99 papers"
+    assert check_paper_counts(text, 40) == ["bài nói 73 paper/nghiên cứu nhưng kho chỉ có 40 paper"]
+    assert check_paper_counts("We analyze 40 papers.", 40) == []
+
+
+def test_gate_on_renumbered_text_traces_through_numbered_citations():
+    """Bản cuối đã đánh số lại: [1] mới là paper p2 (p1 không được cite) → truy vết phải đi theo `numbered_citations`."""
+    all_cites = [SimpleNamespace(paper_id="p1"), SimpleNamespace(paper_id="p2")]
+    state = {"citations": all_cites, "evidence": [_chunk("p1", "Dice 11.1", 1), _chunk("p2", "Dice 88.5", 8)]}
+    catalog = {"p1": {"title": "T1", "authors": "A", "year": "2021", "url": "u"}, "p2": {"title": "T2", "authors": "B", "year": "2022", "url": "u"}}
+    text = '```table\n{"caption": "R", "columns": ["M", "Dice"], "rows": [["B [1]", "88.5"]]}\n```'
+
+    raw_view = run_quality_gate(state, text, catalog)  # đọc [1] theo chỉ số gốc = p1 → 88.5 không có trong p1
+    final_view = run_quality_gate(state, text, catalog, numbered_citations=[all_cites[1]])
+
+    assert raw_view["traceability"]["counts"][UNTRACED] == 1
+    assert final_view["traceability"]["counts"][TRACED] == 1 and final_view["passed"]
+    # độ phủ kho tính trên kho đầy đủ: p1 không còn reference nào trong bản cuối → "1/2 paper chưa được cite"
+    assert any("độ phủ kho: 1/2" in w for w in final_view["warnings"])
+
+
+def test_final_gate_flags_method_name_attributed_to_wrong_paper():
+    cites = [SimpleNamespace(paper_id="p1", text_snippet="nnU-Net Revisited benchmarks U-Net on BraTS")]
+    state = {"citations": cites, "evidence": [], "results": []}
+    catalog = {"p1": {"title": "nnU-Net Revisited", "authors": "Isensee", "year": "2024", "url": "u"}}
+    bad = run_quality_gate(state, "Swin UNETR [1] improves over the baseline.", catalog, numbered_citations=cites)
+    assert any("gán sai nguồn" in w and "UNETR" in w for w in bad["warnings"])
+    good = run_quality_gate(state, "nnU-Net [1] is a strong baseline.", catalog, numbered_citations=cites)
+    assert not any("gán sai nguồn" in w for w in good["warnings"])

@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Figure 1. This design enables the model to learn a unified latent representation that captures high-level semantic features common across different MRI modali- ties while still allowing for modality-specific reconstruction through dedicated decoding. By learning a shared, modality-invariant latent space, the architecture facilitates flexible and accurate cross-modal synthesis, enabling the generat",
+  "kind": "vector",
+  "width": 694,
+  "height": 279,
+  "source_title": "4509ed48-ee93-5aab-b501-e3825db27c7d.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 10,
+  "caption": "Fig. 5: Qualitative comparison of coronal and sagittal plane views illustrating inter-slice inconsistency present in MMG-generated slices, which is effectively resolved in MMG+CEn-generated slices. Specifically, the \"M–C\" map highlights the removal of vertical blurry artifacts caused by inter-slice inconsistency.",
+  "kind": "raster",
+  "width": 991,
+  "height": 228,
+  "source_title": "4509ed48-ee93-5aab-b501-e3825db27c7d.pdf"
+ }
+]

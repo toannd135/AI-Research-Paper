@@ -1,0 +1,11 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 4,
+  "caption": "Fig. 1: (a) Architectural design of the MedNeXt. The network has 4 Encoder and Decoder layers each, with a bottleneck layer. MedNeXt blocks are present in Up and Downsampling layers as well. Deep Supervision is used at each decoder layer, with lower loss weights at lower resolutions. All residuals are additive while convolutions are padded to retain tensor sizes. (b) Upsampled Kernel (UpKern) init",
+  "kind": "vector",
+  "width": 729,
+  "height": 243,
+  "source_title": "2ae6f908-e096-554b-986d-8c3682df14a1.pdf"
+ }
+]

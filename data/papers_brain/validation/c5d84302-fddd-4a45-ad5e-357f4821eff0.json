@@ -1,0 +1,1302 @@
+{
+  "passed": false,
+  "blocking": [
+    "18 giá trị không tìm thấy trong nguồn được trích và 0 giá trị không có [n] trong bảng/biểu đồ — không được dùng làm bảng kết quả",
+    "so sánh không tương đương: biểu đồ trộn nhiều vùng phân đoạn (ET, TC, WT) trên cùng một trục",
+    "so sánh không tương đương: biểu đồ trộn nhiều vùng phân đoạn (ET, TC, WT) trên cùng một trục"
+  ],
+  "warnings": [
+    "37/40 reference là preprint/arXiv, chưa chắc đã bình duyệt — ghi rõ khi dùng làm bằng chứng",
+    "novelty: bài không cite survey/review trước nào (theo tiêu đề catalog) — không chứng minh được điểm mới so với các survey đã có; thêm các survey liên quan vào kho rồi chạy lại",
+    "độ phủ kho: 9/40 paper trong kho chưa được cite (UNet++: A Nested U-Net Architecture for Medical Image Segmen; MedNeXt: Transformer-driven Scaling of ConvNets for Medical ; V-Net: Fully Convolutional Neural Networks for Volumetric Me; U-Net: Convolutional Networks for Biomedical Image Segmentat; nnU-Net: Self-adapting Framework for U-Net-Based Medical Ima; Missing MRI Pulse Sequence Synthesis using Multi-Modal Gener; Brain Tumor Segmentation with Deep Neural Networks; 3D U-Net: Learning Dense Volumetric Segmentation from Sparse…)",
+    "Figure [8] được nhắc trong thân bài nhưng không có khối tương ứng",
+    "Table: có 8, vượt mục tiêu 3–6",
+    "Table: 8 khối nhưng chỉ 6 số được nhắc trong thân bài",
+    "hình: biểu đồ thứ 1 chỉ lặp lại số của một bảng — bỏ hoặc thay bằng hình cho góc nhìn mới",
+    "hình: biểu đồ thứ 2 chỉ lặp lại số của một bảng — bỏ hoặc thay bằng hình cho góc nhìn mới",
+    "nhất quán: tên method khác nhau cho cùng nguồn [12] giữa các bảng: ['Winner 2018 ensemble 10', 'Winner 2018 single', 'Winner 2018 single+TTA']",
+    "nhất quán: tên method khác nhau cho cùng nguồn [26] giữa các bảng: ['EMMA', 'MIC DKFZ', 'UCL-TIG']",
+    "nhất quán: tên method khác nhau cho cùng nguồn [18] giữa các bảng: ['Wang et al. multi-view', 'Wang et al. no multi-view']",
+    "nhất quán: tên method khác nhau cho cùng nguồn [11] giữa các bảng: ['SegResNet', 'Swin UNETR', 'TransBTS', 'nnU-Net']",
+    "nhất quán: tên method khác nhau cho cùng nguồn [30] giữa các bảng: ['DeepMedic', 'Ensemble+CRF']",
+    "nhất quán: tên method khác nhau cho cùng nguồn [22] giữa các bảng: ['M3AE', 'MCTSeg', 'RFNet', 'SMML', 'SMU-Net', 'U-Net-MFI', 'mmFormer']",
+    "nhất quán: tên method khác nhau cho cùng nguồn [29] giữa các bảng: ['SLaM-DiMM MMG', 'SLaM-DiMM MMG+CEn']",
+    "nhất quán: tên method khác nhau cho cùng nguồn [32] giữa các bảng: ['ACN', 'CMJP', 'M3AE', 'ModGen', 'RFNet', 'SMU-Net', 'U-HVED']",
+    "nhất quán: Abstract 245 từ, ngoài khoảng 150–220",
+    "nhất quán: đánh số Table caption không liên tục/trùng: [1, 2, 3, 3, 4, 6]",
+    "nhất quán: đánh số Figure caption không liên tục/trùng: [1, 3, 4, 5, 6, 7, 8]",
+    "nhất quán: bảng 'Full-modal and missing-modality Dice/HD95 on BraTS validation and hidden test se' trộn Dice dạng tỷ lệ (0–1) và % (0–100) trong cùng cột; tách cột hoặc ghi rõ đơn vị từng dòng",
+    "science QA: claim–evidence: 'No quantitative uncertainty metrics—predictive entropy, mutual information, Monte Carlo dropout variance, or evidential learning outputs—are' phủ nhận uncertainty/calibration nhưng có 2 bằng chứng đã trích/xác minh",
+    "science QA: claim–evidence: '**Calibration.** No reliability diagrams, expected calibration error (ECE), Brier scores, or confidence–accuracy curves are reported.' phủ nhận uncertainty/calibration nhưng có 2 bằng chứng đã trích/xác minh",
+    "science QA: claim–evidence: 'Missing-modality comparisons are **weak**: heterogeneous protocols, validation-only, no spread statistics (only 79/417 records report SD/SE/' phủ nhận variance (SD/CI) nhưng có 79 bằng chứng đã trích/xác minh"
+  ],
+  "references": {
+    "references": [
+      {
+        "paper_id": "15beb82a-b8ac-53dd-b513-e664bf5818e3",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "264dfab4-fb58-534a-bb94-511cfe88c2e3",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "375871bc-1250-57e3-86c4-3dea015ef876",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "6ccaf6ea-14bd-5a7e-ad03-053dca5bc1bc",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "751375f1-c9aa-5463-afc4-7eead39473b7",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "9ff4701d-dc59-533b-8f81-662b422aa407",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "b859a356-dfc5-52ef-b123-00cb8eb55e90",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "07f7d522-2cc2-55e6-96ae-4d8b99cca9a2",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "283cea40-6b7e-5a72-9502-73d4d5585276",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "f7f5d237-2215-54d5-887a-06f70c5259e5",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "ea02235e-0e39-5af4-9ea7-f43e4c28f31a",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "b480e2eb-b7cf-515d-9645-6debf6d36d15",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "b5895376-8243-58fb-b03e-fc9ffd10e765",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "published"
+      },
+      {
+        "paper_id": "6a620f46-3d57-5e17-8f19-3403ff11f91f",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "1bfead36-f4cc-58f3-9eb9-ae619c74772d",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "3b54afea-d9b8-5c98-9371-b3953db3b746",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "4cce1762-0486-55fa-ad6c-de87810a4e5d",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "5695a1e0-d789-5bbf-86b2-a99973fd53b5",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "ad9ae7f0-cb16-57d4-8386-e1a11958c3c1",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "02494c8f-9abd-58ab-9caf-ee286015080d",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "1ba755f8-1476-5d5d-ad54-adbbd07f6d38",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "bc635452-5fc5-55c9-8ccf-a9bb07ba8564",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "published"
+      },
+      {
+        "paper_id": "92e311e0-aa46-5e4c-9f4f-3fe4557ef629",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "677bfa1c-eecb-5873-bb3b-780d2d724931",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "51ab6624-90c8-5904-bcce-21e1fc2f6e0e",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "4509ed48-ee93-5aab-b501-e3825db27c7d",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "4e2e7dfc-7edc-5ffa-81d7-30a929511c91",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "846a4576-9186-5828-b5f1-f62cc4417c97",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "af9e8061-7ae7-5701-8d22-55ee60f2bd08",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "published"
+      },
+      {
+        "paper_id": "1e3809fd-f5bc-5bb8-a2ca-31c045126404",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "2ae6f908-e096-554b-986d-8c3682df14a1",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "2c7f7129-1278-579f-b95d-55854a5ab7e5",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "5b31da4d-1923-5c55-9169-6eeed0b782bd",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "672322a2-af8e-5089-b0fa-87a594af23ee",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "7153f889-932f-5704-b2d2-1e5d4c9e2904",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "bcb5e5b0-f12c-5403-9201-f7150255dda9",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "2879ced4-852d-5bca-a2cf-350ccbfb96a2",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      }
+    ],
+    "counts": {
+      "CATALOG_MATCHED": 40
+    },
+    "duplicates": 0,
+    "publication": {
+      "preprint": 37,
+      "published": 3
+    }
+  },
+  "traceability": {
+    "counts": {
+      "TRACED": 41,
+      "UNTRACED": 18,
+      "NO_CITATION": 0
+    },
+    "untraced": [
+      {
+        "block": "table#1",
+        "location": "row 2, HD95 TC",
+        "value": "6.855",
+        "cites": [
+          12
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 2, HD95 ET",
+        "value": "3.926",
+        "cites": [
+          12
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 3, HD95 WT",
+        "value": "4.483",
+        "cites": [
+          12
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 3, HD95 TC",
+        "value": "8.278",
+        "cites": [
+          12
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 3, HD95 ET",
+        "value": "3.805",
+        "cites": [
+          12
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 4, HD95 WT",
+        "value": "4.412",
+        "cites": [
+          12
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 4, HD95 TC",
+        "value": "6.841",
+        "cites": [
+          12
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 4, HD95 ET",
+        "value": "3.824",
+        "cites": [
+          12
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 33, HD95 WT",
+        "value": "2.115",
+        "cites": [
+          29
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 33, HD95 TC",
+        "value": "3.665",
+        "cites": [
+          29
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 33, HD95 ET",
+        "value": "3.337",
+        "cites": [
+          29
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 34, HD95 TC",
+        "value": "4.023",
+        "cites": [
+          29
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 34, HD95 ET",
+        "value": "3.699",
+        "cites": [
+          29
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 35, HD95 WT",
+        "value": "10.768",
+        "cites": [
+          29
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 35, HD95 TC",
+        "value": "11.304",
+        "cites": [
+          29
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 36, HD95 WT",
+        "value": "5.128",
+        "cites": [
+          29
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 36, HD95 TC",
+        "value": "11.917",
+        "cites": [
+          29
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      },
+      {
+        "block": "table#1",
+        "location": "row 36, HD95 ET",
+        "value": "7.984",
+        "cites": [
+          29
+        ],
+        "status": "UNTRACED",
+        "paper_id": null,
+        "pages": [],
+        "pdf_sha256": null
+      }
+    ],
+    "traced_sample": [
+      {
+        "block": "table#1",
+        "location": "row 1, HD95 WT",
+        "value": "8.498",
+        "cites": [
+          8
+        ],
+        "status": "TRACED",
+        "paper_id": "07f7d522-2cc2-55e6-96ae-4d8b99cca9a2",
+        "pages": [
+          1
+        ],
+        "pdf_sha256": "e23c2e128bb60a9a36df502d876581e37c2315f3c0905f154623805c68c0ffb6"
+      },
+      {
+        "block": "table#1",
+        "location": "row 1, HD95 TC",
+        "value": "17.337",
+        "cites": [
+          8
+        ],
+        "status": "TRACED",
+        "paper_id": "07f7d522-2cc2-55e6-96ae-4d8b99cca9a2",
+        "pages": [
+          1
+        ],
+        "pdf_sha256": "e23c2e128bb60a9a36df502d876581e37c2315f3c0905f154623805c68c0ffb6"
+      },
+      {
+        "block": "table#1",
+        "location": "row 1, HD95 ET",
+        "value": "17.805",
+        "cites": [
+          8
+        ],
+        "status": "TRACED",
+        "paper_id": "07f7d522-2cc2-55e6-96ae-4d8b99cca9a2",
+        "pages": [
+          1
+        ],
+        "pdf_sha256": "e23c2e128bb60a9a36df502d876581e37c2315f3c0905f154623805c68c0ffb6"
+      },
+      {
+        "block": "table#1",
+        "location": "row 2, HD95 WT",
+        "value": "4.516",
+        "cites": [
+          12
+        ],
+        "status": "TRACED",
+        "paper_id": "f7f5d237-2215-54d5-887a-06f70c5259e5",
+        "pages": [
+          7
+        ],
+        "pdf_sha256": "020c3b4626b320f1b812351f1ace754f7366d7e33040787120c973b75b9ef583"
+      },
+      {
+        "block": "table#1",
+        "location": "row 5, HD95 WT",
+        "value": "6.04",
+        "cites": [
+          14
+        ],
+        "status": "TRACED",
+        "paper_id": "b480e2eb-b7cf-515d-9645-6debf6d36d15",
+        "pages": [
+          8
+        ],
+        "pdf_sha256": "91e206bdc48d09b3bd5204192ee39780b6dd0027c60daa66fc5524e0e94df78a"
+      },
+      {
+        "block": "table#1",
+        "location": "row 5, HD95 TC",
+        "value": "6.95",
+        "cites": [
+          14
+        ],
+        "status": "TRACED",
+        "paper_id": "b480e2eb-b7cf-515d-9645-6debf6d36d15",
+        "pages": [
+          8
+        ],
+        "pdf_sha256": "91e206bdc48d09b3bd5204192ee39780b6dd0027c60daa66fc5524e0e94df78a"
+      },
+      {
+        "block": "table#1",
+        "location": "row 5, HD95 ET",
+        "value": "6.24",
+        "cites": [
+          14
+        ],
+        "status": "TRACED",
+        "paper_id": "b480e2eb-b7cf-515d-9645-6debf6d36d15",
+        "pages": [
+          8
+        ],
+        "pdf_sha256": "91e206bdc48d09b3bd5204192ee39780b6dd0027c60daa66fc5524e0e94df78a"
+      },
+      {
+        "block": "table#1",
+        "location": "row 6, HD95 WT",
+        "value": "6.97",
+        "cites": [
+          14
+        ],
+        "status": "TRACED",
+        "paper_id": "b480e2eb-b7cf-515d-9645-6debf6d36d15",
+        "pages": [
+          8
+        ],
+        "pdf_sha256": "91e206bdc48d09b3bd5204192ee39780b6dd0027c60daa66fc5524e0e94df78a"
+      },
+      {
+        "block": "table#1",
+        "location": "row 6, HD95 TC",
+        "value": "9.48",
+        "cites": [
+          14
+        ],
+        "status": "TRACED",
+        "paper_id": "b480e2eb-b7cf-515d-9645-6debf6d36d15",
+        "pages": [
+          8
+        ],
+        "pdf_sha256": "91e206bdc48d09b3bd5204192ee39780b6dd0027c60daa66fc5524e0e94df78a"
+      },
+      {
+        "block": "table#1",
+        "location": "row 6, HD95 ET",
+        "value": "4.55",
+        "cites": [
+          14
+        ],
+        "status": "TRACED",
+        "paper_id": "b480e2eb-b7cf-515d-9645-6debf6d36d15",
+        "pages": [
+          8
+        ],
+        "pdf_sha256": "91e206bdc48d09b3bd5204192ee39780b6dd0027c60daa66fc5524e0e94df78a"
+      },
+      {
+        "block": "table#1",
+        "location": "row 8, HD95 WT",
+        "value": "4.23",
+        "cites": [
+          26
+        ],
+        "status": "TRACED",
+        "paper_id": "677bfa1c-eecb-5873-bb3b-780d2d724931",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "bb788a0eff0a5d7684958f7a038c5e7ff2e59ededbca2726ca57f3d10ab0f7f6"
+      },
+      {
+        "block": "table#1",
+        "location": "row 8, HD95 TC",
+        "value": "6.56",
+        "cites": [
+          26
+        ],
+        "status": "TRACED",
+        "paper_id": "677bfa1c-eecb-5873-bb3b-780d2d724931",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "bb788a0eff0a5d7684958f7a038c5e7ff2e59ededbca2726ca57f3d10ab0f7f6"
+      },
+      {
+        "block": "table#1",
+        "location": "row 8, HD95 ET",
+        "value": "4.50",
+        "cites": [
+          26
+        ],
+        "status": "TRACED",
+        "paper_id": "677bfa1c-eecb-5873-bb3b-780d2d724931",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "bb788a0eff0a5d7684958f7a038c5e7ff2e59ededbca2726ca57f3d10ab0f7f6"
+      },
+      {
+        "block": "table#1",
+        "location": "row 9, HD95 WT",
+        "value": "3.89",
+        "cites": [
+          26
+        ],
+        "status": "TRACED",
+        "paper_id": "677bfa1c-eecb-5873-bb3b-780d2d724931",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "bb788a0eff0a5d7684958f7a038c5e7ff2e59ededbca2726ca57f3d10ab0f7f6"
+      },
+      {
+        "block": "table#1",
+        "location": "row 9, HD95 TC",
+        "value": "6.48",
+        "cites": [
+          26
+        ],
+        "status": "TRACED",
+        "paper_id": "677bfa1c-eecb-5873-bb3b-780d2d724931",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "bb788a0eff0a5d7684958f7a038c5e7ff2e59ededbca2726ca57f3d10ab0f7f6"
+      },
+      {
+        "block": "table#1",
+        "location": "row 9, HD95 ET",
+        "value": "3.28",
+        "cites": [
+          26
+        ],
+        "status": "TRACED",
+        "paper_id": "677bfa1c-eecb-5873-bb3b-780d2d724931",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "bb788a0eff0a5d7684958f7a038c5e7ff2e59ededbca2726ca57f3d10ab0f7f6"
+      },
+      {
+        "block": "table#1",
+        "location": "row 10, HD95 WT",
+        "value": "6.97",
+        "cites": [
+          26
+        ],
+        "status": "TRACED",
+        "paper_id": "677bfa1c-eecb-5873-bb3b-780d2d724931",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "bb788a0eff0a5d7684958f7a038c5e7ff2e59ededbca2726ca57f3d10ab0f7f6"
+      },
+      {
+        "block": "table#1",
+        "location": "row 10, HD95 TC",
+        "value": "9.48",
+        "cites": [
+          26
+        ],
+        "status": "TRACED",
+        "paper_id": "677bfa1c-eecb-5873-bb3b-780d2d724931",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "bb788a0eff0a5d7684958f7a038c5e7ff2e59ededbca2726ca57f3d10ab0f7f6"
+      },
+      {
+        "block": "table#1",
+        "location": "row 10, HD95 ET",
+        "value": "4.55",
+        "cites": [
+          26
+        ],
+        "status": "TRACED",
+        "paper_id": "677bfa1c-eecb-5873-bb3b-780d2d724931",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "bb788a0eff0a5d7684958f7a038c5e7ff2e59ededbca2726ca57f3d10ab0f7f6"
+      },
+      {
+        "block": "table#1",
+        "location": "row 13, HD95 WT",
+        "value": "4.964",
+        "cites": [
+          27
+        ],
+        "status": "TRACED",
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "pages": [
+          6,
+          7
+        ],
+        "pdf_sha256": "4fa7cdd035bc8075c9db46b2540f76ff802a18b514af7baf8ca5b72ae1b8a591"
+      },
+      {
+        "block": "table#1",
+        "location": "row 13, HD95 TC",
+        "value": "9.769",
+        "cites": [
+          27
+        ],
+        "status": "TRACED",
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "pages": [
+          6,
+          7
+        ],
+        "pdf_sha256": "4fa7cdd035bc8075c9db46b2540f76ff802a18b514af7baf8ca5b72ae1b8a591"
+      },
+      {
+        "block": "table#1",
+        "location": "row 13, HD95 ET",
+        "value": "17.947",
+        "cites": [
+          27
+        ],
+        "status": "TRACED",
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "pages": [
+          6,
+          7
+        ],
+        "pdf_sha256": "4fa7cdd035bc8075c9db46b2540f76ff802a18b514af7baf8ca5b72ae1b8a591"
+      },
+      {
+        "block": "table#1",
+        "location": "row 15, HD95 WT",
+        "value": "5.831",
+        "cites": [
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "02222608b64528fa1c1c5626f4afb321e91905db40ec7b0f516c2ed0a4f15b8c"
+      },
+      {
+        "block": "table#1",
+        "location": "row 15, HD95 ET",
+        "value": "6.016",
+        "cites": [
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "02222608b64528fa1c1c5626f4afb321e91905db40ec7b0f516c2ed0a4f15b8c"
+      },
+      {
+        "block": "table#1",
+        "location": "row 34, HD95 WT",
+        "value": "2.460",
+        "cites": [
+          29
+        ],
+        "status": "TRACED",
+        "paper_id": "4509ed48-ee93-5aab-b501-e3825db27c7d",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "713770eaf2ed656988e2720871fe0ea4f73e6723eba7b22c5448890aaf177ad6"
+      },
+      {
+        "block": "table#1",
+        "location": "row 35, HD95 ET",
+        "value": "13.609",
+        "cites": [
+          29
+        ],
+        "status": "TRACED",
+        "paper_id": "4509ed48-ee93-5aab-b501-e3825db27c7d",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "713770eaf2ed656988e2720871fe0ea4f73e6723eba7b22c5448890aaf177ad6"
+      },
+      {
+        "block": "chart#2",
+        "location": "series 1, point 1",
+        "value": "88.95",
+        "cites": [
+          8,
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "07f7d522-2cc2-55e6-96ae-4d8b99cca9a2",
+        "pages": [
+          1
+        ],
+        "pdf_sha256": "e23c2e128bb60a9a36df502d876581e37c2315f3c0905f154623805c68c0ffb6"
+      },
+      {
+        "block": "chart#2",
+        "location": "series 1, point 2",
+        "value": "0.926",
+        "cites": [
+          8,
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "02222608b64528fa1c1c5626f4afb321e91905db40ec7b0f516c2ed0a4f15b8c"
+      },
+      {
+        "block": "chart#2",
+        "location": "series 1, point 3",
+        "value": "0.927",
+        "cites": [
+          8,
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "02222608b64528fa1c1c5626f4afb321e91905db40ec7b0f516c2ed0a4f15b8c"
+      },
+      {
+        "block": "chart#2",
+        "location": "series 1, point 4",
+        "value": "0.927",
+        "cites": [
+          8,
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "02222608b64528fa1c1c5626f4afb321e91905db40ec7b0f516c2ed0a4f15b8c"
+      },
+      {
+        "block": "chart#2",
+        "location": "series 1, point 5",
+        "value": "0.911",
+        "cites": [
+          8,
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "02222608b64528fa1c1c5626f4afb321e91905db40ec7b0f516c2ed0a4f15b8c"
+      },
+      {
+        "block": "chart#2",
+        "location": "series 2, point 1",
+        "value": "85.06",
+        "cites": [
+          8,
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "07f7d522-2cc2-55e6-96ae-4d8b99cca9a2",
+        "pages": [
+          1
+        ],
+        "pdf_sha256": "e23c2e128bb60a9a36df502d876581e37c2315f3c0905f154623805c68c0ffb6"
+      },
+      {
+        "block": "chart#2",
+        "location": "series 2, point 2",
+        "value": "0.885",
+        "cites": [
+          8,
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "02222608b64528fa1c1c5626f4afb321e91905db40ec7b0f516c2ed0a4f15b8c"
+      },
+      {
+        "block": "chart#2",
+        "location": "series 2, point 3",
+        "value": "0.913",
+        "cites": [
+          8,
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "02222608b64528fa1c1c5626f4afb321e91905db40ec7b0f516c2ed0a4f15b8c"
+      },
+      {
+        "block": "chart#2",
+        "location": "series 2, point 4",
+        "value": "0.913",
+        "cites": [
+          8,
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "02222608b64528fa1c1c5626f4afb321e91905db40ec7b0f516c2ed0a4f15b8c"
+      },
+      {
+        "block": "chart#2",
+        "location": "series 2, point 5",
+        "value": "0.898",
+        "cites": [
+          8,
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "02222608b64528fa1c1c5626f4afb321e91905db40ec7b0f516c2ed0a4f15b8c"
+      },
+      {
+        "block": "chart#2",
+        "location": "series 3, point 1",
+        "value": "82.03",
+        "cites": [
+          8,
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "07f7d522-2cc2-55e6-96ae-4d8b99cca9a2",
+        "pages": [
+          1
+        ],
+        "pdf_sha256": "e23c2e128bb60a9a36df502d876581e37c2315f3c0905f154623805c68c0ffb6"
+      },
+      {
+        "block": "chart#2",
+        "location": "series 3, point 2",
+        "value": "0.858",
+        "cites": [
+          8,
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "02222608b64528fa1c1c5626f4afb321e91905db40ec7b0f516c2ed0a4f15b8c"
+      },
+      {
+        "block": "chart#2",
+        "location": "series 3, point 3",
+        "value": "0.883",
+        "cites": [
+          8,
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "02222608b64528fa1c1c5626f4afb321e91905db40ec7b0f516c2ed0a4f15b8c"
+      },
+      {
+        "block": "chart#2",
+        "location": "series 3, point 4",
+        "value": "0.883",
+        "cites": [
+          8,
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5",
+        "pages": [
+          9
+        ],
+        "pdf_sha256": "02222608b64528fa1c1c5626f4afb321e91905db40ec7b0f516c2ed0a4f15b8c"
+      }
+    ]
+  },
+  "comparability": {
+    "chart_problems": [
+      "biểu đồ trộn nhiều vùng phân đoạn (ET, TC, WT) trên cùng một trục",
+      "biểu đồ trộn nhiều vùng phân đoạn (ET, TC, WT) trên cùng một trục"
+    ]
+  },
+  "research_questions": {
+    "problems": []
+  },
+  "review_claims": {
+    "problems": [],
+    "declared_review_type": null,
+    "protocol_problems": []
+  },
+  "display_items": {
+    "counts": {
+      "figures": 7,
+      "tables": 8
+    },
+    "target": {
+      "figures": [
+        5,
+        9
+      ],
+      "tables": [
+        3,
+        6
+      ]
+    },
+    "chart_types": [
+      "dot",
+      "heatmap",
+      "scatter"
+    ],
+    "warnings": [
+      "Figure [8] được nhắc trong thân bài nhưng không có khối tương ứng",
+      "Table: có 8, vượt mục tiêu 3–6",
+      "Table: 8 khối nhưng chỉ 6 số được nhắc trong thân bài",
+      "hình: biểu đồ thứ 1 chỉ lặp lại số của một bảng — bỏ hoặc thay bằng hình cho góc nhìn mới",
+      "hình: biểu đồ thứ 2 chỉ lặp lại số của một bảng — bỏ hoặc thay bằng hình cho góc nhìn mới"
+    ]
+  },
+  "consistency": [
+    "tên method khác nhau cho cùng nguồn [12] giữa các bảng: ['Winner 2018 ensemble 10', 'Winner 2018 single', 'Winner 2018 single+TTA']",
+    "tên method khác nhau cho cùng nguồn [26] giữa các bảng: ['EMMA', 'MIC DKFZ', 'UCL-TIG']",
+    "tên method khác nhau cho cùng nguồn [18] giữa các bảng: ['Wang et al. multi-view', 'Wang et al. no multi-view']",
+    "tên method khác nhau cho cùng nguồn [11] giữa các bảng: ['SegResNet', 'Swin UNETR', 'TransBTS', 'nnU-Net']",
+    "tên method khác nhau cho cùng nguồn [30] giữa các bảng: ['DeepMedic', 'Ensemble+CRF']",
+    "tên method khác nhau cho cùng nguồn [22] giữa các bảng: ['M3AE', 'MCTSeg', 'RFNet', 'SMML', 'SMU-Net', 'U-Net-MFI', 'mmFormer']",
+    "tên method khác nhau cho cùng nguồn [29] giữa các bảng: ['SLaM-DiMM MMG', 'SLaM-DiMM MMG+CEn']",
+    "tên method khác nhau cho cùng nguồn [32] giữa các bảng: ['ACN', 'CMJP', 'M3AE', 'ModGen', 'RFNet', 'SMU-Net', 'U-HVED']",
+    "Abstract 245 từ, ngoài khoảng 150–220",
+    "đánh số Table caption không liên tục/trùng: [1, 2, 3, 3, 4, 6]",
+    "đánh số Figure caption không liên tục/trùng: [1, 3, 4, 5, 6, 7, 8]",
+    "bảng 'Full-modal and missing-modality Dice/HD95 on BraTS validation and hidden test se' trộn Dice dạng tỷ lệ (0–1) và % (0–100) trong cùng cột; tách cột hoặc ghi rõ đơn vị từng dòng"
+  ],
+  "science_qa": [
+    "claim–evidence: 'No quantitative uncertainty metrics—predictive entropy, mutual information, Monte Carlo dropout variance, or evidential learning outputs—are' phủ nhận uncertainty/calibration nhưng có 2 bằng chứng đã trích/xác minh",
+    "claim–evidence: '**Calibration.** No reliability diagrams, expected calibration error (ECE), Brier scores, or confidence–accuracy curves are reported.' phủ nhận uncertainty/calibration nhưng có 2 bằng chứng đã trích/xác minh",
+    "claim–evidence: 'Missing-modality comparisons are **weak**: heterogeneous protocols, validation-only, no spread statistics (only 79/417 records report SD/SE/' phủ nhận variance (SD/CI) nhưng có 79 bằng chứng đã trích/xác minh"
+  ],
+  "study_profile": {
+    "b859a356-dfc5-52ef-b123-00cb8eb55e90": {
+      "uncertainty": {
+        "value": "No",
+        "page": 13,
+        "quote": "The AUC is a metric that measures the overall discriminatory capacity of a model for all possible thresholds and allows for comparing the performance of the entries by each participant, even though it has no straightforw"
+      }
+    },
+    "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5": {
+      "cross_validation": {
+        "value": "Yes",
+        "page": 8,
+        "quote": "We used ﬁve-fold cross-validation schemes with a ratio of 80:20."
+      }
+    },
+    "b480e2eb-b7cf-515d-9645-6debf6d36d15": {
+      "cross_validation": {
+        "value": "Yes",
+        "page": 8,
+        "quote": "Train: 5 fold cross-validation on the training data (285 cases)."
+      }
+    },
+    "6a620f46-3d57-5e17-8f19-3403ff11f91f": {
+      "uncertainty": {
+        "value": "Yes",
+        "page": 7,
+        "quote": "Once the style and content features are re- calibrated we recombine these features, along with the ones extracted by the encoder, to generate a new representation as an input for the decoder module."
+      }
+    },
+    "5695a1e0-d789-5bbf-86b2-a99973fd53b5": {
+      "code_available": {
+        "value": "Yes",
+        "page": 1,
+        "quote": "The code is available at https://github.com/YaoZhang93/mmFormer."
+      }
+    },
+    "07f7d522-2cc2-55e6-96ae-4d8b99cca9a2": {
+      "cross_validation": {
+        "value": "Yes",
+        "page": 5,
+        "quote": "We optimize the threshold for postprocessing on our training set cross-validation twice, once via maximizing the mean Dice score and once via minimizing the ranking score in our internal BraTS-like ranking."
+      }
+    },
+    "bc635452-5fc5-55c9-8ccf-a9bb07ba8564": {
+      "code_available": {
+        "value": "Yes",
+        "page": 1,
+        "quote": "The code repository address is https://github.com/billhhh/ShaSpec/.1 1."
+      }
+    },
+    "92e311e0-aa46-5e4c-9f4f-3fe4557ef629": {
+      "cross_validation": {
+        "value": "Yes",
+        "page": 14,
+        "quote": "Because distribution of the intensity values in this dataset is very variable from one subject to another, we used a 7 fold cross validation for training."
+      }
+    },
+    "ec18533d-52b1-5c32-b395-a74c3c070396": {
+      "cross_validation": {
+        "value": "No",
+        "page": 7,
+        "quote": "Since the ground truth for the validation set is not available, we conduct ﬁve-fold cross-validation evaluation on the training set for all methods."
+      }
+    },
+    "4e2e7dfc-7edc-5ffa-81d7-30a929511c91": {
+      "cross_validation": {
+        "value": "Yes",
+        "page": 28,
+        "quote": "For this, we run a 5-fold cross validation where each fold contains both HG and LG images."
+      }
+    },
+    "ea02235e-0e39-5af4-9ea7-f43e4c28f31a": {
+      "missing_random": {
+        "value": "Yes",
+        "page": 24,
+        "quote": "Comparative Experiments We conducted systematic comparative experiments by randomly omitting input modalities to mimic clinical modality-missing scenarios, thus creating 15 input configurations encompassing single-, dual"
+      }
+    },
+    "02494c8f-9abd-58ab-9caf-ee286015080d": {
+      "missing_random": {
+        "value": "Yes",
+        "page": 1,
+        "quote": "We then randomly mask one or more modalities in each branch."
+      }
+    },
+    "af9e8061-7ae7-5701-8d22-55ee60f2bd08": {
+      "missing_random": {
+        "value": "Yes",
+        "page": 1,
+        "quote": "In the ﬁrst stage, a multimodal masked autoencoder (M3AE) is proposed, where both ran- dom modalities (i.e., modality dropout) and random patches of the remaining modalities are masked for a reconstruc- tion task, for se"
+      },
+      "code_available": {
+        "value": "Yes",
+        "page": 1,
+        "quote": "Our code is available at: https://github.com/ccarliu/m3ae."
+      }
+    },
+    "2879ced4-852d-5bca-a2cf-350ccbfb96a2": {
+      "cross_validation": {
+        "value": "Yes",
+        "page": 2,
+        "quote": "The contribution of this work is four-fold."
+      }
+    },
+    "bcb5e5b0-f12c-5403-9201-f7150255dda9": {
+      "uncertainty": {
+        "value": "Yes",
+        "page": 11,
+        "quote": "Zhao, J., Xing, Z., Chen, Z., Wan, L., Han, T., Fu, H., Zhu, L.: Uncertainty-aware multi-dimensional mutual learning for brain and brain tumor segmentation."
+      }
+    }
+  }
+}

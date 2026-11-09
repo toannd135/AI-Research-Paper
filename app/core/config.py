@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     groq_api_key: str | None = None
     groq_model: str = "openai/gpt-oss-120b"
     openrouter_api_key: str | None = None
+    openrouter_api_key_2: str | None = None  # khóa OpenRouter thứ hai, dự phòng khi Groq cũng bị rate limit
     openrouter_model: str = "nvidia/nemotron-3-ultra-550b-a55b:free"
     openrouter_fallback_models: list[str] = [
         "nvidia/nemotron-3-ultra-550b-a55b:free",

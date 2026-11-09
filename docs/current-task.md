@@ -2,7 +2,31 @@
 
 > Cập nhật tệp này MỖI KHI đổi task. Claude đọc nó trước khi code. Trống/lỗi thời -> hỏi người dùng.
 
-## Task hiện tại: đánh giá Q1/Q2 lần 3 — lớp Scientific Consistency QA + bằng chứng truy vết được
+## Task hiện tại: đánh giá Q1/Q2 lần 4 — kiểm chứng trên BẢN CUỐI + sửa tự động lỗi đã phát hiện
+Bản: `survey_c5d84302.pdf` (task `c5d84302-…`). Người dùng: "đọc tiếp đánh giá và cải thiện những phần còn thiếu". Chỉ sửa lỗi do HỆ THỐNG sinh ra
+(mở rộng corpus/PRISMA/2 reviewer là việc của người dùng). Đã đối chiếu từng nhận xét với PDF + `validation/c5d84302-….json`:
+
+| # | Phát hiện (đã xác minh) | Việc | Tệp |
+|---|---|---|---|
+| 1 | Quality Gate chạy trên văn bản THÔ (trước chèn bảng định lượng, đánh số lại [n], postprocess) → `validation_report` không mô tả PDF cuối | Chạy gate lần 2 trên bản cuối với ánh xạ [n] mới → paper | `citation_cleaner.py`, `quality_gate.py`, `synthesize_node.py` |
+| 2 | 18 ô số HD95 không truy vết được vẫn lọt vào bảng; gate chỉ cảnh báo | Thay ô UNTRACED bằng "—" + chú thích bảng (không bịa, không giữ số không có nguồn) | `evidence/redact.py` (mới) |
+| 3 | "417 records … exhaustively", "all modality subsets: 0" mâu thuẫn "[20],[22],[28] evaluate all 15 subsets" | Facts sổ cái (N bản ghi / M paper có số / K kho / paper phủ 15 tập); kiểm tra mâu thuẫn nội bộ; cấm "exhaustive" | `consistency_check.py`, `science_qa.py`, `synthesize_node._review_facts` |
+| 4 | Hình U-Mamba abdominal/microscopy/endoscopy lọt vào survey u não (caption trùng "segmentation/MRI") | Neo miền theo từ hiếm của câu hỏi (IDF trong pool hình); hình kết quả không có neo → bỏ | `synthesize_node._collect_figures` |
+| 5 | Câu tuyệt đối ở thân bài ("necessary", "zero … robustness") — gate chỉ soi Abstract/Conclusion | Mở rộng overclaim ra thân bài + quy tắc hedging trong prompt | `science_qa.py`, `synthesize_node._global_standards` |
+| 6 | Abstract "BraTS 2012–2021" nhưng References tới 2025, không cảnh báo (check chỉ bắt chiều ngược) | Cảnh báo phạm vi dataset ≠ phạm vi xuất bản; đưa dải năm thật vào facts | `science_qa.check_scope`, `_review_facts` |
+| 7 | `[1]` nnU-Net Revisited bị dùng cho Swin UNETR: `find_citation_misattributions` chỉ chạy ở critique, so với UUID | Chạy trên bản cuối, corpus = title catalog + tên model trong sổ cái | `quality_gate.py` |
+
+Không làm (đã ghi lý do): tách cột Dice % / tỉ lệ (người dùng yêu cầu giữ nguyên thang gốc, chỉ cảnh báo); đánh số Figure (đã đúng 1–7 trong markdown,
+thứ tự lộn xộn là do `pdftotext` đọc 2 cột); PRISMA/tìm kiếm CSDL/2 reviewer (việc người dùng).
+
+## Tiêu chí hoàn thành (lần 4)
+- [x] 1–7 có code + test; `pytest app/agent app/pipeline app/ai` pass; ruff không thêm lỗi
+- [x] Doc: architecture, ADR 0007 gate-on-final + redact
+- [ ] Chạy lại survey thật (người dùng restart worker)
+
+---
+
+## Task trước: đánh giá Q1/Q2 lần 3 — lớp Scientific Consistency QA + bằng chứng truy vết được
 Người dùng: "đọc đánh giá và tiếp tục cải tiến hệ thống". Chỉ làm phần của HỆ THỐNG; tìm kiếm CSDL/sàng lọc/novelty thật là việc người dùng,
 hệ thống chỉ được dùng đúng số liệu người dùng khai báo.
 

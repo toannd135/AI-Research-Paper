@@ -78,6 +78,23 @@ def _save_validation_report(task_id: str, report: dict | None) -> None:
         logger.exception("Không ghi được validation_report cho task %s", task_id)
 
 
+def _research_scope(db, allowed: set[str] | None) -> set[str] | None:
+    """Phạm vi truy xuất = paper đã xử lý xong trong DB (giao với phạm vi người dùng).
+
+    Vector trong Qdrant của paper đã xóa khỏi DB (mồ côi) không có metadata -> thành reference 'Anonymous'/UUID
+    và làm sai số paper; vì vậy kể cả admin cũng chỉ thấy paper có trong DB. DB chưa có paper done -> giữ phạm vi cũ.
+    """
+    from sqlalchemy import select
+
+    from app.api.models.paper import Paper
+
+    done = set(db.scalars(select(Paper.id).where(Paper.status == PaperStatus.DONE.value)).all())
+    if not done:
+        logger.warning("Chưa có paper nào xử lý xong; research chạy trên toàn bộ vector hiện có")
+        return allowed
+    return done if allowed is None else allowed & done
+
+
 @celery_app.task(name="app.pipeline.tasks.run_research")
 def run_research(task_id: str) -> dict:
     """Chạy LangGraph research agent cho 1 ResearchTask, cập nhật report/citations/status."""
@@ -104,7 +121,7 @@ def run_research(task_id: str) -> dict:
             from app.core.scope import allowed_paper_ids_for, set_allowed_paper_ids
 
             owner = db.get(User, task.user_id) if task.user_id else None
-            set_allowed_paper_ids(allowed_paper_ids_for(db, owner))
+            set_allowed_paper_ids(_research_scope(db, allowed_paper_ids_for(db, owner)))
             question = task.refined_question or task.question
             state = run_graph(
                 question,

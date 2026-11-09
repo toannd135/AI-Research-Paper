@@ -17,6 +17,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from app.agent.evidence.citation_validator import expand_citation_clusters
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -167,17 +168,46 @@ def collapse_duplicate_citations(text: str) -> str:
     return "".join(out)
 
 
+def _expand_outside_code(text: str) -> str:
+    """Tách cụm trích dẫn trong văn bản thường và khối ```table; khối code/chart/mermaid giữ nguyên (có thể là mảng dữ liệu)."""
+    out: list[str] = []
+    pos = 0
+    for fence in _FENCE_RE.finditer(text):
+        out.append(expand_citation_clusters(text[pos : fence.start()]))
+        block = fence.group(0)
+        out.append(expand_citation_clusters(block) if block.startswith("```table") else block)
+        pos = fence.end()
+    out.append(expand_citation_clusters(text[pos:]))
+    return "".join(out)
+
+
 def clean_and_deduplicate_citations(
     citations: list[Any],
     text: str,
 ) -> tuple[str, list[str]]:
     """Hợp nhất các citation trùng lặp, format IEEE chuẩn, và đồng bộ lại số [n] trong văn bản.
-    
+
     Returns:
         (updated_text, clean_reference_lines)
     """
+    updated_text, references, _ = clean_and_deduplicate_citations_ex(citations, text)
+    return updated_text, references
+
+
+def clean_and_deduplicate_citations_ex(
+    citations: list[Any],
+    text: str,
+) -> tuple[str, list[str], list[Any]]:
+    """Như `clean_and_deduplicate_citations`, thêm danh sách citation theo số [n] MỚI.
+
+    `numbered[k-1]` là citation đại diện của reference [k] trong văn bản đã đánh số lại, để kiểm chứng
+    bản cuối (số [n] mới không còn trùng chỉ số trong `citations` gốc).
+    """
     if not citations:
-        return text, []
+        return text, [], []
+
+    # 0. Tách cụm '[7, 73]'/'[3–5]' thành marker đơn để bước đánh số lại không bỏ sót (cụm sẽ được gộp lại ở bước 4).
+    text = _expand_outside_code(text)
 
     # 1. Deduplicate các citations dựa trên tiêu đề chuẩn hóa
     canonical_list: list[dict[str, str]] = []
@@ -224,6 +254,10 @@ def clean_and_deduplicate_citations(
     updated_text = collapse_duplicate_citations(updated_text)
 
     # 5. Sinh danh sách tham khảo theo định dạng chuẩn IEEE
+    first_orig: dict[int, Any] = {}
+    for orig_i, canon_i in orig_idx_to_canon_idx.items():
+        first_orig.setdefault(canon_i, citations[orig_i - 1])
+    numbered = [first_orig[old_c] for old_c in used_canon_indices]
     formatted_references = []
     for old_c in used_canon_indices:
         new_i = canon_to_new[old_c]
@@ -237,4 +271,4 @@ def clean_and_deduplicate_citations(
         ref_entry = f"[{new_i}] {authors}, \"{title},\" *{venue}*, {year}{doi_part}."
         formatted_references.append(ref_entry)
 
-    return updated_text, formatted_references
+    return updated_text, formatted_references, numbered

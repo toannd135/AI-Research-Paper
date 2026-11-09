@@ -24,9 +24,10 @@ celery_app.conf.update(
     # Task bị kill giữa chừng (worker restart) sẽ được giao lại thay vì mất hẳn.
     task_acks_late=True,
     worker_prefetch_multiplier=1,
-    # 1 research task gồm ~10 lời gọi LLM tuần tự + embedding/rerank CPU -> cho phép tối đa 1 giờ.
-    task_time_limit=3600,
-    task_soft_time_limit=3300,
+    # 1 research task gồm ~10 lời gọi LLM tuần tự + embedding/rerank CPU; khi bị rate limit LLM có thể
+    # chậm hơn nhiều -> cho phép tối đa 2 giờ (soft limit 1 giờ 55 phút).
+    task_time_limit=7200,
+    task_soft_time_limit=6900,
     result_expires=24 * 3600,
     task_serializer="json",
     result_serializer="json",

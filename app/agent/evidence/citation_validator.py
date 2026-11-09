@@ -5,6 +5,26 @@ import re
 from app.core.schemas import Citation
 
 _MARKER_RE = re.compile(r"\[(\d+)\]")
+# Cụm trích dẫn trong một cặp ngoặc: '[7, 73]', '[3–5]', '[2; 9-11]' (≥2 mục hoặc một khoảng).
+_ITEM = r"\d+(?:\s*[–—-]\s*\d+)?"
+_CLUSTER_RE = re.compile(rf"\[(\d+\s*[–—-]\s*\d+|{_ITEM}(?:\s*[,;]\s*{_ITEM})+)\]")
+_MAX_RANGE = 30  # khoảng dài hơn thế này không phải trích dẫn (vd. '[1-100]' là thang đo) -> giữ nguyên
+
+
+def _expand_cluster(m: re.Match) -> str:
+    numbers: list[int] = []
+    for item in re.split(r"\s*[,;]\s*", m.group(1)):
+        lo_hi = re.split(r"\s*[–—-]\s*", item)
+        lo, hi = int(lo_hi[0]), int(lo_hi[-1])
+        if hi < lo or hi - lo > _MAX_RANGE:
+            return m.group(0)
+        numbers.extend(range(lo, hi + 1))
+    return ", ".join(f"[{n}]" for n in dict.fromkeys(numbers))
+
+
+def expand_citation_clusters(text: str) -> str:
+    """'[7, 73]' -> '[7], [73]', '[3–5]' -> '[3], [4], [5]' để mọi bước đánh số lại/kiểm tra chỉ cần xử lý marker đơn."""
+    return _CLUSTER_RE.sub(_expand_cluster, text)
 
 # Regex tìm kiếm tên phương pháp / tác giả đi kèm ngay trước trích dẫn [n]
 # Ví dụ: "IRCoT [4]", "Self-RAG [12]", "CoVe [6]", "Pan et al. [6]"
@@ -24,7 +44,7 @@ _STOP_WORDS = {
 def find_invalid_citations(draft: str, citations: list[Citation]) -> list[int]:
     """Trả về danh sách số [n] xuất hiện trong draft nhưng KHÔNG có citation tương ứng."""
     valid_indices = set(range(1, len(citations) + 1))
-    used = {int(m) for m in _MARKER_RE.findall(draft)}
+    used = {int(m) for m in _MARKER_RE.findall(expand_citation_clusters(draft))}
     return sorted(used - valid_indices)
 
 
@@ -60,10 +80,14 @@ def find_citation_misattributions(draft: str, citations: list[Citation]) -> list
             # Chuẩn hóa để so khớp (ví dụ: 'self-rag' -> 'self rag' hoặc 'self-rag')
             clean_lower = clean_name.lower()
             normalized_name = re.sub(r"[^a-z0-9]", "", clean_lower)
-            normalized_corpus = re.sub(r"[^a-z0-9]", "", cit_corpus)
 
             # Nếu tên phương pháp/tác giả hoàn toàn không xuất hiện trong bài báo được cite
-            if clean_lower not in cit_corpus and normalized_name not in normalized_corpus:
+            # So khớp theo ranh giới từ: 'unetr' không được coi là có mặt trong 'nnunetrevisited'
+            spaced_name = " ".join(re.findall(r"[a-z0-9]+", clean_lower))
+            spaced_corpus = " " + " ".join(re.findall(r"[a-z0-9]+", cit_corpus)) + " "
+            corpus_tokens = set(spaced_corpus.split())
+            present = f" {spaced_name} " in spaced_corpus or normalized_name in corpus_tokens
+            if not present:
                 key = (clean_name, idx)
                 if key not in seen:
                     seen.add(key)

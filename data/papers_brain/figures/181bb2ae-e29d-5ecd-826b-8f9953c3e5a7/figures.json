@@ -1,0 +1,38 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Figure 1: Left: Traditional methods handle modality missing scenarios but lack interaction mechanisms among different modality combinations, resulting in significant performance drops when fewer modalities are available. Right: We propose a cross-modal combination self-distillation framework that (1) learns from full-modality supervision to transfer com- prehensive multimodal knowledge, and (2) im",
+  "kind": "vector",
+  "width": 819,
+  "height": 320,
+  "source_title": "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 7,
+  "caption": "Figure 2: Overview. Left: We employs two encoders to capture both shared and spe- cific features for each modality. For all possible modality combinations, these two types of features are concatenated along both feature and channel dimensions, followed by a lightweight convolutional layer to obtain the fused features for the corresponding modal- ity combination. Based on the fused features, we imp",
+  "kind": "vector",
+  "width": 818,
+  "height": 515,
+  "source_title": "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 17,
+  "caption": "Figure 4: Comparison of average Dice scores across varying numbers of modalities.",
+  "kind": "vector",
+  "width": 820,
+  "height": 334,
+  "source_title": "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 22,
+  "caption": "Figure 5: Comparison of AURC scores among our method and four baseline methods on the three segmentation tasks: ET, TC, and WT. AURC evaluates the overall performance and robustness of a model under varying degrees of modality missing by computing the area under the curve of average Dice scores with respect to the number of available modalities. A higher AURC indicates better stability and perform",
+  "kind": "vector",
+  "width": 819,
+  "height": 469,
+  "source_title": "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7.pdf"
+ }
+]

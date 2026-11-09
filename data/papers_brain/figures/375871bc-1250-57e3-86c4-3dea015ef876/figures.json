@@ -1,0 +1,29 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Fig. 1. Overview of the U-Mamba (Enc) architecture. a, U-Mamba building block contains two successive Residual blocks followed by the SSM-based Mamba block for enhanced long-range dependency modeling. b, U-Mamba employs the encoder-decoder framework with U-Mamba blocks in the endocer, Residual blocks in the decoder, to- gether with skip connections. Note: This illustration serves as a conceptual r",
+  "kind": "raster",
+  "width": 720,
+  "height": 417,
+  "source_title": "375871bc-1250-57e3-86c4-3dea015ef876.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 8,
+  "caption": "Fig. 2. Visualized segmentation examples of abdominal organ segmentation in CT (1st and 2nd rows) and MRI scans (3rd and 4th rows). U-Mamba has better capabilities to distinguish complex soft tissues in the abdomen.",
+  "kind": "raster",
+  "width": 651,
+  "height": 384,
+  "source_title": "375871bc-1250-57e3-86c4-3dea015ef876.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 10,
+  "caption": "Fig. 3. Visualized segmentation examples of abdominal organ segmentation MRI scans (1st row), cell segmentation in microscopy images (2nd row), and instruments segmen- tation in endoscopy images (3rd row). U-Mamba is more robust to heterogeneous ap- pearances and has fewer segmentation outliers.",
+  "kind": "raster",
+  "width": 732,
+  "height": 309,
+  "source_title": "375871bc-1250-57e3-86c4-3dea015ef876.pdf"
+ }
+]

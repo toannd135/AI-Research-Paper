@@ -1,0 +1,65 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 10,
+  "caption": "Figure 3: Framework overview. (Stage A) Missing-modality Sampling: Generates 15 MRI modality combinations and leverages an Adapter Bank to compensate for absent inputs. (Stage B) Knowledge-distillation Training: Incorporate BBDM, GARM, and LGRM, with GARM applied exclusively to the student branch.",
+  "kind": "vector",
+  "width": 808,
+  "height": 359,
+  "source_title": "ea02235e-0e39-5af4-9ea7-f43e4c28f31a.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 14,
+  "caption": "Figure 5: Cosine similarity heatmaps of adapter parameters. Each four-digit code denotes available modalities in the order [T1, T1Gd, T2, FLAIR] (1=present, 0=ab- sent). (a-c) 1st-3rd encoder adapters, (d-f) 1st-3rd decoder adapters. Deeper adapters show higher inter-configuration similarity, indicating convergence toward consistent full- modality feature approximation, while retaining clear modal",
+  "kind": "raster",
+  "width": 831,
+  "height": 231,
+  "source_title": "ea02235e-0e39-5af4-9ea7-f43e4c28f31a.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 19,
+  "caption": "Figure 6: Lesion-Presence-Guided Reliability Module. For each slice, voxel-level probability maps from the student (left) and teacher (right) are aligned to the ground-truth label map (centre) with a voxel-wise mean-squared-error. Concurrently, the three lesion classes (NET, ET, ED) are collapsed into existence scores; these scores are matched to the binary presence vector of the label via an entr",
+  "kind": "vector",
+  "width": 803,
+  "height": 280,
+  "source_title": "ea02235e-0e39-5af4-9ea7-f43e4c28f31a.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 21,
+  "caption": "Figure 7: Scatter plots showing the relationship between model performance and parame- ter count across four evaluation metrics: (a) Dice (%), (b) HD95 (mm), (c) IoU (%), and (d) Sensitivity (%). The proposed method (Ours) is highlighted in red.",
+  "kind": "raster",
+  "width": 811,
+  "height": 554,
+  "source_title": "ea02235e-0e39-5af4-9ea7-f43e4c28f31a.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 22,
+  "caption": "Figure 8: Scatter plots showing the relationship between model performance and FLOPs across four evaluation metrics: (a) Dice (%), (b) HD95 (mm), (c) IoU (%), and (d) Sensitivity (%). The proposed method (Ours) is highlighted in red.",
+  "kind": "raster",
+  "width": 811,
+  "height": 553,
+  "source_title": "ea02235e-0e39-5af4-9ea7-f43e4c28f31a.pdf"
+ },
+ {
+  "file": "fig_6.png",
+  "page": 39,
+  "caption": "Figure 10: Qualitative ablation study on the BraTS 2024 dataset. In- put images and ground-truth masks are shown for four modality configurations (T1, T1+T1Gd+T2+FLAIR, T1Gd+T2, and T1+T1Gd+T2). From left to right, the remain- ing columns present the segmentation outputs and corresponding prediction heatmaps produced by models without BBDM, without GARM, without LGRM, and with the com- plete model",
+  "kind": "vector",
+  "width": 813,
+  "height": 362,
+  "source_title": "ea02235e-0e39-5af4-9ea7-f43e4c28f31a.pdf"
+ },
+ {
+  "file": "fig_7.png",
+  "page": 40,
+  "caption": "Figure 11: Comparison of Mel spectrograms between full-modality input and missing-modality reconstructions with and without GSME. Three modality com- binations are shown across rows: (1) T1C, (2) T1C+FLAIR, and (3) T1C+FLAIR+T1. The x-axis denotes time for spectrograms and index (0-14) for difference maps, while the y-axis indicates Mel frequency.",
+  "kind": "raster",
+  "width": 811,
+  "height": 471,
+  "source_title": "ea02235e-0e39-5af4-9ea7-f43e4c28f31a.pdf"
+ }
+]

@@ -5,6 +5,7 @@ import logging
 from app.ai.llm_gateway.anthropic_adapter import DEFAULT_MODEL as ANTHROPIC_DEFAULT_MODEL
 from app.ai.llm_gateway.anthropic_adapter import AnthropicAdapter
 from app.ai.llm_gateway.base import LLMGateway, LLMGatewayError
+from app.ai.llm_gateway.fallback import FallbackGateway
 from app.ai.llm_gateway.gemini_adapter import DEFAULT_MODEL as GEMINI_DEFAULT_MODEL
 from app.ai.llm_gateway.gemini_adapter import GeminiAdapter
 from app.ai.llm_gateway.groq_adapter import DEFAULT_MODEL as GROQ_DEFAULT_MODEL
@@ -23,7 +24,28 @@ _PROVIDER_ORDER = ("openrouter", "groq", "gemini", "anthropic", "openai")
 
 def _build(provider: str, settings: Settings) -> tuple[LLMGateway, str]:
     if provider == "openrouter":
-        return OpenRouterAdapter(), settings.openrouter_model or OPENROUTER_DEFAULT_MODEL
+        primary_model = settings.openrouter_model or OPENROUTER_DEFAULT_MODEL
+        gateway: LLMGateway = OpenRouterAdapter()
+        # Chuỗi dự phòng khi gặp 429: OpenRouter (khóa 1) -> Groq (nếu có key) -> OpenRouter (khóa 2, nếu có).
+        if settings.groq_api_key:
+            try:
+                groq = GroqAdapter()
+            except LLMGatewayError:
+                logger.exception("Không khởi tạo được Groq fallback, bỏ qua")
+            else:
+                gateway = FallbackGateway(
+                    primary=gateway,
+                    fallback=groq,
+                    fallback_model=settings.groq_model or GROQ_DEFAULT_MODEL,
+                )
+        if settings.openrouter_api_key_2:
+            try:
+                backup = OpenRouterAdapter(api_key=settings.openrouter_api_key_2)
+            except LLMGatewayError:
+                logger.exception("Không khởi tạo được OpenRouter khóa 2 dự phòng, bỏ qua")
+            else:
+                gateway = FallbackGateway(primary=gateway, fallback=backup, fallback_model=primary_model)
+        return gateway, primary_model
     if provider == "groq":
         return GroqAdapter(), settings.groq_model or GROQ_DEFAULT_MODEL
     if provider == "gemini":

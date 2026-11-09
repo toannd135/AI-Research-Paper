@@ -1,0 +1,29 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Figure 1: A block diagram of the proposed Attention U-Net segmentation model. Input image is progressively ﬁltered and downsampled by factor of 2 at each scale in the encoding part of the network (e.g. H4 = H1/8). Nc denotes the number of classes. Attention gates (AGs) ﬁlter the features propagated through the skip connections. Schematic of the AGs is shown in Figure 2. Feature selectivity in AGs ",
+  "kind": "vector",
+  "width": 793,
+  "height": 366,
+  "source_title": "12e0ab26-e069-5048-8e24-fbea34dd3c10.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 4,
+  "caption": "Figure 2: Schematic of the proposed additive attention gate (AG). Input features (xl) are scaled with attention coefﬁcients (α) computed in AG. Spatial regions are selected by analysing both the activations and contextual information provided by the gating signal ( g ) which is collected from a coarser scale. Grid resampling of attention coefﬁcients is done using trilinear interpolation.",
+  "kind": "vector",
+  "width": 819,
+  "height": 235,
+  "source_title": "12e0ab26-e069-5048-8e24-fbea34dd3c10.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 6,
+  "caption": "Figure 4: The ﬁgure shows the attention coefﬁcients (αls2, αls3) across different training epochs (3, 6, 10, 60, 150). The images are extracted from sagittal and axial planes of a 3D abdominal CT scan from the testing dataset. The model gradually learns to focus on the pancreas, kidney, and spleen.",
+  "kind": "raster",
+  "width": 826,
+  "height": 232,
+  "source_title": "12e0ab26-e069-5048-8e24-fbea34dd3c10.pdf"
+ }
+]

@@ -268,3 +268,36 @@ def test_review_facts_state_only_real_process_and_skip_novel_mode():
     facts = sn._review_facts({"citations": cites, "search_queries": ["brain tumor"]}, "survey")
     assert "REVIEW FACTS" in facts and '"brain tumor"' in facts and "1 distinct papers" in facts
     assert sn._review_facts({"citations": cites}, "novel_research") == ""
+
+
+def test_collect_figures_drops_off_topic_captions(monkeypatch):
+    store = {
+        "pA": [
+            {"page": 3, "caption": "Figure 4: Comparison of UNet++, U-Net and Wide U-Net on cell nuclei and liver segmentation", "path": "/x.png"},
+            {"page": 5, "caption": "Figure 2: Segmentation of glioma on BraTS 2018 with FLAIR missing", "path": "/y.png"},
+        ]
+    }
+    monkeypatch.setattr(sn, "load_figures", lambda pid: store.get(pid, []))
+    question = "How do multimodal fusion methods handle missing MRI modalities (T1, T1ce, T2, FLAIR) for BraTS glioma segmentation?"
+    figs = sn._collect_figures([{"paper_id": "pA"}], question)
+    assert [f["page"] for f in figs] == [5]
+    assert len(sn._collect_figures([{"paper_id": "pA"}])) == 2  # không có câu hỏi -> không lọc
+
+
+def test_collect_figures_anchors_on_rare_domain_words(monkeypatch):
+    """Hình kết quả của miền khác (caption chung 'segmentation MRI') bị loại khi pool đủ lớn; hình kiến trúc được giữ."""
+    off = [
+        {"page": i, "caption": f"Figure {i}: Qualitative segmentation results on abdominal MRI organs, endoscopy and microscopy", "path": f"/o{i}.png"}
+        for i in range(1, 6)
+    ]
+    store = {
+        "pA": [
+            *off,
+            {"page": 20, "caption": "Figure 9: Overview of the proposed segmentation architecture for MRI", "path": "/arch.png"},
+            {"page": 21, "caption": "Figure 10: Glioma segmentation MRI results under missing FLAIR on BraTS", "path": "/g.png"},
+        ]
+    }
+    monkeypatch.setattr(sn, "load_figures", lambda pid: store.get(pid, []))
+    question = "How do fusion methods handle missing MRI modalities for BraTS glioma segmentation?"
+    figs = sn._collect_figures([{"paper_id": "pA"}], question)
+    assert sorted(f["page"] for f in figs) == [20, 21]

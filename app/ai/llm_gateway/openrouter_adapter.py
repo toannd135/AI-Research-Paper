@@ -2,7 +2,7 @@
 
 import httpx
 
-from app.ai.llm_gateway.base import LLMGateway, LLMGatewayError, LLMResponse, Message
+from app.ai.llm_gateway.base import LLMGateway, LLMGatewayError, LLMRateLimitError, LLMResponse, Message
 from app.ai.llm_gateway.retry import call_with_retry
 from app.core.config import get_settings
 
@@ -16,6 +16,15 @@ DEFAULT_FALLBACK_MODELS = [
 ]
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 MAX_MODELS_PER_REQUEST = 3
+
+
+def _parse_retry_after(headers) -> float | None:
+    """Đọc header Retry-After (giây). Trả None nếu thiếu hoặc không phải số."""
+    try:
+        raw = headers.get("retry-after") if headers else None
+        return float(raw) if raw else None
+    except (TypeError, ValueError, AttributeError):
+        return None
 
 
 class OpenRouterAdapter(LLMGateway):
@@ -69,6 +78,12 @@ class OpenRouterAdapter(LLMGateway):
 
                 if res.status_code == 401:
                     raise LLMGatewayError(f"OpenRouter API Key không hợp lệ: {res.text}")
+
+                if res.status_code == 429:
+                    raise LLMRateLimitError(
+                        f"OpenRouter API bị giới hạn tần suất (HTTP 429): {res.text}",
+                        retry_after=_parse_retry_after(res.headers),
+                    )
 
                 if res.status_code != 200:
                     raise LLMGatewayError(f"OpenRouter API returned HTTP {res.status_code}: {res.text}")

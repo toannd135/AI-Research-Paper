@@ -5,6 +5,20 @@
 ## Nguyên tắc
 Thứ tự: schema/model -> logic thuần (có test) -> node/route -> tích hợp -> doc. Mỗi bước kết thúc bằng lệnh kiểm chứng xanh rồi mới sang bước sau.
 
+## Các bước (Đánh giá Q1/Q2 lần 4 — kiểm chứng trên bản cuối, task hiện tại; chi tiết phát hiện ở `current-task.md`)
+Thứ tự bắt buộc (bước sau dùng kết quả bước trước). Mỗi bước: test mới + `ruff check` tệp đã sửa + `pytest <tệp test>` xanh.
+| # | Việc | Tệp | Kiểm chứng |
+|---|---|---|---|
+| 1 | `final_citation_list` (ánh xạ [n] mới → Citation) ; `run_quality_gate(..., numbered_citations=)`; gate lần 2 trên bản cuối, `validation_report` = gate cuối + `draft_gate` (số lỗi bản thô) | `citation_cleaner.py`, `quality_gate.py`, `synthesize_node.py` | test: sau remap, số [n] mới truy được đúng paper; gate cuối bắt giá trị lọt vào sau khi chèn bảng |
+| 2 | `redact_untraced_cells(text, records)` thay ô UNTRACED trong bảng bằng "—" + dòng chú thích; chạy trước gate cuối | `evidence/redact.py` (mới), `synthesize_node.py` | test: ô không có nguồn → "—", ô TRACED/năm/Δ giữ nguyên, JSON bảng vẫn hợp lệ |
+| 3 | Facts sổ cái + `check_ledger_claims` (N bản ghi/M paper, "exhaustive") + `check_internal_contradictions` ("no … all 15 subsets" vs "[n] evaluate all 15") ; `check_absence_claims` không bỏ sót khi groups==0 | `consistency_check.py`, `science_qa.py`, `synthesize_node.py` | test từng check có ca đúng/sai |
+| 4 | `_collect_figures`: neo miền (IDF trong pool hình); hình kết quả không neo → bỏ; hình kiến trúc giữ | `synthesize_node.py` | test: caption abdominal/microscopy bị bỏ, caption BraTS giữ |
+| 5 | Overclaim ra thân bài (necessary/always/zero…) ; quy tắc hedging trong `_global_standards` | `science_qa.py`, `synthesize_node.py` | test |
+| 6 | `check_scope` chiều ngược (References vượt dải năm Abstract) + dải năm thật trong facts | `science_qa.py`, `synthesize_node.py` | test |
+| 7 | Misattribution trên bản cuối (corpus = title catalog + tên model sổ cái) | `quality_gate.py` | test: "Swin UNETR [1]" với [1] = nnU-Net Revisited → cảnh báo |
+| 8 | Doc + ADR + handoff | `docs/architecture.md`, `docs/decisions/`, `docs/handoff/` | đối chiếu |
+Rủi ro: redact quá tay nếu `evidence` chỉ là chunk đã truy xuất (không phải cả PDF) → ô thật nhưng chưa truy xuất cũng bị "—"; chấp nhận vì chính sách gate là "không có nguồn thì không là số liệu". Gate lần 2 tốn thêm vài giây, không gọi LLM.
+
 ## Các bước (Sửa lỗi hệ thống theo đánh giá Q1/Q2 lần 2)
 | # | Việc | Tệp | Kiểm chứng |
 |---|---|---|---|
@@ -121,3 +135,26 @@ Nguyên nhân: CSS `.columns-2 > figure.fig { column-span: all }` ép mọi hìn
 - [x] Prompt `_CHART_BLOCK_RULE`: chọn biểu đồ theo câu hỏi khoa học (dot/dumbbell/heatmap/evidence map/line), 5 điều kiện bắt buộc, trường `layout`. Doc: architecture.md.
 - [x] `browser_renderer.prepare_report_page`: co SVG theo bề rộng figure (trước đây theo bề rộng trang → hình một cột bị letterbox, sinh khoảng trắng).
 - [ ] Chạy thật survey mới, xem PDF: số biểu đồ cột ≤2, hình một cột không để trống cột.
+
+### Sửa lỗi hệ thống theo đánh giá `survey-b1e8d2cc` (2026-11-09)
+Nguyên nhân gốc đã kiểm chứng: (a) mọi regex trích dẫn chỉ nhận `[n]` đơn → `[7, 73]` không được đánh số lại/xóa, References dừng ở [36];
+(b) research chạy bằng admin có phạm vi `None` → `ensure_coverage`/retrieval lấy chunk của paper mồ côi trong Qdrant (không có trong DB) → "Anonymous"/UUID;
+(c) không kiểm tra "N papers" so với kích thước corpus (LLM suy 73 từ chỉ số [n] của chunk).
+| # | Việc | Tệp | Kiểm chứng |
+|---|---|---|---|
+| 1 | Tách cụm `[7, 73]`/`[3–5]` thành marker đơn trước khi đánh số lại; validator đếm số trong cụm | `evidence/citation_validator.py`, `evidence/citation_cleaner.py` | `pytest app/agent/tests/test_citation_validator.py app/agent/tests/test_citation_cleaner.py` |
+| 2 | Phạm vi research = paper `done` trong DB (giao với phạm vi người dùng) → loại vector mồ côi | `pipeline/tasks.py` | test tasks/scope |
+| 3 | REVIEW FACTS: "[n] là đoạn trích, không phải paper"; kiểm tra "N papers/studies" > corpus; reference không xác định danh tính (Anonymous/UUID) = lỗi trong validation_report | `nodes/synthesize_node.py`, `evidence/consistency_check.py` | test check |
+| 4 | Cổng liên quan cho hình trích từ PDF (caption ↔ câu hỏi) | `nodes/synthesize_node.py::_collect_figures` | test |
+| 5 | Mâu thuẫn: claim "no missing-modality result" khi bảng có hàng thiếu modality; cờ audit = "not found in retrieved passages"; mẫu số thống nhất | `evidence/science_qa.py`, `evidence/quant_analysis.py` | test |
+Trạng thái: bước 1–4 xong (`pytest app/agent app/pipeline` 338 passed); bước 5 chưa làm.
+Ngoài phạm vi (việc nghiên cứu của người dùng): PRISMA/tìm CSDL/sàng lọc/risk-of-bias thật.
+
+### Fallback rate limit OpenRouter -> Groq (2026-11-09)
+Khi provider chính OpenRouter trả 429, gọi lại cùng lời gọi trên Groq (`GROQ_MODEL`); chỉ kích hoạt khi có `GROQ_API_KEY`, lỗi khác không fallback.
+| # | Việc | Tệp | Kiểm chứng |
+|---|---|---|---|
+| 1 | OpenRouter 429 -> `LLMRateLimitError` kèm `retry_after` từ header | `llm_gateway/openrouter_adapter.py` | `pytest app/ai/tests/test_openrouter_adapter.py` |
+| 2 | `FallbackGateway`: bắt `LLMRateLimitError` rồi gọi Groq; lỗi khác raise nguyên trạng | `llm_gateway/fallback.py` | `pytest app/ai/tests/test_fallback_gateway.py` |
+| 3 | Chọn gateway: OpenRouter + Groq key -> `FallbackGateway`, không có key -> OpenRouter đơn lẻ | `llm_gateway/default.py` | `pytest app/ai/tests/test_default_gateway.py` |
+Kiểm chứng tổng: `venv/bin/pytest app/ai/tests -q -p no:cacheprovider` (76 passed).

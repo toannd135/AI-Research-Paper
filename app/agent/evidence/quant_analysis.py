@@ -220,6 +220,19 @@ def _modality_groups(records: list[ResultRecord], paper_to_n: dict[str, int]) ->
     return {k: v for k, v in groups.items() if len(v) >= 2}
 
 
+def missing_modality_record_count(records: list[ResultRecord], paper_to_n: dict[str, int]) -> int:
+    """Số bản ghi có tập modality KHÔNG đủ 4 (biến thể 'Missing X' hoặc cột modality thiếu), kể cả khi chưa đủ 2 tập để thành nhóm ma trận."""
+    count = 0
+    for r in records:
+        if r.paper_id not in paper_to_n:
+            continue
+        mods = _variant_modalities(r.variant) if r.variant else None
+        mods = mods if mods is not None else _modality_set(r)
+        if mods and mods != FULL_MODALITIES:
+            count += 1
+    return count
+
+
 def modality_matrix_stats(records: list[ResultRecord], paper_to_n: dict[str, int]) -> dict[str, int]:
     """Số liệu thật về độ phủ missing-modality, dùng cho EVIDENCE LIMITS và kiểm tra."""
     groups = _modality_groups(records, paper_to_n)
@@ -236,6 +249,7 @@ def modality_matrix_stats(records: list[ResultRecord], paper_to_n: dict[str, int
         "single_modalities": len(singles),
         "sources": len({k[0] for k in groups}),
         "possible_subsets": 2 ** len(FULL_MODALITIES) - 1,
+        "groups_all_subsets": sum(1 for g in groups.values() if len(g) >= 2 ** len(FULL_MODALITIES) - 1),
         "shared_settings": sum(1 for papers in settings.values() if len(papers) >= 2),
         "subset_labels": sorted(_subset_label(x) for x in subsets),
     }
@@ -361,7 +375,13 @@ def evidence_limits(
         if with_spread == 0
         else f"only {with_spread} of them report a spread (SD/SE/95% CI) and none a significance test, so most comparisons rest on point estimates"
     )
-    lines.append(f"- {len(records)} verified numeric records were extracted from {n_papers} papers; {spread_txt}.")
+    with_records = len({r.paper_id for r in records if r.paper_id in paper_to_n})
+    lines.append(
+        f"- {len(records)} verified numeric records were extracted from {with_records} of the {n_papers} cited papers; the other "
+        f"{max(n_papers - with_records, 0)} contributed no record (no retrieved passage printed a metric value the extractor could verify), "
+        "so the ledger is NOT an exhaustive record of every number in the corpus — never call it exhaustive or complete, and never say "
+        f"'from {n_papers} papers' for it; {spread_txt}."
+    )
     n_sub = stats["possible_subsets"]
     if stats["groups"] == 0:
         lines.append(
@@ -389,8 +409,17 @@ def evidence_limits(
             f"external/multi-centre validation {sp.count(a, 'external_validation')}, cross-validation {sp.count(a, 'cross_validation')}, "
             f"patient-wise split {sp.count(a, 'patient_wise_split')}, uncertainty/calibration/OOD {sp.count(a, 'uncertainty')}, "
             f"random modality dropout {sp.count(a, 'missing_random')}, all modality subsets {sp.count(a, 'missing_all_subsets')}, "
-            f"code availability {sp.count(a, 'code_available')} of {n_papers} sources. Use these counts in the clinical-reliability and limitations discussion; "
-            "never generalise beyond them."
+            f"code availability {sp.count(a, 'code_available')} of {n_papers} sources. These are counts of sentences FOUND in the retrieved passages, "
+            "so a count of 0 means 'not observed in the retrieved passages', never 'no study does this': phrase it that way and do not write "
+            "'no method/study …' from a count alone. "
+            + (
+                f"The structured ledger itself holds {stats['groups_all_subsets']} method/setting group(s) with all {n_sub} subsets."
+                if stats["groups_all_subsets"]
+                else f"The structured ledger holds no method/setting group with all {n_sub} subsets, but a source may still evaluate them in text that was not extracted — "
+                "if you state that a named method was evaluated on all subsets, that claim must come from its own cited passage, and you must not "
+                "also state elsewhere that no method was."
+            )
+            + " Use these counts in the clinical-reliability and limitations discussion; never generalise beyond them."
         )
     lines.append(
         "- Statements about this review's own corpus or evidence base (counts of records, papers, what was or was not extracted) carry NO citation [n]; "

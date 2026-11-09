@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from app.agent.evidence.consistency_check import check_consistency, check_review_claims
+from app.agent.evidence.consistency_check import check_consistency, check_paper_counts, check_review_claims
 from app.agent.evidence.display_check import check_display_items
 from app.agent.evidence.quant_check import check_chart_block
 from app.agent.evidence.reference_check import (
@@ -56,12 +56,28 @@ def _build_sources(citations: list[Any], evidence: list[Any]) -> dict[int, dict[
     return sources
 
 
-def run_quality_gate(state: dict[str, Any], text: str, catalog: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
+def trace_text_records(state: dict[str, Any], text: str, numbered_citations: list[Any] | None = None) -> list[dict[str, Any]]:
+    """Truy vết mọi giá trị số trong bảng/biểu đồ của `text` về chunk của paper được cite (đầy đủ, không cắt)."""
+    citations = state.get("citations", []) if numbered_citations is None else numbered_citations
+    return trace_claims(extract_numeric_claims(text), _build_sources(citations, state.get("evidence", [])))
+
+
+def run_quality_gate(
+    state: dict[str, Any],
+    text: str,
+    catalog: dict[str, dict[str, Any]] | None = None,
+    numbered_citations: list[Any] | None = None,
+) -> dict[str, Any]:
+    """Kiểm chứng `text`. `numbered_citations` (từ `clean_and_deduplicate_citations_ex`) cho văn bản đã đánh số lại [n]:
+    `numbered_citations[k-1]` là nguồn của [k]; không truyền thì [n] là chỉ số trong `state["citations"]` (văn bản thô)."""
     from app.agent.evidence.citation_cleaner import _local_catalog
 
-    citations = state.get("citations", [])
+    all_citations = state.get("citations", [])
+    citations = all_citations if numbered_citations is None else numbered_citations
     catalog = _local_catalog() if catalog is None else catalog
-    cited_numbers = {int(n) for n in re.findall(r"\[(\d+)\]", text)}
+    from app.agent.evidence.citation_validator import expand_citation_clusters
+
+    cited_numbers = {int(n) for n in re.findall(r"\[(\d+)\]", expand_citation_clusters(text))}
     cited_ids = [citations[n - 1].paper_id for n in sorted(cited_numbers) if 1 <= n <= len(citations)]
 
     references = verify_references(cited_ids, catalog)
@@ -69,8 +85,7 @@ def run_quality_gate(state: dict[str, Any], text: str, catalog: dict[str, dict[s
         from app.agent.evidence.external_verify import external_verify
 
         references = external_verify(references, catalog)
-    claims = extract_numeric_claims(text)
-    evidence_records = trace_claims(claims, _build_sources(citations, state.get("evidence", [])))
+    evidence_records = trace_text_records(state, text, citations)
     chart_problems = [p for raw in _CHART_RE.findall(text) for p in check_chart_block(raw)]
 
     trace_counts = {s: sum(1 for r in evidence_records if r["status"] == s) for s in (TRACED, UNTRACED, NO_CITATION)}
@@ -104,6 +119,8 @@ def run_quality_gate(state: dict[str, Any], text: str, catalog: dict[str, dict[s
     declared = protocol["review_type"] if protocol and not protocol_problems else None
     review_claims = check_review_claims(text, declared)
     blocking += [f"tuyên bố sai về quy trình tổng quan: {p}" for p in review_claims]
+    distinct_papers = {getattr(c, "paper_id", None) for c in all_citations} - {None, ""}
+    blocking += [f"số lượng nghiên cứu sai: {p}" for p in check_paper_counts(text, max(len(catalog), len(distinct_papers)))]
     if state.get("research_mode", "survey") != "novel_research" and not any(
         _SURVEY_TITLE_RE.search(str((catalog.get(pid) or {}).get("title", ""))) for pid in cited_ids
     ):
@@ -115,9 +132,13 @@ def run_quality_gate(state: dict[str, Any], text: str, catalog: dict[str, dict[s
         warnings.append("bài cite ít hơn 2 nguồn")
     from app.agent.evidence.coverage import full_coverage_applies, uncited_papers
 
-    available_ids = {getattr(c, "paper_id", None) for c in citations} - {None, ""}
+    available_ids = {getattr(c, "paper_id", None) for c in all_citations} - {None, ""}
     if full_coverage_applies(len(available_ids)):
-        missing = uncited_papers(citations, text)
+        if numbered_citations is None:
+            missing = uncited_papers(citations, text)
+        else:  # [n] đã đánh số lại: paper nào không có reference nào được dùng trong văn bản
+            used = {getattr(citations[n - 1], "paper_id", None) for n in cited_numbers if 1 <= n <= len(citations)}
+            missing = sorted(available_ids - used)
         if missing:
             titles = [(catalog.get(pid) or {}).get("title") or pid for pid in missing]
             warnings.append(f"độ phủ kho: {len(missing)}/{len(available_ids)} paper trong kho chưa được cite ({'; '.join(t[:60] for t in titles[:8])}{'…' if len(titles) > 8 else ''})")
@@ -127,7 +148,9 @@ def run_quality_gate(state: dict[str, Any], text: str, catalog: dict[str, dict[s
     warnings += display["warnings"]
     consistency = check_consistency(text)
     warnings += [f"nhất quán: {w}" for w in consistency]
-    science_qa, study_attrs = _science_qa(state, text)
+    science_qa, study_attrs = _science_qa(state, text, citations)
+    if numbered_citations is not None:
+        warnings += [f"gán sai nguồn: {w}" for w in _misattribution_warnings(state, text, numbered_citations, catalog)]
     warnings += [f"science QA: {w}" for w in science_qa]
 
     return {
@@ -151,13 +174,40 @@ def run_quality_gate(state: dict[str, Any], text: str, catalog: dict[str, dict[s
     }
 
 
-def _science_qa(state: dict[str, Any], text: str) -> tuple[list[str], dict[str, Any]]:
+def _misattribution_warnings(
+    state: dict[str, Any], text: str, numbered_citations: list[Any], catalog: dict[str, dict[str, Any]]
+) -> list[str]:
+    """Tên phương pháp/tác giả đứng ngay trước [n] mà paper [n] không chứa (vd. 'Swin UNETR [1]' với [1] = nnU-Net Revisited).
+
+    Chạy trên bản cuối: [n] đã là chỉ số trong `numbered_citations`. Corpus của mỗi nguồn = title/tác giả catalog + mọi đoạn trích
+    của paper đó + tên mô hình trong sổ cái bản ghi."""
+    from types import SimpleNamespace
+
+    from app.agent.evidence.citation_validator import expand_citation_clusters, find_citation_misattributions
+
+    snippets: dict[str, list[str]] = {}
+    for c in state.get("citations", []):
+        snippets.setdefault(getattr(c, "paper_id", ""), []).append(str(getattr(c, "text_snippet", "") or ""))
+    models: dict[str, set[str]] = {}
+    for r in state.get("results") or []:
+        if isinstance(r, dict) and r.get("paper_id") and r.get("model"):
+            models.setdefault(str(r["paper_id"]), set()).add(str(r["model"]))
+    proxies = []
+    for c in numbered_citations:
+        pid = getattr(c, "paper_id", "")
+        meta = catalog.get(pid) or {}
+        corpus = " ".join([str(meta.get("title", "")), str(meta.get("authors", "")), *snippets.get(pid, []), *sorted(models.get(pid, ()))])
+        proxies.append(SimpleNamespace(paper_id=str(meta.get("title") or pid), text_snippet=corpus, section=""))
+    return find_citation_misattributions(expand_citation_clusters(text), proxies)[:_MAX_LISTED]
+
+
+def _science_qa(state: dict[str, Any], text: str, citations: list[Any] | None = None) -> tuple[list[str], dict[str, Any]]:
     from app.agent.evidence.extractor import records_from_dicts
     from app.agent.evidence.science_qa import run_science_qa
     from app.agent.evidence.study_profile import study_attributes
 
     paper_to_n: dict[str, int] = {}
-    for n, cit in enumerate(state.get("citations", []), start=1):
+    for n, cit in enumerate(state.get("citations", []) if citations is None else citations, start=1):
         paper_to_n.setdefault(getattr(cit, "paper_id", ""), n)
     try:
         records = records_from_dicts(state.get("results") or [])
