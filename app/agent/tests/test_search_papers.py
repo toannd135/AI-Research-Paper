@@ -37,3 +37,18 @@ def test_retrieve_evidence_dedups_across_queries_keeping_highest_score(mock_hybr
     assert by_id["a"].score == 0.9
     assert "b" in by_id
     assert evidence[0].chunk.id == "a"
+
+
+def test_local_only_blocks_external_search_even_if_enabled(monkeypatch):
+    from app.core.config import get_settings
+    from app.core.scope import external_search_allowed, set_local_only
+
+    monkeypatch.setenv("EXTERNAL_SEARCH_ENABLED", "true")
+    get_settings.cache_clear()
+    try:
+        assert external_search_allowed() is True
+        set_local_only(True)
+        assert external_search_allowed() is False
+    finally:
+        set_local_only(False)
+        get_settings.cache_clear()

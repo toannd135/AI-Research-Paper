@@ -15,6 +15,8 @@ from app.agent.evidence.quant_check import ResultRecord, group_comparable
 from app.agent.evidence.stats import lower_is_better
 
 MIN_METHODS = 3
+MIN_SCATTER_POINTS = 4
+MAX_PANELS = 4
 MAX_GROUPS = 3
 MAX_ROWS = 8
 
@@ -67,7 +69,13 @@ def _spread_cell(rec: ResultRecord) -> str:
     return f"±{rec.spread:g} ({rec.spread_type})" if rec.spread is not None and rec.spread_type else "NR"
 
 
-_EFFICIENCY_METRICS = (("params", "Params"), ("parameters", "Params"), ("gflops", "GFLOPs"), ("flops", "GFLOPs"), ("inferencetime", "Inference time"))
+_EFFICIENCY_METRICS = (
+    ("params", "Params"), ("parameters", "Params"), ("gflops", "GFLOPs"), ("flops", "GFLOPs"), ("inferencetime", "Inference time"),
+    ("latency", "Inference time"), ("inferencelatency", "Inference time"), ("trainingtime", "Training time"),
+    ("trainingtimeperepoch", "Training time"), ("gpumemory", "GPU memory"), ("memory", "GPU memory"), ("energy", "Energy"),
+)
+_BASE_COST_COLUMNS = ("Params", "GFLOPs", "Inference time")
+_EXTRA_COST_COLUMNS = ("Training time", "GPU memory", "Energy")  # chỉ thêm cột khi có nguồn báo
 
 
 def efficiency_table(records: list[ResultRecord], paper_to_n: dict[str, int]) -> str | None:
@@ -79,15 +87,20 @@ def efficiency_table(records: list[ResultRecord], paper_to_n: dict[str, int]) ->
         if col is None or r.variant or r.paper_id not in paper_to_n:
             continue
         per_model.setdefault((r.paper_id, r.model), {}).setdefault(col, f"{r.value:g} {r.unit or ''}".strip())
+    present = {c for cells in per_model.values() for c in cells}
+    cols = [*_BASE_COST_COLUMNS, *(c for c in _EXTRA_COST_COLUMNS if c in present)]
     rows = [
-        [f"{model} [{paper_to_n[pid]}]", *(cells.get(c, "NR") for c in ("Params", "GFLOPs", "Inference time"))]
+        [f"{model} [{paper_to_n[pid]}]", *(cells.get(c, "NR") for c in cols)]
         for (pid, model), cells in sorted(per_model.items(), key=lambda kv: (paper_to_n[kv[0][0]], kv[0][1]))
         if model
     ]
     if len(rows) < 2:
         return None
-    caption = "Computational cost as reported by each source (NR = not reported); hardware, input size and units differ between sources, so values are not directly comparable across rows"
-    return _block("table", {"caption": caption, "columns": ["Method [Ref]", "Params", "GFLOPs", "Inference time"], "rows": rows[: MAX_ROWS * 3], "derived": True})
+    caption = (
+        "Computational cost as reported by each source (NR = not reported); hardware, input size and units differ between sources, "
+        "so values are not directly comparable across rows. The NR pattern itself shows which cost dimensions the literature reports"
+    )
+    return _block("table", {"caption": caption, "columns": ["Method [Ref]", *cols], "rows": rows[: MAX_ROWS * 3], "derived": True})
 
 
 def ablation_table(records: list[ResultRecord], paper_to_n: dict[str, int]) -> str | None:
@@ -116,7 +129,8 @@ def tradeoff_scatter(records: list[ResultRecord], paper_to_n: dict[str, int]) ->
             continue
         by_setting.setdefault((r.dataset, r.dataset_version, r.split, r.region, r.unit, p.unit), []).append((r, p))
     best = max(by_setting.items(), key=lambda kv: len(kv[1]), default=None)
-    if not best or len({x[0].model for x in best[1]}) < MIN_METHODS:
+    # < MIN_SCATTER_POINTS phương pháp: không thể hiện được quan hệ/đường biên đánh đổi → bảng chi phí (efficiency_table) đảm nhận
+    if not best or len({x[0].model for x in best[1]}) < MIN_SCATTER_POINTS:
         return None
     (ds, ver, split, region, unit, p_unit), pairs = best
     seen: dict[str, tuple[ResultRecord, ResultRecord]] = {}
@@ -517,6 +531,50 @@ def _evidence_map(rows: list[list[str]], columns: list[str]) -> str:
     })
 
 
+def _is_cost_metric(metric: str) -> bool:
+    return re.sub(r"[\s_-]+", "", metric.lower()) in dict(_EFFICIENCY_METRICS)
+
+
+def protocol_panels(records: list[ResultRecord], paper_to_n: dict[str, int]) -> str | None:
+    """So sánh kết quả đầy đủ đầu vào theo TỪNG protocol: mỗi ô = một dataset/version/split/metric/đơn vị (≥3 phương pháp).
+
+    Thay cho biểu đồ đặt nhiều protocol trên cùng một trục. Chỉ sinh khi có ≥2 setting đủ điều kiện (một setting thì bảng Δ đã
+    đủ); series = vùng/metric con nên cùng màu ở mọi ô. Giá trị lấy nguyên từ record đã kiểm chứng, ô thiếu = null (NR).
+    """
+    by_setting: dict[tuple, dict[str, dict[str, float]]] = {}
+    for r in records:
+        if r.variant or r.paper_id not in paper_to_n or not (r.dataset and r.split and r.unit and r.model) or _is_cost_metric(r.metric):
+            continue
+        mods = _modality_set(r)
+        if mods and mods != FULL_MODALITIES:
+            continue
+        key = (r.dataset, r.dataset_version, r.split, r.metric, r.unit)
+        label = f"{r.model} [{paper_to_n[r.paper_id]}]"
+        by_setting.setdefault(key, {}).setdefault(label, {}).setdefault(r.region or r.metric, r.value)
+    eligible = sorted(((k, v) for k, v in by_setting.items() if len(v) >= MIN_METHODS), key=lambda kv: (-len(kv[1]), str(kv[0])))
+    if len(eligible) < 2:
+        return None
+    panels = []
+    cites: set[str] = set()
+    for (ds, ver, split, metric, unit), models in eligible[:MAX_PANELS]:
+        regions = list(dict.fromkeys(reg for vals in models.values() for reg in vals))
+        low = lower_is_better(metric)
+        first = regions[0]
+        labels = sorted(models, key=lambda m: (models[m].get(first) is None, (models[m].get(first) or 0) * (1 if low else -1)))[:MAX_ROWS]
+        cites.update(re.findall(r"\[\d+\]", " ".join(labels)))
+        title = " ".join(x for x in (ds, ver, f"({split})") if x) + f" · {metric} [{unit}]"
+        panels.append({
+            "type": "dot", "title": title, "labels": labels, "x_label": f"{metric} ({unit})",
+            "series": [{"name": reg, "values": [models[m].get(reg) for m in labels]} for reg in regions],
+        })
+    caption = (
+        "Reported full-input results stratified by evaluation protocol: each panel is one dataset/version/split/metric/unit setting "
+        f"({', '.join(sorted(cites, key=lambda c: int(c[1:-1])))}). Values are compared only within a panel; panels differ in "
+        "protocol and are not comparable. Missing values are not imputed"
+    )
+    return _block("chart", {"type": "panels", "ncols": 2, "panels": panels, "caption": caption, "derived": True})
+
+
 def build_quant_blocks(
     records: list[ResultRecord], paper_to_n: dict[str, int], attrs_by_paper: dict[str, dict[str, dict[str, Any]]] | None = None
 ) -> list[str]:
@@ -524,6 +582,7 @@ def build_quant_blocks(
         b
         for b in (
             delta_table(records, paper_to_n),
+            protocol_panels(records, paper_to_n),
             modality_coverage_matrix(records, paper_to_n),
             modality_degradation_chart(records, paper_to_n),
             ablation_table(records, paper_to_n),

@@ -63,7 +63,7 @@ docker exec paperai_bt-redis-1 redis-cli exists unacked        # phải = 0 (kh�
 source venv/bin/activate
 python -c "import pathlib,sys; from app.core.database import SessionLocal; from app.api.models.paper import Paper; ids={p.stem for p in pathlib.Path('data/papers_brain').glob('*.pdf')}; db=SessionLocal(); done={i for i,s in db.query(Paper.id,Paper.status).all() if s=='done'}; db.close(); miss=ids-done; print(f'PDF {len(ids)} | done {len(ids&done)} | thieu {len(miss)}'); sys.exit(1 if miss else 0)" && echo "OK: đủ paper, có thể chạy research"
 ```
-Kết quả phải là `PDF 40 | done 40 | thieu 0`. Nếu còn thiếu, chờ worker `upload_queue` xử lý xong rồi chạy lại lệnh; chưa đủ thì không gửi task.
+Kết quả phải là `PDF 50 | done 50 | thieu 0` (số PDF hiện có trong `data/papers_brain`). Nếu còn thiếu, chờ worker `upload_queue` xử lý xong rồi chạy lại lệnh; chưa đủ thì không gửi task.
 
 ### Terminal 1 — API
 ```bash
@@ -126,3 +126,106 @@ docker exec paperai_bt-redis-1 redis-cli del unacked unacked_index
 docker exec paperai_bt-postgres-1 psql -U paperai -d paperai -tAc "delete from research_tasks where id='<task_id>'"
 ```
 DB: `localhost:5433`, user/password/db đều là `paperai`.
+
+## Chạy survey multimodal deepfake detection (3 terminal)
+
+Đề tài: *Foundation Models for Multimodal Deepfake Detection: Architectures, Cross-Modal Learning, Robustness, and Open Challenges*. Nguồn: 50 PDF trong `data/papers_deepfake` (manifest: `_manifest.json`). Dùng chung stack `paperai_bt` với bài cũ; chạy tương tự phần brain tumor, khác 4 điểm:
+
+1. **Cách ly theo phiên/đề tài (workspace), không cần DB riêng.** Mỗi paper thuộc 1 user và 1 workspace; research/chat trong workspace chỉ truy xuất paper của workspace đó. Riêng admin không chỉ định workspace thì thấy MỌI paper (nên không chạy bằng admin mà không có workspace). Quy trình: đăng ký user, gán 50 paper vào workspace "Deepfake survey", gửi task kèm `workspace_id`. Người dùng thường upload qua `POST /papers/upload?workspace_id=<id>` thì paper đã thuộc đúng phiên.
+2. PDF deepfake đặt tên theo tiêu đề (không phải UUID) nên lệnh kiểm tra đủ paper so khớp theo tên tệp (`file_path`), không theo `id`.
+3. `UPLOAD_DIR=data/papers_deepfake` (mỗi đề tài một thư mục riêng; `catalog.json` và figures nằm theo `UPLOAD_DIR`).
+4. Không có `catalog.json` (khóa theo `paper_id`, cấp lúc nạp nên không dựng trước được): reference của paper nội bộ suy ra từ nội dung PDF, cần rà tay DOI/tác giả với `_manifest.json` trước khi nộp.
+
+**Chuẩn bị (một lần mỗi phiên):**
+```bash
+docker compose -p paperai_bt up -d postgres qdrant redis
+docker exec paperai_bt-redis-1 redis-cli llen research_queue   # phải = 0
+docker exec paperai_bt-redis-1 redis-cli exists unacked        # phải = 0
+alembic upgrade head   # lần đầu sau khi cập nhật: áp migration 0009 (bảng workspaces) — bạn tự chạy trên DB của mình
+```
+Sau khi API (Terminal 1) và worker (Terminal 2) đã chạy và nạp xong PDF, tạo user riêng rồi gán paper:
+```bash
+set -a; . ./.env; set +a
+curl -s localhost:8000/auth/register -H 'content-type: application/json' \
+  -d '{"email":"deepfake@example.com","password":"<mật-khẩu-mạnh>","full_name":"Deepfake survey"}' | jq -c '{email:.user.email}'
+source venv/bin/activate
+python scripts/assign_papers.py --dir data/papers_deepfake --email deepfake@example.com --workspace "Deepfake survey"            # dry-run: liệt kê
+python scripts/assign_papers.py --dir data/papers_deepfake --email deepfake@example.com --workspace "Deepfake survey" --apply    # ghi user_id + workspace_id (tạo workspace nếu chưa có)
+TOKEN=$(curl -s localhost:8000/auth/login -H 'content-type: application/json' \
+  -d '{"email":"deepfake@example.com","password":"<mật-khẩu-mạnh>"}' | jq -r '.access_token // .token')   # token của USER, không dùng admin
+WS=$(curl -s localhost:8000/workspaces -H "authorization: Bearer $TOKEN" | jq -r '.[] | select(.name=="Deepfake survey") | .id'); echo "workspace: $WS"
+```
+
+**Kiểm tra đủ paper (bắt buộc, chạy sau khi API đã nạp PDF):** lệnh chỉ đọc, thoát mã `1` nếu còn thiếu:
+```bash
+python -c "import pathlib,sys; from app.core.database import SessionLocal; from app.api.models.paper import Paper; names={p.name for p in pathlib.Path('data/papers_deepfake').glob('*.pdf')}; db=SessionLocal(); done={pathlib.Path(fp).name for fp,s in db.query(Paper.file_path,Paper.status).all() if s=='done'}; db.close(); miss=names-done; print(f'PDF {len(names)} | done {len(names&done)} | thieu {len(miss)}'); [print(' -',m) for m in sorted(miss)]; sys.exit(1 if miss else 0)" && echo "OK: đủ paper, có thể chạy research"
+```
+Phải in `PDF 50 | done 50 | thieu 0`. Paper `pending`/`processing` mãi nghĩa là chưa có worker `upload_queue` chạy (Terminal 2) hoặc worker đã bị tắt giữa chừng; chạy lại worker rồi `process_paper.delay(<id>)` cho paper kẹt.
+
+### Terminal 1 — API
+```bash
+source venv/bin/activate
+export UPLOAD_DIR=data/papers_deepfake EXTERNAL_SEARCH_ENABLED=false CONTEXT_TOKEN_LIMIT=22000
+uvicorn app.main:app --port 8000        # tự nạp PDF trong UPLOAD_DIR (tạo record pending, đẩy vào upload_queue)
+```
+
+### Terminal 2 — Worker
+```bash
+source venv/bin/activate
+export UPLOAD_DIR=data/papers_deepfake EXTERNAL_SEARCH_ENABLED=false CONTEXT_TOKEN_LIMIT=22000
+# export EMBEDDING_DEVICE=cuda   # tùy chọn
+celery -A app.workers.celery_app worker -Q upload_queue,research_queue -c 1 -l info
+```
+Khởi động worker TRƯỚC hoặc ngay sau API, chờ lệnh kiểm tra đủ paper in `thieu 0` rồi mới gửi task. Không để nạp paper và sinh paper chạy xen nhau.
+
+### Terminal 3 — Gửi task và theo dõi
+```bash
+# dùng $TOKEN và $WS đã đặt ở phần Chuẩn bị (cùng terminal; nếu mở terminal mới thì đặt lại)
+cat > /tmp/req_df.json <<'JSON'
+{"question":"How do foundation models (large vision-language models, audio-visual and speech self-supervised encoders, and multimodal LLMs) support multimodal deepfake detection across visual, audio, and text/semantic modalities, and how do architectural choices and cross-modal learning mechanisms affect detection accuracy, cross-dataset and cross-generator generalization, and robustness to compression, noise, adversarial attacks, and unseen manipulation types? What are the trade-offs among architectures, adaptation strategies, and fusion mechanisms in terms of accuracy, robustness, computational cost, and explainability, and which open challenges remain?",
+ "audience":"lecturer","field":"computer_vision","contribution_type":"survey",
+ "target_venue":"Journal paper (8-12 pages)",
+ "clarification_answers":{
+  "What is the primary goal or output of this research report?":"A critical literature survey of foundation-model-based multimodal deepfake detection. Synthesize reported experimental evidence, compare architectures and cross-modal learning strategies, identify methodological limitations, and derive evidence-supported open challenges. Use reported results from original studies only; do not invent, estimate, or infer missing numerical results. Describe the review scope accurately as a survey of the provided corpus; do not call it a systematic review unless a database search and screening were actually performed.",
+  "Which modalities and manipulation types are in scope?":"Visual (image, video, face), audio (speech, voice cloning/TTS), and text or semantic/captioning cues, including audio-visual consistency (lip-sync, identity) and image-text consistency. Cover face swap, face reenactment, attribute editing, fully synthetic images from GANs and diffusion models, and synthetic or cloned speech. State clearly which modalities each reviewed method actually uses; do not assume a method is multimodal unless the paper says so.",
+  "Which foundation-model families and architectural aspects should be emphasized?":"Vision-language models (CLIP-style and prompt-tuned VLMs), vision transformers and self-supervised encoders, audio and speech self-supervised models, and multimodal large language models. Emphasize frozen versus fine-tuned backbones, parameter-efficient adaptation (prompt tuning, adapters, LoRA), fusion location and mechanism (early, late, cross-attention), and cross-modal alignment or consistency learning. Discuss only what the reviewed studies support.",
+  "Which robustness and generalization scenarios should be analyzed?":"Cross-dataset and cross-generator (unseen manipulation) generalization, robustness to compression and post-processing, noise, adversarial attacks and purification, and missing or corrupted modalities where reported. Distinguish in-domain evaluation from cross-domain evaluation, and methods evaluated on a single benchmark from those evaluated on several. Do not assume every family has evidence for every scenario in the corpus.",
+  "How should reported experimental results be compared?":"Use only numerical results explicitly reported in original papers. Record dataset (for example FaceForensics++, Celeb-DF, DFDC, DFDCP, WildDeepfake, FakeAVCeleb, DF-Platter), train/test protocol, in-domain versus cross-domain setting, metric (AUC, ACC, EER, F1, AP), compression level, and reported uncertainty where available. Do not directly rank or quantitatively compare studies with incompatible datasets, splits, or protocols. Preserve original metric scales and units (ratio vs percentage) and mark unavailable information as NR. Distinguish Reported, Not reported (NR) and Not retrieved; never treat Not retrieved as evidence of absence. Group quantitative evidence by dataset, protocol, metric and modality configuration. Every numerical, comparative and factual claim must trace to an identifiable source in the corpus; never invent authors, titles, venues, DOIs or corpus statistics.",
+  "Which analytical dimensions should guide the comparison?":"Compare methods across four dimensions: detection accuracy, generalization and robustness, computational efficiency, and explainability or trustworthiness. Discuss computational cost only when supported by reported parameters, FLOPs, memory, or inference time. Discuss trustworthiness in terms of calibration, interpretability, fairness across demographics, and failure analysis when evidence is available.",
+  "What are the expected scientific contributions of the survey?":"Develop an evidence-based analytical framework connecting foundation-model architectures, cross-modal learning mechanisms, and evaluation protocols. Compare strengths and limitations, identify gaps in experimental evaluation (benchmark leakage, protocol inconsistency, limited audio-text coverage), and formulate specific future directions. Keep three kinds of content separate: findings supported by the original papers, evidence gaps where the corpus lacks data, and research proposals by the authors. Classify methods with a multi-label, multi-axis taxonomy (modalities, backbone, adaptation strategy, fusion location, cross-modal learning objective, evaluation coverage) instead of forcing one category per paper. For every open challenge give the observed findings, the specific missing evidence, why it matters, and a concrete future direction; never present a proposed direction as an experimentally demonstrated conclusion. Quantitative figures must be reproducible from extracted evidence; label conceptual diagrams as author-designed. Conclusions must not exceed the strength of the evidence.",
+  "What is the intended audience and approximate length of the final report?":"Researchers in multimedia forensics, computer vision, speech processing, and trustworthy AI. Target an 8-12 page journal manuscript with sufficient technical depth, critical comparison, concise evidence tables, and a clearly stated review methodology; length must not limit the analysis."}}
+JSON
+jq --arg ws "$WS" '. + {workspace_id: $ws}' /tmp/req_df.json > /tmp/req_df_ws.json   # gắn task vào phiên Deepfake
+curl -s localhost:8000/research/ -H "authorization: Bearer $TOKEN" \
+  -H 'content-type: application/json' -d @/tmp/req_df_ws.json | jq -c '{id,status}'
+
+# theo dõi (~20 phút trở lên)
+docker exec paperai_bt-postgres-1 psql -U paperai -d paperai -tAc \
+  "select id,status,length(coalesce(report,'')) from research_tasks"
+```
+**Đảm bảo reference chỉ từ `data/papers_deepfake`:** (1) task gắn `workspace_id` thì hệ thống ép chế độ chỉ-kho-nội-bộ, tắt hẳn OpenAlex dù `EXTERNAL_SEARCH_ENABLED` là gì, và truy xuất chỉ trong paper của workspace; (2) sau khi xong, kiểm chứng bằng lệnh chỉ đọc (thoát mã `1` nếu có citation ngoài thư mục):
+```bash
+python scripts/verify_task_sources.py --task <task_id> --dir data/papers_deepfake
+```
+Phải in `ngoài data/papers_deepfake: 0` và `OK`. Lưu ý: lệnh chỉ kiểm paper được trích dẫn; số liệu/thực thể LLM tự thêm vào văn bản mà không có `[n]` do quality gate bắt (`validation/<task_id>.json`: UNTRACED/NO_CITATION).
+
+Khi `status = done`: kiểm chứng ở `data/papers_deepfake/validation/<task_id>.json` (đọc `passed`, `blocking`, `warnings`, đếm TRACED/UNTRACED/NO_CITATION); xuất PDF:
+```bash
+curl -s -H "authorization: Bearer $TOKEN" "localhost:8000/research/<task_id>/pdf?draft=true" -o survey_deepfake.pdf
+```
+
+**Checklist chuẩn nộp Q1/Q2 (đối chiếu trước khi nộp):**
+- Tên là "survey of the provided corpus" (50 paper, nguồn OpenAlex open access), KHÔNG gọi là systematic review. Muốn gọi systematic review thì tự làm: tìm CSDL (Scopus/WoS/IEEE/arXiv), chuỗi truy vấn, tiêu chí gộp/loại, sơ đồ PRISMA, 2 reviewer độc lập.
+- `validation/<task_id>.json`: `passed = true`, `blocking` rỗng, không còn UNTRACED/NO_CITATION; mọi con số trong bảng truy được về paper.
+- Không so xếp hạng giữa các paper khác dataset/giao thức; giữ nguyên thang gốc (%, tỉ lệ); ô thiếu ghi NR.
+- Rà tay References với `_manifest.json` (DOI, năm, tác giả), vì không có `catalog.json`.
+- Đối chiếu tính mới với các survey deepfake đã xuất bản (hệ thống không tự kiểm tra được).
+- Corpus 50 paper là nhỏ: nêu rõ giới hạn phạm vi ở phần Methodology/Limitations; mở rộng corpus là việc của bạn.
+
+### Dừng và dọn
+```bash
+ps -eo pid,args | grep -E "[c]elery -A|[u]vicorn app"   # lấy PID rồi: kill <pid>  (KHÔNG dùng pkill -f)
+docker compose -p paperai_bt stop                        # giữ nguyên dữ liệu
+docker exec paperai_bt-redis-1 redis-cli del unacked unacked_index   # hủy task treo
+docker exec paperai_bt-postgres-1 psql -U paperai -d paperai -tAc "delete from research_tasks where id='<task_id>'"
+```

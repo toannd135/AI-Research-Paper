@@ -1,0 +1,92 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 6,
+  "caption": "Figure 3: Average energy per frequency bin. We show the average energy per frequency bin in dB. Additionally, we plot the difference to the original data (LJSPEECH).",
+  "kind": "vector",
+  "width": 818,
+  "height": 212,
+  "source_title": "WaveFake_A_Data_Set_to_Facilitate_Audio_Deepfake_Detection.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 10,
+  "caption": "Figure 4: Attribution of the different models on a real audio sample. We show the LFCC, delta, and, double delta features. The plot can be read similarly to the spectrogram plots, i.e., features computed over lower frequencies are at the bottom of their respective section, features over higher frequencies are at the top. Best viewed in color.",
+  "kind": "vector",
+  "width": 819,
+  "height": 377,
+  "source_title": "WaveFake_A_Data_Set_to_Facilitate_Audio_Deepfake_Detection.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 21,
+  "caption": "Figure 5: Original",
+  "kind": "raster",
+  "width": 564,
+  "height": 627,
+  "source_title": "WaveFake_A_Data_Set_to_Facilitate_Audio_Deepfake_Detection.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 22,
+  "caption": "Figure 7: FB-MelGAN",
+  "kind": "raster",
+  "width": 564,
+  "height": 235,
+  "source_title": "WaveFake_A_Data_Set_to_Facilitate_Audio_Deepfake_Detection.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 22,
+  "caption": "Figure 8: MB-MelGAN",
+  "kind": "raster",
+  "width": 564,
+  "height": 235,
+  "source_title": "WaveFake_A_Data_Set_to_Facilitate_Audio_Deepfake_Detection.pdf"
+ },
+ {
+  "file": "fig_6.png",
+  "page": 22,
+  "caption": "Figure 9: HiFi-GAN",
+  "kind": "raster",
+  "width": 564,
+  "height": 235,
+  "source_title": "WaveFake_A_Data_Set_to_Facilitate_Audio_Deepfake_Detection.pdf"
+ },
+ {
+  "file": "fig_7.png",
+  "page": 23,
+  "caption": "Figure 10: WaveGlow",
+  "kind": "raster",
+  "width": 564,
+  "height": 235,
+  "source_title": "WaveFake_A_Data_Set_to_Facilitate_Audio_Deepfake_Detection.pdf"
+ },
+ {
+  "file": "fig_8.png",
+  "page": 23,
+  "caption": "Figure 11: PWG",
+  "kind": "raster",
+  "width": 564,
+  "height": 235,
+  "source_title": "WaveFake_A_Data_Set_to_Facilitate_Audio_Deepfake_Detection.pdf"
+ },
+ {
+  "file": "fig_9.png",
+  "page": 24,
+  "caption": "Figure 12: Average energy per frequency bin. We show the average energy per frequency bin in dB. Additionally, we plot the difference to the original data (LJSPEECH).",
+  "kind": "vector",
+  "width": 737,
+  "height": 1294,
+  "source_title": "WaveFake_A_Data_Set_to_Facilitate_Audio_Deepfake_Detection.pdf"
+ },
+ {
+  "file": "fig_10.png",
+  "page": 26,
+  "caption": "Figure 14: Mel ﬁlterbank",
+  "kind": "vector",
+  "width": 633,
+  "height": 216,
+  "source_title": "WaveFake_A_Data_Set_to_Facilitate_Audio_Deepfake_Detection.pdf"
+ }
+]

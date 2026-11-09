@@ -1,0 +1,182 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 12,
+  "caption": "Figure 2: Image panels illustrating the annotated tumor sub-regions across various mpMRI scans with segmentations of ET (yellow), SNFH (green), and NETC (red) done on ITK-SNAP.",
+  "kind": "raster",
+  "width": 1067,
+  "height": 1354,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 14,
+  "caption": "Figure 4: Map of institutions that expressed interest in contributing data to the BraTS-METS challenge.",
+  "kind": "vector",
+  "width": 1132,
+  "height": 689,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 20,
+  "caption": "Figure 7: BraTS-METS 2023 boxplots of tumor core Dice scores (A) and 95% Hausdorff distance (HD95) (B) for all participating teams on the BraTS 2023 test set.",
+  "kind": "vector",
+  "width": 1068,
+  "height": 339,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 22,
+  "caption": "Figure 10: BraTS-METS 2023 plot of cumulative average of (A) Dice scores, (B) 95% Hausdorff distance (HD95), and (C) lesion detection rate as a function of increasing lesion volume.",
+  "kind": "vector",
+  "width": 1073,
+  "height": 916,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 30,
+  "caption": "Figure 11: Supplementary: Examples of Random Voxels Predicted as Non-enhancing tumor core",
+  "kind": "raster",
+  "width": 1123,
+  "height": 478,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ },
+ {
+  "file": "fig_6.png",
+  "page": 30,
+  "caption": "Figure 12: Supplementary: Examples of Random Voxels Predicted as Non-enhancing tumor core",
+  "kind": "raster",
+  "width": 1123,
+  "height": 477,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ },
+ {
+  "file": "fig_7.png",
+  "page": 31,
+  "caption": "Figure 13: Supplementary: Examples of Random Voxels Predicted as Non-enhancing tumor core",
+  "kind": "raster",
+  "width": 1123,
+  "height": 478,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ },
+ {
+  "file": "fig_8.png",
+  "page": 31,
+  "caption": "Figure 14: Supplementary: Examples of Random Voxels Predicted as Non-enhancing tumor core",
+  "kind": "raster",
+  "width": 1123,
+  "height": 477,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ },
+ {
+  "file": "fig_9.png",
+  "page": 32,
+  "caption": "Figure 15: Supplementary: Examples of Random Voxels Predicted as Non-enhancing tumor core",
+  "kind": "raster",
+  "width": 1123,
+  "height": 478,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ },
+ {
+  "file": "fig_10.png",
+  "page": 32,
+  "caption": "Figure 16: Supplementary: Examples of Random Voxels Predicted as Non-enhancing tumor core",
+  "kind": "raster",
+  "width": 1123,
+  "height": 477,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ },
+ {
+  "file": "fig_11.png",
+  "page": 33,
+  "caption": "Figure 17: Supplementary: Examples of Random Voxels Predicted as Non-enhancing tumor core",
+  "kind": "raster",
+  "width": 1123,
+  "height": 478,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ },
+ {
+  "file": "fig_12.png",
+  "page": 33,
+  "caption": "Figure 18: Supplementary: Examples of Random Voxels Predicted as Non-enhancing tumor core",
+  "kind": "raster",
+  "width": 1123,
+  "height": 477,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ },
+ {
+  "file": "fig_13.png",
+  "page": 34,
+  "caption": "Figure 19: Supplementary: Examples of Random Voxels Predicted as Non-enhancing tumor core",
+  "kind": "raster",
+  "width": 1123,
+  "height": 478,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ },
+ {
+  "file": "fig_14.png",
+  "page": 34,
+  "caption": "Figure 20: Supplementary: Examples of Random Voxels Predicted as Non-enhancing tumor core",
+  "kind": "raster",
+  "width": 1123,
+  "height": 477,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ },
+ {
+  "file": "fig_15.png",
+  "page": 35,
+  "caption": "Figure 21: Supplementary: Examples of Random Voxels Predicted as Non-enhancing tumor core",
+  "kind": "raster",
+  "width": 1123,
+  "height": 478,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ },
+ {
+  "file": "fig_16.png",
+  "page": 35,
+  "caption": "Figure 22: Supplementary: Examples of Random Voxels Predicted as Non-enhancing tumor core",
+  "kind": "raster",
+  "width": 1123,
+  "height": 477,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ },
+ {
+  "file": "fig_17.png",
+  "page": 36,
+  "caption": "Figure 23: Supplementary: Examples of Random Voxels Predicted as Non-enhancing tumor core",
+  "kind": "raster",
+  "width": 1123,
+  "height": 477,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ },
+ {
+  "file": "fig_18.png",
+  "page": 36,
+  "caption": "Figure 24: Supplementary: Examples of Random Voxels Predicted as Non-enhancing tumor core",
+  "kind": "raster",
+  "width": 1123,
+  "height": 636,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ },
+ {
+  "file": "fig_19.png",
+  "page": 37,
+  "caption": "Figure 25: Supplementary: Pitfall Cases",
+  "kind": "raster",
+  "width": 1123,
+  "height": 478,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ },
+ {
+  "file": "fig_20.png",
+  "page": 37,
+  "caption": "Figure 26: Supplementary: Pitfall Cases",
+  "kind": "raster",
+  "width": 1123,
+  "height": 477,
+  "source_title": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b.pdf"
+ }
+]

@@ -44,12 +44,16 @@ def chat(
         paper = db.get(Paper, payload.paper_id)
         if paper is None or not can_access(user, paper.user_id):
             raise HTTPException(status_code=404, detail="Paper không tồn tại")
+    workspace_id = None
+    if payload.paper_id:
+        workspace_id = paper.workspace_id  # hỏi đáp theo paper: phạm vi là phiên của paper đó
     if payload.research_task_id:
         task = db.get(ResearchTask, payload.research_task_id)
         if task is None or not can_access(user, task.user_id):
             raise HTTPException(status_code=404, detail="Research task không tồn tại")
+        workspace_id = task.workspace_id  # hỏi đáp về một research chỉ trong phiên của nó
     # Truy xuất toàn kho rồi lọc theo paper của người dùng để không lộ nội dung người khác.
-    allowed = allowed_paper_ids_for(db, user)
+    allowed = allowed_paper_ids_for(db, user, workspace_id)
     candidates = filter_chunks(search_hybrid(payload.question, top_k=60, paper_id=payload.paper_id), allowed)[:20]
     top_chunks = rerank(payload.question, candidates, top_k=6)
     if not top_chunks:

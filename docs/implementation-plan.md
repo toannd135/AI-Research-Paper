@@ -158,3 +158,40 @@ Khi provider chính OpenRouter trả 429, gọi lại cùng lời gọi trên Gr
 | 2 | `FallbackGateway`: bắt `LLMRateLimitError` rồi gọi Groq; lỗi khác raise nguyên trạng | `llm_gateway/fallback.py` | `pytest app/ai/tests/test_fallback_gateway.py` |
 | 3 | Chọn gateway: OpenRouter + Groq key -> `FallbackGateway`, không có key -> OpenRouter đơn lẻ | `llm_gateway/default.py` | `pytest app/ai/tests/test_default_gateway.py` |
 Kiểm chứng tổng: `venv/bin/pytest app/ai/tests -q -p no:cacheprovider` (76 passed).
+
+## Workspace (phiên/đề tài) — cách ly paper theo đề tài trong cùng một user
+Mục tiêu: upload tập paper vào workspace A → research/chat của A chỉ truy xuất paper của A; workspace B (cùng user) không thấy paper A.
+Thiết kế: `workspaces(id, user_id, name, created_at)`; `papers.workspace_id`, `research_tasks.workspace_id` (nullable, không FK cứng, giống `user_id`).
+Phạm vi truy xuất (`allowed_paper_ids_for(db, user, workspace_id)`): có workspace → chỉ paper của workspace đó; không workspace → user thường chỉ thấy paper CHƯA gán workspace (paper đã gán không rò sang lượt không chỉ định phiên); admin không workspace → giữ nguyên (toàn bộ).
+| # | Bước | Kiểm chứng |
+|---|---|---|
+| 1 | Model `Workspace`, thêm cột 2 bảng, migration 0009 (không chạy trên DB thật) | `pytest app/api/tests/test_models.py` |
+| 2 | `scope.allowed_paper_ids_for(..., workspace_id)` | test scope |
+| 3 | `/workspaces` (POST, GET); `/papers/upload?workspace_id=`; `GET /papers?workspace_id=`; `ResearchRequest.workspace_id`; chat theo workspace của research task; `run_research` dùng workspace | `pytest app/api -q` |
+| 4 | `scripts/assign_papers.py --workspace TÊN` (tạo nếu chưa có) | `pytest app/pipeline/tests/test_seed.py` |
+| 5 | Doc: api-contracts, database-schema, architecture, README | đối chiếu thủ công |
+Không làm: frontend, xoá workspace (xoá từng paper như cũ), paper dùng chung nhiều workspace.
+
+## Hệ thống hình theo đánh giá phần hình của `survey_c5d84302.pdf` (2026-11-09)
+Đối chiếu đánh giá với report markdown (task c5d84302) + code. PDF sinh lúc 12:15, TRƯỚC commit 17:09 thêm ma trận 15 tập modality
+(`modality_coverage_matrix`) và heatmap suy giảm (`modality_degradation_chart`) → hai hình "thiếu" đã có code, chỉ cần chạy lại survey.
+Lỗi THẬT do hệ thống còn lại (đã xác minh trên markdown):
+| # | Phát hiện | Việc | Tệp | Kiểm chứng |
+|---|---|---|---|---|
+| 1 | "Figure 7: Computational cost…" là đoạn chú thích mồ côi: khối chart bị validator bỏ nhưng đoạn `**Figure N:…**` vẫn còn → hai Figure 7 | Bỏ đoạn chú thích Figure không còn khối hình đi kèm (trước khi đánh số lại) | `evidence/report_structure.py`, `synthesize_node.py` | test: chart bị bỏ → chú thích + đánh số liên tục |
+| 2 | Figure 5 trộn BraTS 2020 hidden test với 2021 validation, % với tỉ lệ trong một panel (LLM vi phạm luật) | Chặn chart so sánh có ≥2 edition/split/đơn vị trong caption/nhãn | `report_postprocess.py` | test: caption 2 năm/2 split → bị bỏ |
+| 3 | Thay thế cho #2: so sánh full-modality theo TỪNG protocol | `protocol_panels`: dot chart mỗi setting (≥3 phương pháp) dựng từ record đã kiểm chứng; loại chart `panels` (small multiples, chú giải chung — cũng phủ dạng lưới line chart) | `quant_analysis.py`, `chart_scientific.py` | test render SVG + spec |
+| 4 | Scatter chi phí/độ bền chỉ vài điểm | Scatter cần ≥4 điểm cùng setting (LLM và tất định); thay bằng evidence map "mức báo cáo chi phí" (Params/FLOPs/latency/training time/memory/energy × phương pháp) từ record | `report_postprocess.py`, `quant_analysis.py` | test |
+| 5 | Không có sơ đồ hình thành corpus (khi không có review_protocol.json) | Sơ đồ luồng trung thực từ số đếm thật (corpus → được truy xuất → được trích dẫn → có số liệu), ghi rõ "không phải PRISMA" | `evidence/corpus_flow.py` (mới), `synthesize_node.py` | test |
+| 6 | Taxonomy mermaid quá ngang, chữ nhỏ | `graph TD` có nhánh >4 con → `flowchart LR` | `report_postprocess.py` | test |
+| 7 | Thiếu timeline + roadmap | Loại chart `timeline` (năm lấy từ References, không tin LLM) + luật prompt; roadmap gap→hướng→protocol bằng mermaid ở Stage 5 | `chart_scientific.py`, `synthesize_node.py` | test render + kiểm năm |
+Không làm: hình định tính BraTS (hệ thống chỉ dùng hình có thật trong corpus; lọc hình lạc miền đã làm ở lần 4 #4 — không bịa ảnh).
+
+## Kiểm tra bổ sung theo checklist hình thức Q1/Q2 (chỉ cảnh báo, tất định, không gọi LLM)
+- `consistency_check._check_abstract_content`: Abstract phải nêu phương pháp review, số paper, phát hiện định lượng chính, đóng góp.
+- `consistency_check.check_acronyms`: viết tắt dùng ≥3 lần mà chưa định nghĩa dạng "Tên đầy đủ (ACR)"; ≥8 viết tắt mà không có mục Abbreviations → cảnh báo (chưa TỰ SINH bảng viết tắt).
+- `science_qa._TERM_GROUPS`: thêm nhóm thuật ngữ deepfake/đa phương thức (deepfake, multimodal, cross-modal, cross-dataset, cross-generator, vision-language, AUROC, Celeb-DF) và full-modal.
+- `evidence/ledger_export.py` + `tasks._save_ledger_csv`: xuất sổ cái ra `<upload_dir>/ledger/<task_id>.csv` (supplementary: paper_file, dataset, split, metric, value, unit, trang/bảng, lỗi nội tại).
+Kiểm chứng: `pytest app/agent/tests/test_report_checks.py app/agent/tests/test_science_qa.py app/agent/tests/test_evidence_pipeline.py`.
+Chưa làm: tự sinh bảng viết tắt; kiểm caption bảng (đơn vị/protocol/nguồn); đối chiếu Journal fit; kiểm DPI/cỡ chữ hình.
+

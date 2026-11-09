@@ -2,14 +2,17 @@
 
 Các type: xyline (hội tụ, độ nhạy 1D, scalability), scatter (PCA/t-SNE/UMAP), cdf (latency),
 histogram, boxplot, heatmap (độ nhạy 2D, Δ theo cấu hình; ô null = NR), dot (so sánh phương pháp × metric),
-dumbbell (hai điều kiện ghép cặp: validation/test, có/không module), evidence_map (nghiên cứu × tiêu chí: Yes/No/NR).
+dumbbell (hai điều kiện ghép cặp: validation/test, có/không module), evidence_map (nghiên cứu × tiêu chí: Yes/No/NR),
+panels (lưới small multiples dot/line/xyline, chú giải chung), timeline (năm × nhóm phương pháp; năm kiểm chứng theo References).
 Chỉ vẽ số liệu có trong spec — không sinh dữ liệu; giá trị thiếu không bao giờ vẽ thành 0.
 """
 
 import io
 import math
 
-SCIENTIFIC_TYPES = {"xyline", "scatter", "cdf", "histogram", "boxplot", "heatmap", "dot", "dumbbell", "evidence_map"}
+SCIENTIFIC_TYPES = {"xyline", "scatter", "cdf", "histogram", "boxplot", "heatmap", "dot", "dumbbell", "evidence_map", "panels", "timeline"}
+PANEL_TYPES = {"dot", "xyline", "line"}
+MAX_PANELS = 8
 _EVIDENCE_COLORS = {"yes": "#4f9a5b", "partial": "#e3b448", "no": "#c8553d", "nr": "#e6e6e6"}
 
 _PALETTE = ["#1f4e79", "#c55a11", "#548235", "#7f6000", "#7030a0", "#2e75b6"]
@@ -63,7 +66,8 @@ def _evidence_key(v) -> str:
     return "nr"
 
 
-def _draw_dot(ax, spec: dict) -> int:
+def _draw_dot(ax, spec: dict, colors: list[str] | None = None, markers: list[str] | None = None) -> int:
+    colors, markers = colors or _PALETTE, markers or _MARKERS
     labels, series = _labelled_values(spec)
     keep = [i for i in range(len(labels)) if any(not math.isnan(v[i]) for _, v in series)]
     if not keep:
@@ -72,8 +76,8 @@ def _draw_dot(ax, spec: dict) -> int:
     offs = [0.0] if len(series) == 1 else [(-0.25 + 0.5 * k / (len(series) - 1)) for k in range(len(series))]
     for k, (name, vals) in enumerate(series):
         pts = [(vals[i], y + offs[k]) for y, i in zip(ys, keep, strict=True) if not math.isnan(vals[i])]
-        ax.scatter([p[0] for p in pts], [p[1] for p in pts], s=26, color=_PALETTE[k % len(_PALETTE)],
-                   marker=_MARKERS[k % len(_MARKERS)], label=name, zorder=3)
+        ax.scatter([p[0] for p in pts], [p[1] for p in pts], s=26, color=colors[k % len(colors)],
+                   marker=markers[k % len(markers)], label=name, zorder=3)
     ax.set_yticks(ys, [labels[i] for i in keep])
     ax.invert_yaxis()
     ax.grid(axis="y", color="#eee", linewidth=0.6)
@@ -176,7 +180,142 @@ def finish_figure(fig, fmt: str = "svg") -> str | bytes:
     return data[data.index("<svg"):] if fmt == "svg" else data
 
 
+def _timeline_events(spec: dict) -> list[tuple[int, str, str]]:
+    out = []
+    for e in spec.get("events") or []:
+        if not isinstance(e, dict):
+            continue
+        try:
+            year = int(e.get("year"))
+        except (TypeError, ValueError):
+            continue
+        if e.get("label"):
+            out.append((year, str(e["label"]), str(e.get("group") or "")))
+    return sorted(out)
+
+
+def _draw_timeline(ax, spec: dict) -> int:
+    """Dòng thời gian: trục ngang = năm, mỗi làn = một nhóm phương pháp; nhãn so le trên/dưới để không chồng nhau."""
+    events = _timeline_events(spec)
+    if len(events) < 2:
+        return 0
+    groups = list(dict.fromkeys(g for _, _, g in events))
+    lane = {g: i for i, g in enumerate(groups)}
+    slot: dict[tuple[int, str], int] = {}
+    for year, label, group in events:
+        k = slot.get((year, group), 0)
+        slot[(year, group)] = k + 1
+        y = lane[group]
+        color = _PALETTE[lane[group] % len(_PALETTE)]
+        ax.scatter([year], [y], s=22, color=color, marker=_MARKERS[lane[group] % len(_MARKERS)], zorder=3)
+        dy = (0.28 + 0.2 * (k // 2)) * (1 if k % 2 == 0 else -1)
+        ax.annotate(label, (year, y), xytext=(year, y + dy), fontsize=6.3, ha="center", va="center", color="#222",
+                    arrowprops={"arrowstyle": "-", "color": "#bbb", "linewidth": 0.5})
+    years = [y for y, _, _ in events]
+    ax.set_xlim(min(years) - 0.7, max(years) + 0.7)
+    ax.set_xticks(range(min(years), max(years) + 1))
+    ax.set_yticks(range(len(groups)), groups)
+    ax.set_ylim(len(groups) - 0.4, -0.6)
+    for i in range(len(groups)):
+        ax.axhline(i, color="#eee", linewidth=0.8, zorder=1)
+    return len(events)
+
+
+def _draw_panel(ax, spec: dict, colors: list[str], markers: list[str]) -> int:
+    """Một ô con của lưới: dot (nhãn trục dọc), xyline (x số thực) hoặc line (nhãn thứ tự trên trục ngang).
+
+    colors/markers xếp theo thứ tự series của ô (đã ánh xạ theo tên ở cấp lưới)."""
+    kind = spec.get("type", "line")
+    if kind == "dot":
+        return _draw_dot(ax, spec, colors, markers)
+    drawn = 0
+    if kind == "xyline":
+        for i, s in enumerate(x for x in spec.get("series", []) if isinstance(x, dict)):
+            pts = sorted(_pairs(s.get("x", []), s.get("y", [])))
+            if pts:
+                ax.plot([p[0] for p in pts], [p[1] for p in pts], marker=markers[i % len(markers)], markersize=3.5,
+                        linewidth=1.4, color=colors[i % len(colors)], label=s.get("name"))
+                drawn += 1
+        return drawn
+    labels, series = _labelled_values(spec)
+    xs = list(range(len(labels)))
+    for i, (name, vals) in enumerate(series):
+        pts = [(x, v) for x, v in zip(xs, vals, strict=True) if not math.isnan(v)]  # NR = đứt nét, không nội suy
+        if pts:
+            ax.plot([p[0] for p in pts], [p[1] for p in pts], marker=markers[i % len(markers)], markersize=3.5,
+                    linewidth=1.4, color=colors[i % len(colors)], label=name)
+            drawn += 1
+    ax.set_xticks(xs, labels)
+    return drawn
+
+
+def render_panels_svg(spec: dict, fmt: str = "svg") -> str | bytes:
+    """Lưới small multiples: mỗi ô một setting/điều kiện, chú giải chung bên dưới; màu/marker theo TÊN series nhất quán mọi ô.
+
+    spec: {type: "panels", ncols, panels: [{type: dot|xyline|line, title, labels?, series, x_label?, y_label?}], sharey?}
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    from app.pipeline.export.figure_layout import WIDE_WIDTH_IN
+
+    panels = [p for p in spec.get("panels", []) if isinstance(p, dict) and p.get("type", "line") in PANEL_TYPES][:MAX_PANELS]
+    if not panels:
+        raise ValueError("chart panels thiếu ô con hợp lệ")
+    names: list[str] = []
+    for p in panels:
+        for s in p.get("series", []):
+            if isinstance(s, dict) and s.get("name") and s["name"] not in names:
+                names.append(s["name"])
+    order = {n: i for i, n in enumerate(names)}
+    ncols = max(1, min(int(spec.get("ncols") or (4 if len(panels) >= 4 else len(panels))), len(panels)))
+    nrows = math.ceil(len(panels) / ncols)
+    dot_rows = max((len(p.get("labels") or []) for p in panels if p.get("type") == "dot"), default=0)
+    cell_h = max(1.9, 0.22 * dot_rows + 0.9)
+    plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 7.5, "svg.fonttype": "path"})
+    fig, axes = plt.subplots(nrows, ncols, figsize=(WIDE_WIDTH_IN, cell_h * nrows + 0.5), squeeze=False,
+                             sharey=bool(spec.get("sharey")))
+    drawn = 0
+    for idx, ax in enumerate(axes.flat):
+        if idx >= len(panels):
+            ax.set_visible(False)
+            continue
+        p = dict(panels[idx])
+        # màu theo vị trí tên series trong toàn lưới → cùng phương pháp cùng màu ở mọi ô
+        p["series"] = sorted((s for s in p.get("series", []) if isinstance(s, dict)), key=lambda s: order.get(s.get("name"), 99))
+        idxs = [order.get(s.get("name"), k) for k, s in enumerate(p["series"])]
+        drawn += _draw_panel(
+            ax, p, [_PALETTE[i % len(_PALETTE)] for i in idxs] or _PALETTE, [_MARKERS[i % len(_MARKERS)] for i in idxs] or _MARKERS
+        )
+        ax.set_title(str(p.get("title") or ""), fontsize=8)
+        if p.get("x_label"):
+            ax.set_xlabel(p["x_label"])
+        if p.get("y_label"):
+            ax.set_ylabel(p["y_label"])
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.grid(linestyle=":", alpha=0.6)
+        ax.set_axisbelow(True)
+    if not drawn:
+        plt.close(fig)
+        raise ValueError("chart panels thiếu dữ liệu hợp lệ")
+    if spec.get("title"):
+        fig.suptitle(str(spec["title"]), fontsize=9)
+    handles: dict[str, object] = {}
+    for ax in axes.flat:
+        for h, lab in zip(*ax.get_legend_handles_labels(), strict=True):
+            handles.setdefault(lab, h)
+    fig.tight_layout(rect=(0, 0.08 if len(handles) > 1 else 0, 1, 1))
+    if len(handles) > 1:
+        fig.legend(handles.values(), handles.keys(), loc="lower center", ncol=min(len(handles), 5), frameon=True, fontsize=7.5,
+                   edgecolor="#bbb", bbox_to_anchor=(0.5, 0.0))
+    return finish_figure(fig, fmt)
+
+
 def render_scientific_svg(spec: dict, fmt: str = "svg") -> str | bytes:
+    if spec.get("type") == "panels":
+        return render_panels_svg(spec, fmt)
     import matplotlib
 
     matplotlib.use("Agg")
@@ -191,6 +330,8 @@ def render_scientific_svg(spec: dict, fmt: str = "svg") -> str | bytes:
     n_rows = len(spec.get("y_labels") or spec.get("labels") or [])
     if kind in ("heatmap", "evidence_map", "dot", "dumbbell"):  # một hàng mỗi nhãn: cao theo số hàng
         height = max(2.0, 0.24 * n_rows + 1.1)
+    elif kind == "timeline":  # một làn mỗi nhóm, chừa chỗ cho nhãn so le
+        height = max(2.2, 0.75 * len({g for _, _, g in _timeline_events(spec)}) + 0.9)
     else:
         height = 2.7 if narrow else 3.6
     plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 8 if narrow else 9, "svg.fonttype": "path"})
@@ -256,6 +397,8 @@ def render_scientific_svg(spec: dict, fmt: str = "svg") -> str | bytes:
         drawn = _draw_dot(ax, spec)
     elif kind == "dumbbell":
         drawn = _draw_dumbbell(ax, spec)
+    elif kind == "timeline":
+        drawn = _draw_timeline(ax, spec)
 
     if not drawn:
         plt.close(fig)
@@ -265,7 +408,7 @@ def render_scientific_svg(spec: dict, fmt: str = "svg") -> str | bytes:
         ax.set_xlabel(spec["x_label"])
     if spec.get("y_label"):
         ax.set_ylabel(spec["y_label"])
-    if kind in ("heatmap", "evidence_map"):
+    if kind in ("heatmap", "evidence_map", "timeline"):
         ax.spines[:].set_visible(False)
     elif kind in ("dot", "dumbbell"):
         ax.spines[["top", "right", "left"]].set_visible(False)

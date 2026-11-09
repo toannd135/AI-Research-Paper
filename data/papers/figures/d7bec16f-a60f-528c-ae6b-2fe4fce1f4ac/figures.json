@@ -1,0 +1,38 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 2,
+  "caption": "Fig. 1: Illustration of SAM [18], fine-tuned SAM (SAM-Med2D [6]), and our SAM-Med3D on 3D Volumetric Medical Images. Both SAM and SAM-Med2D take N prompt points (one for each slice) whereas SAM-Med3D uses a single prompt point for the entire 3D volume. Here, N corresponds to the number of slices containing the target object. The top-left corner provides a schematic of the Axial, Coronal, and Sagit",
+  "kind": "vector",
+  "width": 708,
+  "height": 396,
+  "source_title": "d7bec16f-a60f-528c-ae6b-2fe4fce1f4ac.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 4,
+  "caption": "Fig. 2: Overview of SA-Med3D-140K. (a) The word cloud maps for category statis- tics of all training data. There are 245 categories in our training data. (b) Comparison of counts of images and masks in the 3D medical image datasets. Our dataset consists of 22K 3D images with corresponding 143K 3D masks, while AMOS [17], TotalSeg- mentator [36] have less than 2K images, and BraTS21 [1] has less tha",
+  "kind": "raster",
+  "width": 497,
+  "height": 302,
+  "source_title": "d7bec16f-a60f-528c-ae6b-2fe4fce1f4ac.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 8,
+  "caption": "Fig. 3: The fully 3D architecture of our SAM-Med3D, encompassing a 3D image en- coder, 3D prompt encoder, and 3D mask decoder. 3D positional encoding (PE) and 3D layers like convolution and layer normalization are employed to construct it.",
+  "kind": "vector",
+  "width": 640,
+  "height": 300,
+  "source_title": "d7bec16f-a60f-528c-ae6b-2fe4fce1f4ac.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 12,
+  "caption": "Fig. 4: (a-c) Comparison across different modalities with varying numbers of points. Despite not being trained on the US modality like SAM-Med2D, SAM-Med3D still shows competitive performance. (d) Comparison of the Dice score between SAM- Med3D and the 2D fine-tuned SAM, SAM-Med2D [6] across 44 major organs and 5 kinds of lesions. ∗and ∗∗represent unseen organs and lesions.",
+  "kind": "vector",
+  "width": 730,
+  "height": 418,
+  "source_title": "d7bec16f-a60f-528c-ae6b-2fe4fce1f4ac.pdf"
+ }
+]

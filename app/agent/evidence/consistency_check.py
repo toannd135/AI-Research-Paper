@@ -173,12 +173,57 @@ def _check_dice_scale(text: str) -> list[str]:
     return out
 
 
+_ABSTRACT_PARTS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("phương pháp review (nguồn, cách chọn/phân tích corpus)", re.compile(r"\b(?:we (?:review|survey|analy[sz]e|synthesi[sz]e|compare|examine)|corpus|literature|reviewed|search(?:ed)?|selected|inclusion)\b", re.I)),
+    ("số paper/nghiên cứu được review", re.compile(r"\b\d{1,4}\s+(?:\w+\s+){0,3}(?:papers?|studies|works|articles|publications|methods)\b", re.I)),
+    ("phát hiện định lượng chính", re.compile(r"\d+(?:\.\d+)?\s*%|\b(?:AUC|AUROC|EER|Dice|HD95|accuracy|F1)\b[^.]{0,40}\d|\d[^.]{0,40}\b(?:AUC|AUROC|EER|Dice|HD95|accuracy|F1)\b", re.I)),
+    ("đóng góp/điểm mới", re.compile(r"\b(?:contribut\w*|taxonomy|framework|we (?:propose|introduce|present)|novel|first)\b", re.I)),
+)
+
+
+def _check_abstract_content(secs: dict[str, str]) -> list[str]:
+    """Abstract phải nêu phương pháp review, số paper, phát hiện định lượng chính và đóng góp (kiểm bằng luật, chỉ cảnh báo)."""
+    abstract = secs.get("abstract")
+    if abstract is None:
+        return []
+    return [f"Abstract chưa nêu rõ {label}" for label, rx in _ABSTRACT_PARTS if not rx.search(abstract)]
+
+
+_ACRONYM_RE = re.compile(r"\b[A-Z][A-Z0-9]{1,5}(?:\+\+)?\b")
+_ACRONYM_IGNORE = frozenset({"RQ", "II", "III", "IV", "VI", "IEEE", "PDF", "CVPR", "ICCV", "ECCV", "NIPS", "AAAI", "ACM", "DOI", "URL", "NR", "AND", "FOR", "THE", "TABLE", "FIGURE", "ARXIV", "ICML", "ICLR", "ACL", "OK", "US", "UK", "ID"})
+_ABBREV_SECTION_RE = re.compile(r"abbreviation|acronym|nomenclature|list of symbols", re.I)
+ACRONYM_MIN_USES = 3
+ACRONYM_TABLE_MIN = 8
+
+
+def check_acronyms(text: str) -> list[str]:
+    """Viết tắt dùng nhiều lần mà chưa từng được định nghĩa dạng 'Expanded Form (ACR)'; thiếu bảng viết tắt khi có nhiều viết tắt."""
+    body = re.split(r"\n#{1,3}\s*References\b", text, maxsplit=1)[0]
+    body = _FENCE_RE.sub("", body)
+    counts: dict[str, int] = {}
+    for m in _ACRONYM_RE.finditer(body):
+        if m.group(0) not in _ACRONYM_IGNORE and not m.group(0).isdigit():
+            counts[m.group(0)] = counts.get(m.group(0), 0) + 1
+    frequent = {a: n for a, n in counts.items() if n >= ACRONYM_MIN_USES}
+    out = [
+        f"viết tắt {a} dùng {n} lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ ({a})'"
+        for a, n in sorted(frequent.items(), key=lambda kv: -kv[1])
+        if not re.search(rf"\(\s*{re.escape(a)}\s*\)", body)
+    ]
+    has_table = any(_ABBREV_SECTION_RE.search(h) for h in _sections(text))
+    if len(frequent) >= ACRONYM_TABLE_MIN and not has_table:
+        out.append(f"có {len(frequent)} viết tắt nhưng không có mục/bảng danh sách viết tắt (Abbreviations)")
+    return out
+
+
 def check_consistency(text: str) -> list[str]:
     secs = _sections(text)
     return (
         _check_rq(secs)
         + _check_names_and_datasets(text)
         + _check_abstract(secs, text)
+        + _check_abstract_content(secs)
+        + check_acronyms(text)
         + _check_numbering(text)
         + _check_formulas(text)
         + _check_dice_scale(text)

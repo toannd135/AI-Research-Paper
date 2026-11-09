@@ -1,0 +1,38 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Figure 1. The proposed overall deepfake detection network. The image split into patches and pass EfﬁcientNet [47]. We got (Batch, N, embedding features), (Batch, M, embedding features) respectively. These tokens are concatenated, through global pooling, and fed to transformer encoder. Encoder consist of Multi-Self Attention (MSA) and 2 layers of GeLU function. We add distillation token which is tr",
+  "kind": "vector",
+  "width": 744,
+  "height": 458,
+  "source_title": "Deepfake_Detection_Scheme_Based_on_Vision_Transformer_and_Distillation.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 4,
+  "caption": "Figure 3. ROC-AUC curve. Orange is the curve of our model and green is the curve of SOTA model. Our model has larger area than the compared SOTA.",
+  "kind": "vector",
+  "width": 423,
+  "height": 484,
+  "source_title": "Deepfake_Detection_Scheme_Based_on_Vision_Transformer_and_Distillation.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 5,
+  "caption": "Figure 4. We set the threshold 0.55 which is probability of fake videos. Top-right, top-left, bottom-right, bottom-left means false- positive, true-negative, true-positive, false-negative in order. Con- fusion Matrix of the left side is previous SOTA model’s prediction and the right side is our results. We can see that our model predict clearly on fake videos.",
+  "kind": "vector",
+  "width": 485,
+  "height": 256,
+  "source_title": "Deepfake_Detection_Scheme_Based_on_Vision_Transformer_and_Distillation.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 5,
+  "caption": "Figure 5. Correlation of prediction values between our model and SOTA. The x-axis is the predicted probability of our model whether the video is fake or not, and the y-axis is the predicted value of the SOTA model. We note that our model classiﬁes fake videos clearly but the SOTA model is not conﬁdent about many fake videos.",
+  "kind": "vector",
+  "width": 421,
+  "height": 319,
+  "source_title": "Deepfake_Detection_Scheme_Based_on_Vision_Transformer_and_Distillation.pdf"
+ }
+]

@@ -78,6 +78,27 @@ def _save_validation_report(task_id: str, report: dict | None) -> None:
         logger.exception("Không ghi được validation_report cho task %s", task_id)
 
 
+def _save_ledger_csv(db, task_id: str, results: list[dict] | None) -> None:
+    """Supplementary: <upload_dir>/ledger/<task_id>.csv (không chặn task nếu không ghi được)."""
+    if not results:
+        return
+    try:
+        from pathlib import Path
+
+        from sqlalchemy import select
+
+        from app.agent.evidence.ledger_export import export_ledger_csv
+        from app.api.models.paper import Paper
+        from app.core.config import get_settings
+
+        ids = {r.get("paper_id") for r in results}
+        files = {p.id: p.filename for p in db.scalars(select(Paper).where(Paper.id.in_(ids)))}
+        n = export_ledger_csv(results, Path(get_settings().upload_dir) / "ledger" / f"{task_id}.csv", files)
+        logger.info("Đã xuất %d bản ghi sổ cái cho task %s", n, task_id)
+    except Exception:
+        logger.exception("Không xuất được sổ cái CSV cho task %s", task_id)
+
+
 def _research_scope(db, allowed: set[str] | None) -> set[str] | None:
     """Phạm vi truy xuất = paper đã xử lý xong trong DB (giao với phạm vi người dùng).
 
@@ -118,10 +139,11 @@ def run_research(task_id: str) -> dict:
 
         try:
             from app.api.models.user import User
-            from app.core.scope import allowed_paper_ids_for, set_allowed_paper_ids
+            from app.core.scope import allowed_paper_ids_for, set_allowed_paper_ids, set_local_only
 
             owner = db.get(User, task.user_id) if task.user_id else None
-            set_allowed_paper_ids(_research_scope(db, allowed_paper_ids_for(db, owner)))
+            set_allowed_paper_ids(_research_scope(db, allowed_paper_ids_for(db, owner, task.workspace_id)))
+            set_local_only(bool(task.workspace_id))
             question = task.refined_question or task.question
             state = run_graph(
                 question,
@@ -144,6 +166,7 @@ def run_research(task_id: str) -> dict:
             task.contribution_type = state.get("contribution_type")
             task.research_model = json.dumps(state["research_model"]) if state.get("research_model") else None
             _save_validation_report(task_id, state.get("validation_report"))
+            _save_ledger_csv(db, task_id, state.get("results"))
             task.status = ResearchStatus.DONE.value
             db.commit()
             logger.info("Research task %s hoàn tất: report %d ký tự", task_id, len(task.report or ""))
@@ -159,7 +182,8 @@ def run_research(task_id: str) -> dict:
             db.commit()
             raise
     finally:
-        from app.core.scope import set_allowed_paper_ids
+        from app.core.scope import set_allowed_paper_ids, set_local_only
 
         set_allowed_paper_ids(None)
+        set_local_only(False)
         db.close()

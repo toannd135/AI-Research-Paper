@@ -1,0 +1,38 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 1,
+  "caption": "Figure 1. KoDF is a distribution-controlled large-scale Korean deepfake detection dataset aimed to complement other datasets and to accommodate elaborate augmentation techniques for bet- ter generalization to real-world deepfakes.",
+  "kind": "raster",
+  "width": 422,
+  "height": 403,
+  "source_title": "KoDF_A_Large_scale_Korean_DeepFake_Detection_Dataset.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 5,
+  "caption": "Figure 2. A selection of synthesized frames. Each row is created using FaceSwap, DeepFaceLab, FSGAN, FOMM, and Wav2Lip from top to bottom.",
+  "kind": "raster",
+  "width": 415,
+  "height": 414,
+  "source_title": "KoDF_A_Large_scale_Korean_DeepFake_Detection_Dataset.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 5,
+  "caption": "Figure 3. KoDF video distribution by synthesis methods. Audio- driven includes ATFHP and Wav2Lip.",
+  "kind": "raster",
+  "width": 497,
+  "height": 371,
+  "source_title": "KoDF_A_Large_scale_Korean_DeepFake_Detection_Dataset.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 8,
+  "caption": "Figure 4. ROC curves of the DFDC winning detection model trained on FF++, the DFDC dataset, KoDF, and their combinations. All training set variants are of equal size. The trained models are evaluated on unseen test sets, including the adversarial samples of KoDF (Attack), the GDFD dataset, and DF-1.0. We also include a corresponding accuracy heat map.",
+  "kind": "raster",
+  "width": 1022,
+  "height": 456,
+  "source_title": "KoDF_A_Large_scale_Korean_DeepFake_Detection_Dataset.pdf"
+ }
+]

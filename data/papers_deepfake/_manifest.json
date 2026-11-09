@@ -208,5 +208,145 @@
   "year": 2023,
   "cited": 54,
   "doi": "https://doi.org/10.48550/arxiv.2310.17419"
+ },
+ {
+  "file": "The_DeepFake_Detection_Challenge_DFDC_Dataset.pdf",
+  "title": "The DeepFake Detection Challenge (DFDC) Dataset",
+  "year": 2020,
+  "cited": 1300,
+  "doi": "https://doi.org/10.48550/arxiv.2006.07397"
+ },
+ {
+  "file": "Media_Forensics_and_DeepFakes_An_Overview.pdf",
+  "title": "Media Forensics and DeepFakes: An Overview",
+  "year": 2020,
+  "cited": 1136,
+  "doi": "https://doi.org/10.1109/jstsp.2020.3002101"
+ },
+ {
+  "file": "FakeCatcher_Detection_of_Synthetic_Portrait_Videos_using_Biological_Signals.pdf",
+  "title": "FakeCatcher: Detection of Synthetic Portrait Videos using Biological Signals",
+  "year": 2020,
+  "cited": 567,
+  "doi": "https://doi.org/10.1109/tpami.2020.3009287"
+ },
+ {
+  "file": "Leveraging_Frequency_Analysis_for_Deep_Fake_Image_Recognition.pdf",
+  "title": "Leveraging Frequency Analysis for Deep Fake Image Recognition",
+  "year": 2020,
+  "cited": 422,
+  "doi": "https://doi.org/10.48550/arxiv.2003.08685"
+ },
+ {
+  "file": "Robust_Deepfake_Detection_Mitigating_Spatial_Attention_Drift_via_Calibrated_Comp.pdf",
+  "title": "Robust Deepfake Detection: Mitigating Spatial Attention Drift via Calibrated Complementary Ensembles",
+  "year": 2026,
+  "cited": null,
+  "doi": "arXiv:2604.25889v1"
+ },
+ {
+  "file": "C2P_CLIP_Injecting_Category_Common_Prompt_in_CLIP_to_Enhance_Generalization_in_D.pdf",
+  "title": "C2P-CLIP: Injecting Category Common Prompt in CLIP to Enhance Generalization in Deepfake Detection",
+  "year": 2024,
+  "cited": null,
+  "doi": "arXiv:2408.09647v2"
+ },
+ {
+  "file": "Adversarial_Deepfake_Generation_and_an_Investigation_of_Purification_Based_Adver.pdf",
+  "title": "Adversarial Deepfake Generation and an Investigation of Purification-Based Adversarial Detection",
+  "year": 2026,
+  "cited": null,
+  "doi": "arXiv:2607.25842v1"
+ },
+ {
+  "file": "Unlocking_the_Hidden_Potential_of_CLIP_in_Generalizable_Deepfake_Detection.pdf",
+  "title": "Unlocking the Hidden Potential of CLIP in Generalizable Deepfake Detection",
+  "year": 2025,
+  "cited": null,
+  "doi": "arXiv:2503.19683v2"
+ },
+ {
+  "file": "CLIPping_the_Deception_Adapting_Vision_Language_Models_for_Universal_Deepfake_De.pdf",
+  "title": "CLIPping the Deception: Adapting Vision-Language Models for Universal Deepfake Detection",
+  "year": 2024,
+  "cited": null,
+  "doi": "arXiv:2402.12927v1"
+ },
+ {
+  "file": "GazeCLIP_Gaze_Guided_CLIP_with_Adaptive_Enhanced_Fine_Grained_Language_Prompt_fo.pdf",
+  "title": "GazeCLIP: Gaze-Guided CLIP with Adaptive-Enhanced Fine-Grained Language Prompt for Deepfake Attribution and Detection",
+  "year": 2026,
+  "cited": null,
+  "doi": "arXiv:2603.29295v3"
+ },
+ {
+  "file": "Deepfake_Forensics_Adapter_A_Dual_Stream_Network_for_Generalizable_Deepfake_Dete.pdf",
+  "title": "Deepfake Forensics Adapter: A Dual-Stream Network for Generalizable Deepfake Detection",
+  "year": 2026,
+  "cited": null,
+  "doi": "arXiv:2603.01450v1"
+ },
+ {
+  "file": "Detecting_Deepfakes_with_Multivariate_Soft_Blending_and_CLIP_based_Image_Text_Al.pdf",
+  "title": "Detecting Deepfakes with Multivariate Soft Blending and CLIP-based Image-Text Alignment",
+  "year": 2026,
+  "cited": null,
+  "doi": "arXiv:2602.15903v1"
+ },
+ {
+  "file": "Wavelet_Driven_Generalizable_Framework_for_Deepfake_Face_Forgery_Detection.pdf",
+  "title": "Wavelet-Driven Generalizable Framework for Deepfake Face Forgery Detection",
+  "year": 2024,
+  "cited": null,
+  "doi": "arXiv:2409.18301v3"
+ },
+ {
+  "file": "Harnessing_CLIP_and_DINO_An_Uncertainty_Aware_Cascaded_Fusion_Network_for_Genera.pdf",
+  "title": "Harnessing CLIP and DINO: An Uncertainty-Aware Cascaded Fusion Network for Generalizable Deepfake Image Detection",
+  "year": 2026,
+  "cited": null,
+  "doi": "arXiv:2609.07670v1"
+ },
+ {
+  "file": "Deepfake_Detection_A_Comparative_Analysis.pdf",
+  "title": "Deepfake Detection: A Comparative Analysis",
+  "year": 2023,
+  "cited": null,
+  "doi": "arXiv:2308.03471v1"
+ },
+ {
+  "file": "KoDF_A_Large_scale_Korean_DeepFake_Detection_Dataset.pdf",
+  "title": "KoDF: A Large-scale Korean DeepFake Detection Dataset",
+  "year": 2021,
+  "cited": null,
+  "doi": "arXiv:2103.10094v2"
+ },
+ {
+  "file": "DeepFakes_Detecting_Forged_and_Synthetic_Media_Content_Using_Machine_Learning.pdf",
+  "title": "DeepFakes: Detecting Forged and Synthetic Media Content Using Machine Learning",
+  "year": 2021,
+  "cited": null,
+  "doi": "arXiv:2109.02874v1"
+ },
+ {
+  "file": "WWW_Where_Which_and_Whatever_Enhancing_Interpretability_in_Multimodal_Deepfake_D.pdf",
+  "title": "WWW: Where, Which and Whatever Enhancing Interpretability in Multimodal Deepfake Detection",
+  "year": 2024,
+  "cited": null,
+  "doi": "arXiv:2408.02954v1"
+ },
+ {
+  "file": "Multi_modal_Deepfake_Detection_and_Localization_with_FPN_Transformer.pdf",
+  "title": "Multi-modal Deepfake Detection and Localization with FPN-Transformer",
+  "year": 2025,
+  "cited": null,
+  "doi": "arXiv:2511.08031v1"
+ },
+ {
+  "file": "SingFake_Singing_Voice_Deepfake_Detection.pdf",
+  "title": "SingFake: Singing Voice Deepfake Detection",
+  "year": 2023,
+  "cited": null,
+  "doi": "arXiv:2309.07525v2"
  }
 ]

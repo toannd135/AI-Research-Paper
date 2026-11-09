@@ -1,0 +1,47 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 4,
+  "caption": "Figure 1. The methodological architectural analysis of our novel proposed research study in deep- fake prediction.",
+  "kind": "raster",
+  "width": 854,
+  "height": 295,
+  "source_title": "A_Novel_Deep_Learning_Approach_for_Deepfake_Image_Detection.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 10,
+  "caption": "Figure 4. The time-series analysis of the employed neural network approaches with each epoch during training. (a) The loss and accuracy analysis of the NAS-Net approach. (b) The loss and accuracy analysis of the Xception approach. (c) The loss and accuracy analysis of the Mobile Net approach. (d) The loss and accuracy analysis of the VGG16 approach. (e) The loss and accuracy analysis of the propos",
+  "kind": "raster",
+  "width": 414,
+  "height": 283,
+  "source_title": "A_Novel_Deep_Learning_Approach_for_Deepfake_Image_Detection.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 11,
+  "caption": "Figure 5. The bar chart-based performance comparative analysis of employed neural network techniques.",
+  "kind": "vector",
+  "width": 677,
+  "height": 422,
+  "source_title": "A_Novel_Deep_Learning_Approach_for_Deepfake_Image_Detection.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 12,
+  "caption": "Figure 6. The bar chart-based loss score comparative analysis of employed neural network techniques.",
+  "kind": "raster",
+  "width": 809,
+  "height": 272,
+  "source_title": "A_Novel_Deep_Learning_Approach_for_Deepfake_Image_Detection.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 12,
+  "caption": "Figure 7. The confusion matrix analysis of employed neural network techniques is based on the validations of performance metrics results. (a) The confusion matrix of the Xception approach. (b) The confusion matrix of the NAS-Net approach. (c) The confusion matrix of the Mobile Net approach. (d) The confusion matrix of the VGG16 approach. (e) The confusion matrix of the proposed approach.",
+  "kind": "raster",
+  "width": 376,
+  "height": 272,
+  "source_title": "A_Novel_Deep_Learning_Approach_for_Deepfake_Image_Detection.pdf"
+ }
+]

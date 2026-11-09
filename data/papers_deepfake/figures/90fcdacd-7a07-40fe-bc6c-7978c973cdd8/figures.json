@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 8,
+  "caption": "Fig. 5. The processing pipeline for making reenactment and face swap deepfakes. Usually only a subset of these steps are performed.",
+  "kind": "vector",
+  "width": 781,
+  "height": 240,
+  "source_title": "The_Creation_and_Detection_of_Deepfakes.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 18,
+  "caption": "Fig. 9. Architectural schematics for some mouth reenactment networks. Black lines indicate prediction flows used during deployment, dashed gray lines indicate dataflows performed during training.",
+  "kind": "vector",
+  "width": 817,
+  "height": 214,
+  "source_title": "The_Creation_and_Detection_of_Deepfakes.pdf"
+ }
+]

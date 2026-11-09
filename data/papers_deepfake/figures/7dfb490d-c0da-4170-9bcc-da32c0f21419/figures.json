@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 2,
+  "caption": "Figure 1. Examples of Deepfake-Eval-2024 video and audio (rows 1–2), and images (rows 3–4), demonstrating a diversity of content styles and generation techniques, including lipsync, faceswap, and diffusion. Images have been resized for presentation.",
+  "kind": "raster",
+  "width": 981,
+  "height": 842,
+  "source_title": "Deepfake_Eval_2024_A_Multi_Modal_In_the_Wild_Benchmark_of_Deepfakes_Circulated_i.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 4,
+  "caption": "Figure 2. Distribution of data origins and languages in Deepfake-Eval-2024. In total, media was shared from 88 different web-domain names. The dataset also contains a total of 52 different languages (42 languages in Deepfake-Eval-2024-audio and 49 languages in Deepfake-Eval-2024-video). Languages were identified using speech recognition model Whisper [43].",
+  "kind": "raster",
+  "width": 1027,
+  "height": 399,
+  "source_title": "Deepfake_Eval_2024_A_Multi_Modal_In_the_Wild_Benchmark_of_Deepfakes_Circulated_i.pdf"
+ }
+]

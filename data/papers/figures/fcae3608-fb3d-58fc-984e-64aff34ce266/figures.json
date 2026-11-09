@@ -1,0 +1,29 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Figure 1: Overview of our proposed designed convolution blocks to simulate the behaviour of swin transformers. We leverage depthwise convolution and pointwise scaling to adapt large receptive ﬁeld and enrich the features through widening independent channels. We further compare different backbones of volumetric ConvNets and Swin Transformer block architecture. The yellow dotted line demonstrates t",
+  "kind": "raster",
+  "width": 742,
+  "height": 309,
+  "source_title": "fcae3608-fb3d-58fc-984e-64aff34ce266.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 4,
+  "caption": "Figure 2: Overview of the proposed 3D UX-Net with our designed convolutional block as the en- coder backbone. LK convolution is used to project features into patch-wise embeddings. A down- sampling block is used in each stage to mix and enrich context across all channels, while our de- signed blocks extract meaningful features in depth-wise setting.",
+  "kind": "raster",
+  "width": 806,
+  "height": 335,
+  "source_title": "fcae3608-fb3d-58fc-984e-64aff34ce266.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 6,
+  "caption": "Figure 3: Validation Curve with Dice Score for FeTA2021 (a), FLARE2021 (b) and AMOS2022 (c). 3D UX-Net demonstrates the fastest convergence rate with limited samples training (FeTA2021) and transfer learning (AMOS2022) scenario respectively, while the convergence rate is comparable to SwinUNETR with the increase of sample size training (FLARE2021).",
+  "kind": "vector",
+  "width": 831,
+  "height": 231,
+  "source_title": "fcae3608-fb3d-58fc-984e-64aff34ce266.pdf"
+ }
+]

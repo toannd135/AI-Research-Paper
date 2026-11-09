@@ -77,6 +77,32 @@ def _repair_mermaid(code: str, errors: list[str], gateway: LLMGateway, model_nam
     return re.sub(r"^```(?:mermaid)?\s*|\s*```$", "", out).strip() or None
 
 
+_MERMAID_TD_RE = re.compile(r"^(\s*(?:graph|flowchart)\s+)(?:TD|TB)\b", re.M)
+_MERMAID_EDGE_RE = re.compile(r"([A-Za-z][\w-]*)(?:\s*(?:\[[^\]\n]*\]|\([^)\n]*\)|\{[^}\n]*\}))?\s*-[-.=]*>(?:\|[^|\n]*\|)?\s*([A-Za-z][\w-]*)")
+MAX_TD_LEVEL_WIDTH = 6  # quá số nút cùng tầng này thì sơ đồ dọc thành một dải ngang chữ li ti
+
+
+def orient_mermaid(code: str) -> str:
+    """Cây TD/TB có tầng rộng (taxonomy 6 trục × vài lá = 30+ nút một hàng) → LR: các lá xếp dọc, chữ đọc được trong trang."""
+    if not _MERMAID_TD_RE.search(code):
+        return code
+    children: dict[str, list[str]] = {}
+    targets: set[str] = set()
+    for a, b in _MERMAID_EDGE_RE.findall(code):
+        children.setdefault(a, []).append(b)
+        targets.add(b)
+    roots = [n for n in children if n not in targets] or list(children)[:1]
+    level, seen, widest = roots, set(roots), len(roots)
+    while level:
+        level = [c for n in level for c in children.get(n, []) if c not in seen]
+        seen.update(level)
+        widest = max(widest, len(level))
+    if widest <= MAX_TD_LEVEL_WIDTH:
+        return code
+    logger.info("Đổi sơ đồ mermaid TD → LR: tầng rộng nhất %d nút", widest)
+    return _MERMAID_TD_RE.sub(r"\1LR", code, count=1)
+
+
 def fix_mermaid_block(code: str, gateway: LLMGateway | None, model_name: str | None, retries: int = 2) -> str | None:
     """Trả về sơ đồ hợp lệ (đã sửa nếu cần) hoặc None khi không cứu được."""
     from app.agent.format_sanitizer import sanitize_mermaid_block
@@ -85,7 +111,7 @@ def fix_mermaid_block(code: str, gateway: LLMGateway | None, model_name: str | N
     for attempt in range(retries + 1):
         errors = validate_mermaid(current)
         if not errors:
-            return current
+            return orient_mermaid(current)
         if gateway is None or attempt == retries:
             break
         repaired = _repair_mermaid(current, errors, gateway, model_name)
@@ -209,6 +235,47 @@ def _apply_chart_policy(body: str | None) -> str | None:
     return json.dumps(refined, ensure_ascii=False)
 
 
+_EDITION_RE = re.compile(r"\b([A-Z][A-Za-z0-9-]{1,30})[\s-]+((?:19|20)\d{2})\b")
+_SPLIT_WORDS = {
+    "test": r"\b(?:hidden\s+)?test(?:ing)?\s+(?:set|split)\b|\bhidden\s+test\b|\btest\b",
+    "validation": r"\bvalidation\b|\bval\b",
+    "cv": r"\bcross[- ]validation\b|\b\d+[- ]fold\b|\bCV\b",
+    "train": r"\btrain(?:ing)?\s+(?:set|split)\b",
+}
+_PERCENT_RE = re.compile(r"%|\bpercent(?:age)?\b|\bpct\b", re.I)
+_RATIO_RE = re.compile(r"\bratio\b|\b0\s*[–-]\s*1\b|\brat\b", re.I)
+# Các loại hình so sánh trực tiếp trên MỘT trục; dumbbell được phép ghép đúng 2 điều kiện (val vs test…), heatmap/xy theo cấu hình
+_COMPARATIVE_TYPES = {"bar", "barh", "dot", "line", "stacked_bar", "stacked_barh", "scatter"}
+MIN_SCATTER_POINTS = 4
+
+
+def mixed_protocol_reason(spec: dict) -> str | None:
+    """Lý do chart so sánh đặt kết quả của các protocol khác nhau trên cùng một trục (None = không phát hiện).
+
+    Tất định, không theo lĩnh vực: ≥2 phiên bản của cùng tên dataset ('X 2020' và 'X 2021'), ≥2 loại split
+    (test/validation/CV) hoặc lẫn % với tỉ lệ 0–1 trong caption/nhãn/tên series/trục.
+    """
+    kind = spec.get("type", "bar")
+    if kind not in _COMPARATIVE_TYPES:
+        return None
+    parts = [spec.get("caption"), spec.get("title"), spec.get("x_label"), spec.get("y_label"), *(spec.get("labels") or [])]
+    parts += [s.get("name") for s in spec.get("series") or [] if isinstance(s, dict)]
+    text = " ".join(str(p) for p in parts if p)
+    editions: dict[str, set[str]] = {}
+    for name, year in _EDITION_RE.findall(text):
+        editions.setdefault(name.lower(), set()).add(year)
+    multi = {n: sorted(y) for n, y in editions.items() if len(y) > 1}
+    if multi:
+        name, years = next(iter(multi.items()))
+        return f"trộn nhiều phiên bản dataset {name} {years} trong một panel"
+    splits = sorted(k for k, pat in _SPLIT_WORDS.items() if re.search(pat, text, re.I))
+    if len(splits) > 1:
+        return f"trộn nhiều split {splits} trong một panel"
+    if _PERCENT_RE.search(text) and _RATIO_RE.search(text):
+        return "trộn đơn vị % và tỉ lệ 0–1 trong một panel"
+    return None
+
+
 def scrub_chart_spec(body: str, draft: str) -> str | None:
     """Giữ biểu đồ nếu có ít nhất 2 giá trị có thật trong draft; giá trị không có căn cứ bị bỏ (null/loại điểm).
 
@@ -230,6 +297,14 @@ def scrub_chart_spec(body: str, draft: str) -> str | None:
     real = 0
     if kind == "evidence_map":  # ô Yes/No chỉ tin khi dựng từ câu nguyên văn (derived), không tin LLM
         return None
+    if kind == "panels":  # kiểm từng ô con như một chart độc lập; ô không đủ căn cứ bị bỏ
+        panels = spec.get("panels")
+        if not isinstance(panels, list):
+            return None
+        kept_panels = [json.loads(b) for p in panels if isinstance(p, dict) and (b := scrub_chart_spec(json.dumps(p), draft))]
+        if not kept_panels:
+            return None
+        return json.dumps({**spec, "panels": kept_panels}, ensure_ascii=False)
     if kind == "heatmap":
         matrix = spec.get("matrix")
         if not isinstance(matrix, list) or not all(isinstance(r, list) for r in matrix):
@@ -268,7 +343,71 @@ def scrub_chart_spec(body: str, draft: str) -> str | None:
         spec["series"] = kept
     if real < 2:
         return None
+    if kind == "scatter" and real < MIN_SCATTER_POINTS:  # vài điểm không thể hiện được quan hệ/đường biên đánh đổi
+        logger.warning("Bỏ scatter '%s': chỉ %d điểm có căn cứ (< %d)", str(spec.get("caption", ""))[:60], real, MIN_SCATTER_POINTS)
+        return None
     return json.dumps(spec, ensure_ascii=False)
+
+
+_REF_YEAR_RE = re.compile(r"^\[(\d+)\].*?[,\s]((?:19|20)\d{2})[a-z]?\.?\s*$")
+_LABEL_CITE_RE = re.compile(r"\[(\d+)\]")
+MIN_TIMELINE_EVENTS = 4
+
+
+def reference_years(references: list[str]) -> dict[int, int]:
+    """'[3] A et al., "T," *Venue*, 2024.' → {3: 2024}; mục không có năm ở cuối thì bỏ (không đoán)."""
+    out: dict[int, int] = {}
+    for ref in references:
+        m = _REF_YEAR_RE.match(ref.strip())
+        if m:
+            out[int(m.group(1))] = int(m.group(2))
+    return out
+
+
+def scrub_timeline_spec(body: str, years: dict[int, int] | None) -> str | None:
+    """Giữ mốc có đúng MỘT trích dẫn [n] và năm trùng năm của reference [n]; LLM không được tự đặt năm."""
+    try:
+        spec = json.loads(body)
+    except ValueError:
+        return None
+    if not isinstance(spec, dict) or not years:
+        return None
+    kept = []
+    for e in spec.get("events") or []:
+        if not isinstance(e, dict):
+            continue
+        cites = _LABEL_CITE_RE.findall(str(e.get("label") or ""))
+        try:
+            ok = len(cites) == 1 and years.get(int(cites[0])) == int(e.get("year"))
+        except (TypeError, ValueError):
+            ok = False
+        if ok:
+            kept.append(e)
+        else:
+            logger.warning("Bỏ mốc timeline không khớp năm của reference: %s", e)
+    if len(kept) < MIN_TIMELINE_EVENTS or len({e["year"] for e in kept}) < 2:
+        return None
+    return json.dumps({**spec, "events": kept}, ensure_ascii=False)
+
+
+def reject_mixed_protocol(body: str | None) -> str | None:
+    """Chạy SAU Chart Selection Policy (cặp val/test đã thành dumbbell): bỏ chart/ô con trộn protocol trên một trục."""
+    if body is None:
+        return None
+    try:
+        spec = json.loads(body)
+    except ValueError:
+        return body
+    if not isinstance(spec, dict):
+        return body
+    if spec.get("type") == "panels":
+        panels = [p for p in spec.get("panels") or [] if isinstance(p, dict) and not mixed_protocol_reason(p)]
+        return json.dumps({**spec, "panels": panels}, ensure_ascii=False) if panels else None
+    reason = mixed_protocol_reason(spec)
+    if reason:
+        logger.warning("Bỏ chart '%s': %s", str(spec.get("caption", ""))[:80], reason)
+        return None
+    return body
 
 
 # --------------------------------------------------------------------------- ledger → fallback chart
@@ -526,8 +665,11 @@ def postprocess_report(
     figures: list[dict] | None = None,
     evidence_text: str = "",
     min_charts: int = 1,
+    ref_years: dict[int, int] | None = None,
 ) -> str:
-    """Kiểm chứng/sửa mọi khối mermaid, table, chart, image; dịch đoạn lẫn Việt; chèn biểu đồ ledger nếu thiếu."""
+    """Kiểm chứng/sửa mọi khối mermaid, table, chart, image; dịch đoạn lẫn Việt; chèn biểu đồ ledger nếu thiếu.
+
+    `ref_years` ({n: năm} của References đã đánh số lại) để kiểm năm của khối timeline; None → bỏ timeline do LLM viết."""
     used_figures: set[str] = set()
 
     def _fix(m: re.Match) -> str:
@@ -544,9 +686,13 @@ def postprocess_report(
                     logger.warning("Bỏ khối image trùng ref=%s", ref)
                     fixed = None
                 used_figures.add(ref)
+        elif re.search(r'"type"\s*:\s*"timeline"', body):
+            fixed = scrub_timeline_spec(body, ref_years)
         else:
             fixed = body if '"derived": true' in body else scrub_chart_spec(body, draft)  # số suy ra từ record đã kiểm chứng
             fixed = _apply_chart_policy(fixed)
+            if '"derived": true' not in body:
+                fixed = reject_mixed_protocol(fixed)
         if fixed is None:
             logger.warning("Dropped invalid %s block from report", kind)
             return ""

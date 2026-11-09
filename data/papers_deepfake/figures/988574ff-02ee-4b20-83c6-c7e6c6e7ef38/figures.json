@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 4,
+  "caption": "Figure 1: Framework of proposed dual FPN-Transformer detection method. First, we employ pre-trained self-supervised models (WavLM/CLIP:ViT) to encode input temporal data into feature embeddings. Then, these embeddings are processed through an encoder composed of Transformer blocks to obtain the feature pyramid. And finally, prediction heads jointly analyze temporal features to predict forgery boun",
+  "kind": "raster",
+  "width": 1051,
+  "height": 354,
+  "source_title": "Multi_modal_Deepfake_Detection_and_Localization_with_FPN_Transformer.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 6,
+  "caption": "Figure 2: Visualization results of our proposed method. Red represents forged segments, and yellow represents our predicted results. Our method can accurately predict the presence of forged video and audio segments in the samples for both video and audio modalities.",
+  "kind": "raster",
+  "width": 1051,
+  "height": 400,
+  "source_title": "Multi_modal_Deepfake_Detection_and_Localization_with_FPN_Transformer.pdf"
+ }
+]

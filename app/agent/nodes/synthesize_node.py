@@ -19,6 +19,7 @@ import re
 from datetime import date
 from typing import Any
 
+from app.core.scope import external_search_allowed
 from app.agent.evidence.citation_cleaner import _local_catalog, clean_and_deduplicate_citations_ex
 from app.agent.evidence.claim_scan import find_leaked_claims, soften_leaked_claims
 from app.agent.evidence.coverage import coverage_target, full_coverage_applies
@@ -34,7 +35,7 @@ from app.agent.evidence.rq_sync import canonical_rqs, enforce_rqs, rq_block, sec
 from app.agent.format_sanitizer import sanitize_academic_markdown
 from app.agent.language import language_name
 from app.agent.profiles import adaptation_rules, audience_profile, field_profile, missing_end_sections
-from app.agent.report_postprocess import postprocess_report
+from app.agent.report_postprocess import postprocess_report, reference_years
 from app.agent.research_model import contribution_guidance, model_brief
 from app.agent.state import ResearchState
 from app.ai.llm_gateway.base import LLMGateway, Message
@@ -275,7 +276,12 @@ _STAGE_STRUCTURES: dict[str, dict[str, str]] = {
             "- Present a multi-axis ANALYTICAL FRAMEWORK of 3-4 axes (never claim the axes are 'orthogonal' or 'unified'). Each method appears under exactly ONE primary category per axis (e.g. a hybrid CNN-Transformer is not listed again as a pure Transformer). Method-design axes (how inputs are fused, which architecture, how absent inputs are handled) are distinct from evaluation attributes (dataset version, split, metric), which are analysis attributes, not method classes; say so. Include a Markdown taxonomy table with caption '**Table 2: Taxonomy of ...**' whose citation cells list the actual sources [n] of each row (never a range of the whole corpus).\n"
             "- Then state what this framework reveals that a flat list does not: which axis combinations are well studied, which are empty in the corpus, and which questions about interactions between axes (e.g. does one fusion level degrade less when a given input is absent?) the evidence can or cannot answer.\n"
             "### 3.2 Architectural Pipeline\n"
-            "- Include one ```mermaid flowchart (graph TD or LR) showing the typical end-to-end pipeline or the taxonomy tree, with citations [n] in labels where relevant.\n"
+            "- Include one ```mermaid flowchart showing the typical end-to-end pipeline or the taxonomy tree, with citations [n] in labels where relevant. A taxonomy tree with more than 6 leaves "
+            "uses `graph LR` (leaves stacked vertically, readable) and at most 6 leaves per axis; keep node labels under 40 characters.\n"
+            "- If at least 4 cited methods can be placed in time, add ONE ```chart timeline of method families: "
+            '{"type": "timeline", "caption": "Evolution of method families in the corpus [n...]", "events": [{"year": 2018, "label": "Method A [12]", "group": "Family 1"}]}. '
+            "Each label names ONE method with exactly ONE citation [n] and its year MUST be the publication year printed in that reference (events whose year does not match are removed); "
+            "group = the method family of the taxonomy (at most 6 groups). It shows how the families emerged over time, not performance.\n"
             "### 3.3 Gaps in Existing Work\n"
             "- State precisely which gaps this survey addresses and how the taxonomy helps close them.",
         ),
@@ -318,6 +324,9 @@ _STAGE_STRUCTURES: dict[str, dict[str, str]] = {
             "### 6.3 Limitations of this Review\n"
             "- Corpus-based narrative review, not exhaustive; possible selection bias; no independent re-run of the published methods. Also state every item listed under EVIDENCE LIMITS as a concrete limitation, using the same wording levels it gives (e.g. which per-input ablations exist versus which complete or cross-study matrices cannot be built), and say which comparisons it prevents. Never contradict a table or figure of the manuscript.\n"
             "### 6.4 Open Research Directions\n"
+            "- Before the directions, ONE ```mermaid `graph LR` research roadmap: one chain per direction, Gap → Direction → Evaluation protocol, e.g. "
+            'G1["Gap: no external validation [4]"] --> D1["Direction: multi-site training"] --> E1["Evaluate: held-out sites, same metric"]; '
+            "at most 6 chains, each gap stated earlier in the manuscript with its [n]; labels under 45 characters; give it a caption line '**Figure N: Research roadmap ...**' above the block.\n"
             "- At least 4 concrete, distinct directions grounded in the evidence. For EACH give, in 2-4 sentences: the research gap (with [n]); why current methods do not solve it; a concrete approach AND how it should be evaluated (protocol, data, metrics); and which research question (RQ) it follows from. No generic directions.\n\n"
             "## 7. Conclusion\n"
             "- Answer EVERY canonical research question (RQ1, RQ2, ...) in one or two sentences each, in order and labelled with its RQ number, then give the outlook; no new claims.",
@@ -472,7 +481,7 @@ def _review_facts(state: ResearchState, mode: str) -> str:
             + ". Every extracted value is checked to appear verbatim in the cited PDF passage.\n"
             + _CITATION_COUNT_RULE
         )
-    scope = "the curated internal PDF repository only" if not settings.external_search_enabled else "the internal repository plus an external scholarly index (OpenAlex)"
+    scope = "the curated internal PDF repository only" if not external_search_allowed() else "the internal repository plus an external scholarly index (OpenAlex)"
     return surveys + (
         "REVIEW FACTS (the only facts about the search process you may state in Section 2; do not add others):\n"
         f"- Sources searched: {scope}.\n"
@@ -927,12 +936,14 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
     validation_report = _run_quality_gate(state, raw_stitched)
 
     # Sơ đồ luồng PRISMA từ đúng số người dùng khai báo (review_protocol.json hợp lệ); không có tệp → không có sơ đồ
+    has_protocol = False
     if mode != "novel_research":
         from app.agent.evidence.review_protocol import inject_prisma, load_protocol, prisma_block, validate_protocol
 
         protocol = load_protocol()
         if protocol and not validate_protocol(protocol, len(_local_catalog()) or None):
             raw_stitched = inject_prisma(raw_stitched, prisma_block(protocol))
+            has_protocol = True
 
     # Phase 4: bảng Δ/ablation và scatter đánh đổi từ bản ghi đã kiểm chứng; chèn TRƯỚC khi đánh số lại [n]
     if state.get("results"):
@@ -949,10 +960,22 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
 
     # Deduplicate citations, remap numbers, and generate clean IEEE references
     updated_text, clean_references, numbered_citations = clean_and_deduplicate_citations_ex(citations, raw_stitched)
+    if mode != "novel_research" and not has_protocol:
+        # không có protocol người dùng khai báo → sơ đồ hình thành corpus trung thực từ số đếm của chính lần chạy (không phải PRISMA)
+        from app.agent.evidence.corpus_flow import corpus_flow_block, inject_corpus_flow
+        from app.core.scope import get_allowed_paper_ids
+
+        allowed = get_allowed_paper_ids()
+        retrieved = {getattr(getattr(sc, "chunk", sc), "paper_id", None) for sc in state.get("evidence", [])} - {None}
+        with_results = {r.get("paper_id") for r in state.get("results") or []} & {c.get("paper_id") if isinstance(c, dict) else getattr(c, "paper_id", None) for c in numbered_citations}
+        updated_text = inject_corpus_flow(
+            updated_text, corpus_flow_block(len(allowed) if allowed else None, len(retrieved), len(clean_references), len(with_results))
+        )
     updated_text = postprocess_report(
         updated_text, state.get("draft", ""), gateway, model_name, state.get("language", "en"), state["figures"],
         evidence_text=" ".join(str(getattr(c, "text_snippet", "") or "") for c in citations),
         min_charts=3 if mode == "survey" else 1,
+        ref_years=reference_years(clean_references),
     )
     updated_text, dangling = strip_dangling_citations(updated_text, len(clean_references))
     if dangling:

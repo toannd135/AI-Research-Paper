@@ -4,13 +4,14 @@ Model ở `app/api/models/`. Migration ở `migrations/versions/` (hiện tới 
 
 ## Thực thể
 - **users**: id, email (unique), full_name, password_hash, role (`user|admin`), is_active, created_at
-- **papers**: id, filename, file_path, user_id (idx), content_hash (unique, chống trùng), status, error, created_at
-- **research_tasks**: id, user_id (idx), question, clarification_answers (JSON text), refined_question, audience, field, contribution_type, target_venue, user_results, **research_model** (JSON text), status, report, citations (JSON text), error, created_at
+- **workspaces**: id, user_id (idx), name, created_at — phiên/đề tài của user (migration 0009)
+- **papers**: id, filename, file_path, user_id (idx), workspace_id (idx, nullable), content_hash (unique, chống trùng), status, error, created_at
+- **research_tasks**: id, user_id (idx), workspace_id (idx, nullable), question, clarification_answers (JSON text), refined_question, audience, field, contribution_type, target_venue, user_results, **research_model** (JSON text), status, report, citations (JSON text), error, created_at
 - **conversations**: id, user_id (idx), paper_id, research_task_id (idx), created_at
 - **messages**: id, conversation_id -> conversations.id, role, content, citations (JSON text), created_at
 
 ## Quan hệ
-users 1—N papers / research_tasks / conversations (qua `user_id`, không FK cứng, nullable cho dữ liệu cũ) · conversations 1—N messages · conversations N—1 paper hoặc research_task (tùy chọn).
+users 1—N workspaces · workspaces 1—N papers / research_tasks (qua `workspace_id`, không FK cứng) · users 1—N papers / research_tasks / conversations (qua `user_id`, không FK cứng, nullable cho dữ liệu cũ) · conversations 1—N messages · conversations N—1 paper hoặc research_task (tùy chọn).
 
 ## Vector store
 Qdrant collection `paper_chunks`: payload gồm paper_id, chunk_index, page, section, text. Xóa paper phải xóa vector tương ứng.

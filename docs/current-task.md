@@ -2,7 +2,28 @@
 
 > Cập nhật tệp này MỖI KHI đổi task. Claude đọc nó trước khi code. Trống/lỗi thời -> hỏi người dùng.
 
-## Task hiện tại: đánh giá Q1/Q2 lần 4 — kiểm chứng trên BẢN CUỐI + sửa tự động lỗi đã phát hiện
+## Task hiện tại: Hệ thống hình theo đánh giá phần hình `survey_c5d84302.pdf` (2026-11-09)
+Chi tiết + kiểm chứng: `docs/implementation-plan.md` mục "Hệ thống hình…", ADR 0008.
+- [x] 1 đánh số hình theo khối, bỏ hình ma · [x] 2–3 chặn trộn protocol + `panels`/`protocol_panels` · [x] 4 scatter ≥4 điểm, bảng chi phí mở rộng
+- [x] 5 sơ đồ corpus (không phải PRISMA) · [x] 6 taxonomy TD rộng → LR · [x] 7 timeline (năm theo References) + roadmap (prompt)
+- [x] `pytest app/agent app/pipeline` pass; ruff không thêm lỗi mới
+- [ ] Chạy lại survey thật (cần chạy migration 0009 trước — DB thật chưa có cột `workspace_id`)
+
+---
+
+## Task trước: Workspace (phiên/đề tài) — cách ly paper giữa các đề tài của CÙNG một người dùng
+Người dùng: một người nghiên cứu nhiều đề tài; paper upload trong phiên A chỉ được dùng cho research/chat của phiên A, không lẫn vào phiên B.
+Quyết định: mỗi paper thuộc đúng 1 user và 1 workspace (không nhiều-nhiều). Frontend (submodule) làm sau, ngoài phạm vi.
+Chi tiết bước + cách kiểm chứng: `docs/implementation-plan.md` mục "Workspace".
+
+## Tiêu chí hoàn thành
+- [x] Bảng `workspaces` + cột `papers.workspace_id`, `research_tasks.workspace_id` (migration 0009, chưa chạy trên DB thật)
+- [x] Research/chat trong workspace A không truy xuất paper của workspace B hay paper không workspace
+- [x] `pytest app/api app/pipeline -q` pass, ruff sạch tệp đã sửa; doc api-contracts + database-schema + architecture cập nhật
+
+---
+
+## Task trước (lưu để tham chiếu): đánh giá Q1/Q2 lần 4 — kiểm chứng trên BẢN CUỐI + sửa tự động lỗi đã phát hiện
 Bản: `survey_c5d84302.pdf` (task `c5d84302-…`). Người dùng: "đọc tiếp đánh giá và cải thiện những phần còn thiếu". Chỉ sửa lỗi do HỆ THỐNG sinh ra
 (mở rộng corpus/PRISMA/2 reviewer là việc của người dùng). Đã đối chiếu từng nhận xét với PDF + `validation/c5d84302-….json`:
 

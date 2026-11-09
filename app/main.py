@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import auth, chat, papers, research, sources
+from app.api.routes import auth, chat, papers, research, sources, workspaces
 from app.core.config import get_settings
 from app.core.database import SessionLocal
 from app.core.logging import setup_logging
@@ -65,6 +65,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(papers.router)
+app.include_router(workspaces.router)
 app.include_router(chat.router)
 app.include_router(research.router)
 app.include_router(sources.router)

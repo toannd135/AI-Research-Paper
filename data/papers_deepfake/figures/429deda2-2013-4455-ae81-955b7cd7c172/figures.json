@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 1,
+  "caption": "Figure 1: Comparison between previous benchmark and the pro- posed benchmark, FakeMix. While FakeAVCeleb operated deep- fake on complete video or audio segments for video-level classifica- tion, FakeMix introduces dynamic frame-level alterations to enhance evaluation of deepfake video detection.",
+  "kind": "raster",
+  "width": 507,
+  "height": 515,
+  "source_title": "WWW_Where_Which_and_Whatever_Enhancing_Interpretability_in_Multimodal_Deepfake_D.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 3,
+  "caption": "Figure 2: Comprehensive overview of Temporal Accuracy and Frame-wise Discrimination Metric conducted on the Fakemix.",
+  "kind": "vector",
+  "width": 982,
+  "height": 333,
+  "source_title": "WWW_Where_Which_and_Whatever_Enhancing_Interpretability_in_Multimodal_Deepfake_D.pdf"
+ }
+]

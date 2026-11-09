@@ -145,6 +145,15 @@ _TERM_GROUPS: tuple[tuple[str, ...], ...] = (
     (r"\btumor\b", r"\btumour\b"),
     (r"\bgeneralization\b", r"\bgeneralisation\b"),
     (r"\bmodeling\b", r"\bmodelling\b"),
+    (r"\bdeepfakes?\b", r"\bdeep-fakes?\b", r"\bdeep fakes?\b"),
+    (r"\bmultimodal\b", r"\bmulti-modal\b"),
+    (r"\bcross-modal\b", r"\bcross modal\b", r"\bcrossmodal\b"),
+    (r"\bcross-dataset\b", r"\bcross dataset\b"),
+    (r"\bcross-generator\b", r"\bcross generator\b"),
+    (r"\bvision-language\b", r"\bvision language\b"),
+    (r"\bAUROC\b", r"\bAUC-ROC\b", r"\bROC-AUC\b"),
+    (r"\bCeleb-DF\b", r"\bCelebDF\b", r"\bCeleb DF\b"),
+    (r"\bfull-modal\b", r"\bfull-modality\b", r"\bfull modality\b"),
 )
 
 

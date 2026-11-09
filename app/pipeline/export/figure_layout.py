@@ -29,6 +29,10 @@ def chart_span(spec: dict) -> str:
     if layout in (COLUMN, WIDE):
         return layout
     kind = spec.get("type", "bar")
+    if kind == "panels":  # lưới nhiều ô con luôn chiếm cả trang
+        return WIDE
+    if kind == "timeline":  # nhiều mốc trên trục năm cần bề ngang để nhãn không chồng
+        return WIDE if len(spec.get("events") or []) > 8 else COLUMN
     if kind in ("heatmap", "evidence_map"):
         cols = len(spec.get("x_labels") or [])
         longest = max((len(str(x)) for x in spec.get("x_labels") or []), default=0)

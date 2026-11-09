@@ -117,7 +117,7 @@ def test_export_blocked_when_gate_failed(tmp_path, monkeypatch):
 
 
 # ---- P3
-_GOOD_ABSTRACT = " ".join(["word"] * 180) + " 90.5"
+_GOOD_ABSTRACT = "We review 5 studies from a curated corpus and propose a taxonomy; Dice reaches 90.5%. " + " ".join(["word"] * 160) + " 90.5"
 
 
 def test_consistency_catches_each_planted_error():
@@ -151,12 +151,11 @@ def test_quant_blocks_only_when_comparable_and_enough():
             _rec("A", "p1", 87.0, variant="w/o X")]
     n = {"p1": 1, "p2": 2, "p3": 3}
     blocks = build_quant_blocks(recs, n)
-    assert len(blocks) == 5 and "Evidence profile" in blocks[4]
+    assert len(blocks) == 4 and "Evidence profile" in blocks[3]  # 3 phương pháp < 4 điểm → không scatter
     delta = json.loads(blocks[0].split("\n")[1])
     assert delta["derived"] and ["C [3]", "BraTS 2020 (validation)", "Dice WT", "85.5", "-4.50"] in delta["rows"]
     assert json.loads(blocks[1].split("\n")[1])["rows"][0][-1] == "-3.00"
-    assert json.loads(blocks[2].split("\n")[1])["type"] == "scatter"
-    eff = json.loads(blocks[3].split("\n")[1])
+    eff = json.loads(blocks[2].split("\n")[1])
     assert eff["columns"] == ["Method [Ref]", "Params", "GFLOPs", "Inference time"] and ["A [1]", "12 M", "NR", "NR"] in eff["rows"]
     assert build_quant_blocks(recs[:2], n) == []  # <3 phương pháp → không sinh
     mixed = [_rec("A", "p1", 90.0), _rec("B", "p2", 88.0), _rec("C", "p3", 85.5, split="testing")]
@@ -438,3 +437,49 @@ def test_evidence_limits_zero_subset_count_means_not_observed():
     text = evidence_limits(MISSING_RECORDS, P2N, 2, {"pA": {}})
     assert "not observed in the retrieved passages" in text and "never 'no study does this'" in text
     assert "no method/setting group with all 15 subsets" in text
+
+
+def test_tradeoff_scatter_needs_four_methods():
+    from app.agent.evidence.quant_analysis import tradeoff_scatter
+
+    models = [("A", "p1", 90.0, 12.0), ("B", "p2", 88.0, 30.0), ("C", "p3", 85.5, 5.0), ("D", "p4", 84.0, 8.0)]
+    recs = [r for m, p, d, prm in models for r in (_rec(m, p, d), _rec(m, p, prm, metric="Params", region=None, unit="M"))]
+    n = {"p1": 1, "p2": 2, "p3": 3, "p4": 4}
+    assert tradeoff_scatter(recs[:6], n) is None
+    assert json.loads(tradeoff_scatter(recs, n).split("\n")[1])["type"] == "scatter"
+
+
+def test_protocol_panels_one_panel_per_setting_never_mixed():
+    from app.agent.evidence.quant_analysis import protocol_panels
+
+    n = {f"p{i}": i for i in range(1, 7)}
+    val = [_rec(m, p, v) for m, p, v in (("A", "p1", 90.0), ("B", "p2", 88.0), ("C", "p3", 85.5))]
+    test = [_rec(m, p, v, split="test", unit="ratio") for m, p, v in (("D", "p4", 0.91), ("E", "p5", 0.89), ("F", "p6", 0.9))]
+    assert protocol_panels(val, n) is None  # một setting: bảng Δ đã đủ
+    spec = json.loads(protocol_panels(val + test + [_rec("A", "p1", 80.0, variant="w/o X")], n).split("\n")[1])
+    assert spec["type"] == "panels" and spec["derived"] and len(spec["panels"]) == 2
+    titles = {p["title"] for p in spec["panels"]}
+    assert titles == {"BraTS 2020 (validation) · Dice [percent]", "BraTS 2020 (test) · Dice [ratio]"}
+    first = next(p for p in spec["panels"] if "validation" in p["title"])
+    assert first["labels"] == ["A [1]", "B [2]", "C [3]"] and first["series"] == [{"name": "WT", "values": [90.0, 88.0, 85.5]}]
+
+
+def test_postprocess_drops_mixed_protocol_and_sparse_scatter_but_scrubs_panels():
+    from app.agent.report_postprocess import mixed_protocol_reason, postprocess_report, scrub_chart_spec
+
+    draft = "90.0 88.0 85.5 0.91 0.89 12 30"
+    mixed = {"type": "dot", "caption": "Dice on BraTS 2020 hidden test and BraTS 2021 validation", "labels": ["A", "B"],
+             "series": [{"name": "WT", "values": [90.0, 0.91]}]}
+    assert "2020" in mixed_protocol_reason(mixed)
+    assert "```chart" not in postprocess_report(f"```chart\n{json.dumps(mixed)}\n```", draft, None, None, "en", min_charts=0)
+    assert mixed_protocol_reason({"type": "dot", "caption": "Dice (%) on X validation", "labels": ["a"], "series": []}) is None
+    assert "split" in mixed_protocol_reason({"type": "bar", "caption": "F1 on validation and test sets", "labels": [], "series": []})
+    assert mixed_protocol_reason({"type": "dumbbell", "caption": "validation vs test", "labels": [], "series": []}) is None
+    sparse = {"type": "scatter", "caption": "Cost", "series": [{"name": "A", "x": [12], "y": [90.0]}, {"name": "B", "x": [30], "y": [88.0]}]}
+    assert scrub_chart_spec(json.dumps(sparse), draft) is None
+    panels = {"type": "panels", "panels": [
+        {"type": "line", "title": "ok", "labels": ["a", "b"], "series": [{"name": "S", "values": [90.0, 88.0]}]},
+        {"type": "line", "title": "bịa", "labels": ["a", "b"], "series": [{"name": "S", "values": [11.1, 22.2]}]},
+    ]}
+    kept = json.loads(scrub_chart_spec(json.dumps(panels), draft))
+    assert [p["title"] for p in kept["panels"]] == ["ok"]

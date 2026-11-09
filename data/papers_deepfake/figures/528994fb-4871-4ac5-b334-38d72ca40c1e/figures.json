@@ -1,0 +1,47 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 5,
+  "caption": "Figure 1. The ﬁve principal categories of deepfake manipulation.",
+  "kind": "raster",
+  "width": 969,
+  "height": 811,
+  "source_title": "Deepfake_Attacks_Generation_Detection_Datasets_Challenges_and_Research_Direction.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 7,
+  "caption": "Figure 2. Clues and features employed by deepfake detection models in the identiﬁcation of deep- fake content.",
+  "kind": "raster",
+  "width": 801,
+  "height": 248,
+  "source_title": "Deepfake_Attacks_Generation_Detection_Datasets_Challenges_and_Research_Direction.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 11,
+  "caption": "Figure 3. Overview of predominant deep learning architectures, networks, and frameworks employed in the development of deepfake detection models.",
+  "kind": "raster",
+  "width": 966,
+  "height": 546,
+  "source_title": "Deepfake_Attacks_Generation_Detection_Datasets_Challenges_and_Research_Direction.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 11,
+  "caption": "Figure 4. ResNet building block (source: [93]).",
+  "kind": "raster",
+  "width": 875,
+  "height": 402,
+  "source_title": "Deepfake_Attacks_Generation_Detection_Datasets_Challenges_and_Research_Direction.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 12,
+  "caption": "Figure 5. EfﬁcientNet performance on the ImageNet dataset (source: [88]).",
+  "kind": "raster",
+  "width": 1172,
+  "height": 422,
+  "source_title": "Deepfake_Attacks_Generation_Detection_Datasets_Challenges_and_Research_Direction.pdf"
+ }
+]

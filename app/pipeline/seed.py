@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.api.models.paper import Paper
 from app.api.models.user import ROLE_ADMIN, User
+from app.api.models.workspace import Workspace
 from app.core.config import get_settings
 from app.core.schemas import PaperStatus
 from app.pipeline.tasks import process_paper
@@ -78,3 +79,49 @@ def import_existing_papers(db: Session) -> int:
     if created:
         logger.info("Đã nhập %d PDF có sẵn trong %s", len(created), upload_dir)
     return len(created)
+
+
+def assign_papers_to_user(
+    db: Session, directory: Path, email: str, apply: bool = False, workspace_name: str | None = None
+) -> list[Paper]:
+    """Gán chủ sở hữu (`user_id`) và (tuỳ chọn) workspace cho paper có PDF nằm trực tiếp trong `directory`.
+
+    Trả về các paper sẽ/đã đổi. Chỉ ghi `user_id`/`workspace_id`; `workspace_name` được tạo nếu user chưa có.
+    `apply=False` chỉ liệt kê (dry-run, không tạo workspace).
+    """
+    user = db.scalar(select(User).where(User.email == email.strip().lower()))
+    if user is None:
+        raise ValueError(f"Không có người dùng {email!r}; hãy đăng ký trước.")
+    folder = directory.resolve()
+    workspace = None
+    if workspace_name:
+        workspace = db.scalar(select(Workspace).where(Workspace.user_id == user.id, Workspace.name == workspace_name))
+        if workspace is None and apply:
+            workspace = Workspace(user_id=user.id, name=workspace_name)
+            db.add(workspace)
+            db.flush()
+    target_ws = workspace.id if workspace else None
+    changed = [
+        p
+        for p in db.scalars(select(Paper))
+        if Path(p.file_path).resolve().parent == folder
+        and (p.user_id != user.id or (workspace_name and p.workspace_id != target_ws))
+    ]
+    if apply:
+        for p in changed:
+            p.user_id = user.id
+            if workspace_name:
+                p.workspace_id = target_ws
+        db.commit()
+    return changed
+
+
+def foreign_citation_ids(db: Session, citation_paper_ids: list[str], directory: Path) -> list[str]:
+    """Các paper_id được trích dẫn nhưng KHÔNG phải paper `done` có PDF nằm trong `directory` (nguồn ngoài/sai đề tài)."""
+    folder = directory.resolve()
+    allowed = {
+        p.id
+        for p in db.scalars(select(Paper).where(Paper.status == PaperStatus.DONE.value))
+        if Path(p.file_path).resolve().parent == folder
+    }
+    return [pid for pid in dict.fromkeys(citation_paper_ids) if pid not in allowed]

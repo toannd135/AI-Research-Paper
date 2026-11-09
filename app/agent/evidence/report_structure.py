@@ -72,7 +72,7 @@ def _tokens(s: str) -> set[str]:
     return {w for w in _WORD_RE.findall(s.lower()) if w not in _STOP}
 
 
-def renumber_captions_report(text: str) -> tuple[str, list[str]]:
+def renumber_captions_report(text: str, kinds: tuple[str, ...] = ("Table", "Figure")) -> tuple[str, list[str]]:
     """Đánh số lại '**Table N:' / '**Figure N:' tuần tự và cập nhật tham chiếu trong thân bài.
 
     Số cũ chỉ xuất hiện ở 1 chú thích thì mọi 'Table N' được đổi theo. Số cũ trùng nhiều chú thích (do các chặng sinh độc lập,
@@ -83,6 +83,8 @@ def renumber_captions_report(text: str) -> tuple[str, list[str]]:
     counters = {"Table": 0, "Figure": 0}
     for m in _CAPTION_RE.finditer(text):
         kind = m.group(2)
+        if kind not in kinds:
+            continue
         counters[kind] += 1
         line_end = text.find("\n", m.start())
         captions.append(
@@ -95,6 +97,8 @@ def renumber_captions_report(text: str) -> tuple[str, list[str]]:
     new_numbers = iter(captions)
 
     def _cap(m: re.Match) -> str:
+        if m.group(2) not in kinds:
+            return m.group(0)
         c = next(new_numbers)
         return f"{m.group(1)}{c['kind']} {c['new']}{m.group(4)}"
 
@@ -179,6 +183,7 @@ _SOURCE_REF_RE = re.compile(r"\b(Table|Figure)\s+(\d+)(?=\s+(?:of|in|from)\s+(?:
 def check_cross_references(text: str) -> list[str]:
     """Lỗi chặn: tham chiếu 'Table N'/'Figure N' trong thân bài vượt quá số chú thích thực có (tham chiếu treo)."""
     counts = Counter(m.group(2) for m in _CAPTION_RE.finditer(text))
+    counts["Figure"] = max(counts.get("Figure", 0), _count_figure_blocks(text))  # khối hình tự chèn không có chú thích vẫn được đánh số
     body_lines = [ln for ln in _FENCE_RE.sub("", text).split("\n") if not ln.startswith(("**Table ", "**Figure "))]
     body = _SOURCE_REF_RE.sub("", "\n".join(body_lines))
     problems: list[str] = []
@@ -190,9 +195,89 @@ def check_cross_references(text: str) -> list[str]:
     return problems
 
 
+_FIG_FENCE_OPEN_RE = re.compile(r"^```(?:chart|image|mermaid)\b")
+_FIG_CAPTION_LINE_RE = re.compile(r"^\*\*(Figure|Fig\.)\s*(\d+)(\s*[:.])")
+_FIG_REF_RE = re.compile(r"\b(Figure|Fig\.)\s+(\d+)\b(?!\s+(?:of|in|from)\s+(?:\[\d+\]|the original))")
+_SENTENCE_RE = re.compile(r"(?<=[.!?])\s+(?=[A-Z(*])")
+
+
+def align_figure_captions(text: str) -> tuple[str, list[int]]:
+    """Đánh số '**Figure N:' theo THỨ TỰ KHỐI HÌNH thật (chart/image/mermaid) như renderer, kể cả khối chèn tự động không có chú thích.
+
+    Chú thích không đứng ngay trên một khối hình (khối đã bị validator bỏ) là hình ma: xóa chú thích và mọi câu nhắc tới số đó
+    (tránh hai 'Figure 7' và câu mô tả hình không tồn tại). Trả về (văn bản, các số hình ma cũ).
+    """
+    lines = text.split("\n")
+    mapping: dict[int, int] = {}
+    orphans: list[int] = []
+    drop: set[int] = set()
+    ordinal = 0
+    in_fence = False
+    for i, line in enumerate(lines):
+        if line.startswith("```"):
+            if not in_fence and _FIG_FENCE_OPEN_RE.match(line):
+                ordinal += 1
+            in_fence = not in_fence
+            continue
+        m = None if in_fence else _FIG_CAPTION_LINE_RE.match(line)
+        if not m:
+            continue
+        nxt = next((ln for ln in lines[i + 1 :] if ln.strip()), "")
+        old = int(m.group(2))
+        if _FIG_FENCE_OPEN_RE.match(nxt):
+            new = ordinal + 1
+            mapping.setdefault(old, new)
+            lines[i] = f"**{m.group(1)} {new}{m.group(3)}" + line[m.end() :]
+        else:
+            orphans.append(old)
+            drop.add(i)
+    if not mapping and not orphans:
+        return text, []
+    ghost = {n for n in orphans if n not in mapping}
+
+    def _ref(m: re.Match) -> str:
+        old = int(m.group(2))
+        return f"{m.group(1)} {mapping[old]}" if old in mapping else m.group(0)
+
+    out: list[str] = []
+    in_fence = False
+    for i, line in enumerate(lines):
+        if line.startswith("```"):
+            in_fence = not in_fence
+            out.append(line)
+            continue
+        if i in drop:
+            continue
+        if in_fence or _FIG_CAPTION_LINE_RE.match(line):
+            out.append(line)
+            continue
+        if ghost:
+            parts = _SENTENCE_RE.split(line)
+            kept = [p for p in parts if not any(int(r.group(2)) in ghost for r in _FIG_REF_RE.finditer(p))]
+            if len(kept) != len(parts):
+                logger.warning("Bỏ %d câu nhắc tới hình không còn khối hình: %s", len(parts) - len(kept), sorted(ghost))
+                line = " ".join(kept)
+        out.append(_FIG_REF_RE.sub(_ref, line))
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(out)), orphans
+
+
+def _count_figure_blocks(text: str) -> int:
+    return sum(1 for ln in text.split("\n") if _FIG_FENCE_OPEN_RE.match(ln))
+
+
 def finalize_structure_report(text: str) -> tuple[str, list[str], list[str]]:
-    """Đánh số lại mục, bảng, hình sau khi ghép. Trả về (văn bản, lỗi tham chiếu treo, tham chiếu gán theo vị trí)."""
-    fixed, low_confidence = renumber_captions_report(renumber_sections(text))
+    """Đánh số lại mục, bảng, hình sau khi ghép. Trả về (văn bản, lỗi tham chiếu treo, tham chiếu gán theo vị trí).
+
+    Có khối hình → số hình theo thứ tự khối (khớp renderer), bỏ chú thích hình ma; không có → đánh số theo chú thích như cũ.
+    """
+    text = renumber_sections(text)
+    if _count_figure_blocks(text):
+        text, orphans = align_figure_captions(text)
+        if orphans:
+            logger.warning("Bỏ chú thích của hình không còn khối hình (bị validator loại): Figure %s", orphans)
+        fixed, low_confidence = renumber_captions_report(text, kinds=("Table",))
+    else:
+        fixed, low_confidence = renumber_captions_report(text)
     return fixed, check_cross_references(fixed), low_confidence
 
 

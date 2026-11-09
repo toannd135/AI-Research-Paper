@@ -1,0 +1,47 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Figure 1: (Overview.) Structured SSMs independently map each channel (e.g. 𝐷= 5) of an input 𝑥to output 𝑦through a higher dimensional latent state ℎ(e.g. 𝑁= 4). Prior SSMs avoid materializing this large effective state (𝐷𝑁, times batch size 𝐵and sequence length 𝐿) through clever alternate computation paths requiring time-invariance: the (Δ, 𝑨, 𝑩, 𝑪) parameters are constant across time. Our selecti",
+  "kind": "vector",
+  "width": 1025,
+  "height": 286,
+  "source_title": "b38757b1-5fc4-54a5-9551-b6a650180521.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 8,
+  "caption": "Figure 3: (Architecture.) Our simplified block design combines the H3 block, which is the basis of most SSM architectures, with the ubiquitous MLP block of modern neural networks. Instead of interleaving these two blocks, we simply repeat the Mamba block homogenously. Compared to the H3 block, Mamba replaces the first multiplicative gate with an activation function. Compared to the MLP block, Mamb",
+  "kind": "vector",
+  "width": 920,
+  "height": 367,
+  "source_title": "b38757b1-5fc4-54a5-9551-b6a650180521.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 13,
+  "caption": "Figure 5: (DNA Scaling Laws.) Pretraining on the HG38 (human genome) dataset. (Left) Fixing short context length 210 = 1024 and increasing size from ≈200𝐾to ≈40𝑀parameters, Mamba scales better than baselines. (Right) Fixing model size and increasing sequence lengths while keeping tokens/batch and total training tokens fixed. Unlike baselines, the selection mechanism of Mamba facilitates better per",
+  "kind": "vector",
+  "width": 1014,
+  "height": 243,
+  "source_title": "b38757b1-5fc4-54a5-9551-b6a650180521.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 14,
+  "caption": "Figure 6: (Great Apes DNA Classification.) Accuracy after fine- tuning on sequences of length 210 = 1024 up to 220 = 1048576 using pretrained models of the same context length. Numerical results in Table 13.",
+  "kind": "vector",
+  "width": 1030,
+  "height": 243,
+  "source_title": "b38757b1-5fc4-54a5-9551-b6a650180521.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 31,
+  "caption": "Figure 9: (Scaling laws: extra ablations.) (Left) Instead of (Right) Instead of",
+  "kind": "vector",
+  "width": 1014,
+  "height": 242,
+  "source_title": "b38757b1-5fc4-54a5-9551-b6a650180521.pdf"
+ }
+]

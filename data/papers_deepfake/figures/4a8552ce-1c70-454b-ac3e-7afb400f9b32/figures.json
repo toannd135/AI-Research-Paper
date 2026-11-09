@@ -1,0 +1,128 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 2,
+  "caption": "Figure 1. Relative publication data obtained from Dimensions database [9] at the end of 2023 by searching “deepfake generation” and “deepfake detection” as keywords: (a) number of deepfake- generation-related scholarly papers from 2014 to 2023; (b) number of deepfake-detection-related papers from 2014 to 2023.",
+  "kind": "raster",
+  "width": 576,
+  "height": 397,
+  "source_title": "A_Contemporary_Survey_on_Deepfake_Detection_Datasets_Algorithms_and_Challenges.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 3,
+  "caption": "Figure 2. Several FaceForensics++ samples. The manipulated methods are DeepFakes (Row 1), Face2Face (Row 2), FaceSwap (Row 3), and Neural Textures (Row 4). DeepFakes and FaceSwap methods usually create low-quality manipulated facial sequences with color, landmark, and boundary mismatch. Face2Face and Neural Textures methods can output slightly better-quality manipulated sequences but with differen",
+  "kind": "raster",
+  "width": 650,
+  "height": 429,
+  "source_title": "A_Contemporary_Survey_on_Deepfake_Detection_Datasets_Algorithms_and_Challenges.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 4,
+  "caption": "Figure 3. DFDC samples. We manually utilized InsightFace facial detection model to extract human faces from the DFDC. Although some of the samples are without color blending and with obvious facial boundaries, the average quality is a little higher than the first-generation deepfake datasets.",
+  "kind": "raster",
+  "width": 604,
+  "height": 505,
+  "source_title": "A_Contemporary_Survey_on_Deepfake_Detection_Datasets_Algorithms_and_Challenges.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 5,
+  "caption": "Figure 4. Celeb-DF V2 crop manipulated facial frames. Except for transgender and transracial fake samples (Row 3), it is hard to distinguish real and fake images with the human eye.",
+  "kind": "raster",
+  "width": 474,
+  "height": 455,
+  "source_title": "A_Contemporary_Survey_on_Deepfake_Detection_Datasets_Algorithms_and_Challenges.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 7,
+  "caption": "Figure 5. The architecture of CapsuleNet faces forensics detection. This method utilizes the CNN backbone to extract features and Capsule Network to output vectors for prediction.",
+  "kind": "raster",
+  "width": 710,
+  "height": 361,
+  "source_title": "A_Contemporary_Survey_on_Deepfake_Detection_Datasets_Algorithms_and_Challenges.pdf"
+ },
+ {
+  "file": "fig_6.png",
+  "page": 7,
+  "caption": "Figure 6. Details of the primary Capsule Network structure with relative parameters. Each Capsule Network includes the parallel connection of 10 primary capsules.",
+  "kind": "raster",
+  "width": 592,
+  "height": 234,
+  "source_title": "A_Contemporary_Survey_on_Deepfake_Detection_Datasets_Algorithms_and_Challenges.pdf"
+ },
+ {
+  "file": "fig_7.png",
+  "page": 8,
+  "caption": "Figure 7. The architecture of CORE. One method extracts pairs of representations by data augmenta- tion and calculates consistency loss to guide final loss function.",
+  "kind": "raster",
+  "width": 1052,
+  "height": 431,
+  "source_title": "A_Contemporary_Survey_on_Deepfake_Detection_Datasets_Algorithms_and_Challenges.pdf"
+ },
+ {
+  "file": "fig_8.png",
+  "page": 9,
+  "caption": "Figure 8. The architecture of the consistency branch and classification branch [32], One method calculates the patch similarity and classification loss to guide the final loss.",
+  "kind": "raster",
+  "width": 1052,
+  "height": 393,
+  "source_title": "A_Contemporary_Survey_on_Deepfake_Detection_Datasets_Algorithms_and_Challenges.pdf"
+ },
+ {
+  "file": "fig_9.png",
+  "page": 11,
+  "caption": "Figure 9. An overview of DCL architecture. Reprinted with permission from Ref. [36]. 2024, K.Sun. Four random data augmentation factors were utilized in this contrastive learning method to guide inter-class and intra-class distances separately.",
+  "kind": "raster",
+  "width": 1076,
+  "height": 366,
+  "source_title": "A_Contemporary_Survey_on_Deepfake_Detection_Datasets_Algorithms_and_Challenges.pdf"
+ },
+ {
+  "file": "fig_10.png",
+  "page": 11,
+  "caption": "Figure 10. The structure of STIL [40]. Each STIL block contains SIM, TIM, and ISM modules.",
+  "kind": "raster",
+  "width": 1052,
+  "height": 257,
+  "source_title": "A_Contemporary_Survey_on_Deepfake_Detection_Datasets_Algorithms_and_Challenges.pdf"
+ },
+ {
+  "file": "fig_11.png",
+  "page": 13,
+  "caption": "Figure 11. An overview of DFDT framework for deepfake detection [44]. It includes overlapping patch embedding, patch selection mechanism, multi-scale transformer block, and classifier.",
+  "kind": "raster",
+  "width": 1052,
+  "height": 507,
+  "source_title": "A_Contemporary_Survey_on_Deepfake_Detection_Datasets_Algorithms_and_Challenges.pdf"
+ },
+ {
+  "file": "fig_12.png",
+  "page": 14,
+  "caption": "Figure 12. An architecture of ISTVT [46]. It consists of four basic components: backbone feature extraction, token embedding, self-attention blocks, and MLP.",
+  "kind": "raster",
+  "width": 1052,
+  "height": 250,
+  "source_title": "A_Contemporary_Survey_on_Deepfake_Detection_Datasets_Algorithms_and_Challenges.pdf"
+ },
+ {
+  "file": "fig_13.png",
+  "page": 15,
+  "caption": "Figure 13. Two approaches combining visual representations with physiological signals Reprinted with permission from Ref. [50], 2024, Stefanov, K.",
+  "kind": "raster",
+  "width": 769,
+  "height": 342,
+  "source_title": "A_Contemporary_Survey_on_Deepfake_Detection_Datasets_Algorithms_and_Challenges.pdf"
+ },
+ {
+  "file": "fig_14.png",
+  "page": 18,
+  "caption": "Figure 14. Some fake samples with obvious forgery clues are wrongly predicted as “Real”.",
+  "kind": "raster",
+  "width": 810,
+  "height": 258,
+  "source_title": "A_Contemporary_Survey_on_Deepfake_Detection_Datasets_Algorithms_and_Challenges.pdf"
+ }
+]

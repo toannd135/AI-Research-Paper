@@ -1,0 +1,47 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 4,
+  "caption": "Fig. 1. The radar chart shows how different models perform across several metrics.",
+  "kind": "raster",
+  "width": 578,
+  "height": 604,
+  "source_title": "Deepfake_Forensics_Adapter_A_Dual_Stream_Network_for_Generalizable_Deepfake_Dete.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 6,
+  "caption": "Fig. 2. Examples of reenactment, replacement, editing, and synthesis of deepfakes of the human face. [25]",
+  "kind": "raster",
+  "width": 722,
+  "height": 260,
+  "source_title": "Deepfake_Forensics_Adapter_A_Dual_Stream_Network_for_Generalizable_Deepfake_Dete.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 8,
+  "caption": "Fig. 3. Overall architecture of the proposed Deepfake Forensics Adapter.",
+  "kind": "raster",
+  "width": 722,
+  "height": 399,
+  "source_title": "Deepfake_Forensics_Adapter_A_Dual_Stream_Network_for_Generalizable_Deepfake_Dete.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 11,
+  "caption": "Fig. 4. Overview of datasets used for evaluating model performance, including CelebDF-V1, CelebDF-V2, DFDC, DFDCP, and FF++. DFDC is reserved for evaluat- ing generalization capability, while the remaining datasets form the training/validation data.",
+  "kind": "raster",
+  "width": 722,
+  "height": 436,
+  "source_title": "Deepfake_Forensics_Adapter_A_Dual_Stream_Network_for_Generalizable_Deepfake_Dete.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 16,
+  "caption": "Fig. 5. Comparison of t-SNE visualizations of features extracted by Xception (left) and our DFA model (right) on samples from the DFDC dataset.",
+  "kind": "raster",
+  "width": 578,
+  "height": 237,
+  "source_title": "Deepfake_Forensics_Adapter_A_Dual_Stream_Network_for_Generalizable_Deepfake_Dete.pdf"
+ }
+]

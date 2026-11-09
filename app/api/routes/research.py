@@ -15,6 +15,7 @@ from app.api.deps import can_access, get_current_user, get_current_user_or_query
 from app.api.models.conversation import Conversation
 from app.api.models.research_task import ResearchTask
 from app.api.models.user import ROLE_ADMIN, User
+from app.api.routes.workspaces import get_owned_workspace_id
 from app.core.database import get_db
 from app.core.schemas import (
     Citation,
@@ -76,7 +77,9 @@ def create_research(
     if result["status"] == "needs_clarification":
         return ResearchClarificationResponse(questions=result["questions"])
 
+    workspace_id = get_owned_workspace_id(db, user, payload.workspace_id)
     task = ResearchTask(
+        workspace_id=workspace_id,
         question=payload.question,
         clarification_answers=json.dumps(payload.clarification_answers) if payload.clarification_answers else None,
         refined_question=result["refined_question"],

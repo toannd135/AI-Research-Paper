@@ -39,6 +39,14 @@ def _upload(client, name="a.pdf", content=b"%PDF-1.4 hello"):
     return client.post("/papers/upload", files={"file": (name, io.BytesIO(content), "application/pdf")})
 
 
+def _upload_ws(client, workspace_id, name="ws.pdf", content=b"%PDF-1.4 ws"):
+    return client.post(
+        "/papers/upload",
+        params={"workspace_id": workspace_id},
+        files={"file": (name, io.BytesIO(content), "application/pdf")},
+    )
+
+
 @patch("app.api.routes.papers.process_paper")
 def test_upload_rejects_non_pdf_extension(mock_task, client):
     response = _upload(client, name="a.txt")
@@ -115,3 +123,25 @@ def test_delete_paper_removes_file_vectors_and_record(mock_task, mock_delete_vec
 
 def test_get_unknown_paper_returns_404(client):
     assert client.get("/papers/nope").status_code == 404
+
+
+@patch("app.api.routes.papers.process_paper")
+def test_upload_into_workspace_and_filter_list(mock_task, client):
+    ws = client.post("/workspaces", json={"name": "Deepfake survey"})
+    assert ws.status_code == 201
+    wid = ws.json()["id"]
+
+    in_ws = _upload_ws(client, wid)
+    assert in_ws.status_code == 201 and in_ws.json()["workspace_id"] == wid
+    outside = _upload(client, name="other.pdf")
+
+    listed = client.get("/papers", params={"workspace_id": wid}).json()
+    assert [p["id"] for p in listed["items"]] == [in_ws.json()["id"]]
+    assert outside.json()["id"] not in [p["id"] for p in listed["items"]]
+    assert [w["id"] for w in client.get("/workspaces").json()] == [wid]
+
+
+@patch("app.api.routes.papers.process_paper")
+def test_upload_to_unknown_workspace_is_404(mock_task, client):
+    assert _upload_ws(client, "does-not-exist").status_code == 404
+    mock_task.delay.assert_not_called()

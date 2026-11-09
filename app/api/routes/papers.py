@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import can_access, get_current_user
 from app.api.models.paper import Paper
 from app.api.models.user import ROLE_ADMIN, User
+from app.api.routes.workspaces import get_owned_workspace_id
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.schemas import PaperListResponse, PaperStatus, PaperStatusResponse, PaperUploadResponse
@@ -38,6 +39,7 @@ def _to_response(paper: Paper) -> PaperStatusResponse:
         status=PaperStatus(paper.status),
         error=paper.error,
         created_at=paper.created_at,
+        workspace_id=paper.workspace_id,
     )
 
 
@@ -67,8 +69,12 @@ def _save_pdf(file: UploadFile, dest: Path) -> None:
 
 @router.post("/upload", response_model=PaperUploadResponse, status_code=status.HTTP_201_CREATED)
 def upload_paper(
-    file: UploadFile, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+    file: UploadFile,
+    workspace_id: str | None = Query(None, description="Phiên/đề tài mà paper thuộc về"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ) -> PaperUploadResponse:
+    workspace_id = get_owned_workspace_id(db, user, workspace_id)
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Chỉ chấp nhận file PDF")
 
@@ -79,7 +85,8 @@ def upload_paper(
     # Chỉ giữ tên file gốc (bỏ đường dẫn client gửi kèm), cắt theo độ dài cột.
     safe_name = Path(file.filename).name[:255]
     paper = Paper(
-        id=paper_id, filename=safe_name, file_path=str(dest), status=PaperStatus.PENDING.value, user_id=user.id
+        id=paper_id, filename=safe_name, file_path=str(dest), status=PaperStatus.PENDING.value,
+        user_id=user.id, workspace_id=workspace_id,
     )
     db.add(paper)
     db.commit()
@@ -87,7 +94,9 @@ def upload_paper(
     process_paper.delay(paper_id)
     logger.info("Đã nhận paper %s (%s), đẩy vào upload_queue", paper_id, safe_name)
 
-    return PaperUploadResponse(id=paper.id, filename=paper.filename, status=PaperStatus.PENDING)
+    return PaperUploadResponse(
+        id=paper.id, filename=paper.filename, status=PaperStatus.PENDING, workspace_id=workspace_id
+    )
 
 
 @router.get("", response_model=PaperListResponse)
@@ -95,6 +104,7 @@ def list_papers(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     status_filter: PaperStatus | None = Query(None, alias="status"),
+    workspace_id: str | None = Query(None, description="Chỉ liệt kê paper của phiên/đề tài này"),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> PaperListResponse:
@@ -103,6 +113,10 @@ def list_papers(
     if user.role != ROLE_ADMIN:
         stmt = stmt.where(Paper.user_id == user.id)
         count_stmt = count_stmt.where(Paper.user_id == user.id)
+    if workspace_id:
+        workspace_id = get_owned_workspace_id(db, user, workspace_id)
+        stmt = stmt.where(Paper.workspace_id == workspace_id)
+        count_stmt = count_stmt.where(Paper.workspace_id == workspace_id)
     if status_filter is not None:
         stmt = stmt.where(Paper.status == status_filter.value)
         count_stmt = count_stmt.where(Paper.status == status_filter.value)

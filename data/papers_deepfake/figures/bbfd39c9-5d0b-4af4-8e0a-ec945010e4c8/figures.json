@@ -1,0 +1,29 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 2,
+  "caption": "Fig. 3. Examples of image manipulations carried out using conventional media editing tools. Images come from the dataset of the 1st IEEE Image Forensics Challenge organized in 2013. From left to right: splicing (alien material has been inserted in the image), copy-move (an object has been cloned), inpainting (an object has been hidden by background patches).",
+  "kind": "raster",
+  "width": 1052,
+  "height": 462,
+  "source_title": "Media_Forensics_and_DeepFakes_An_Overview.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 6,
+  "caption": "Fig. 8. PRNU-based forgery localization. Top: the device PRNU pattern is estimated by averaging a large number of noise residuals. Bottom: the image PRNU pattern is estimated through denoising, and compared with the reference pattern: the low correlation in the telephone booth region suggests a possible manipulation.",
+  "kind": "vector",
+  "width": 570,
+  "height": 324,
+  "source_title": "Media_Forensics_and_DeepFakes_An_Overview.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 18,
+  "caption": "Fig. 17. From left to right: the pristine Emma Gonzalez image, the heatmap obtained using a CNN-based localization method, the manipulated image, and the corresponding heatmap obtained with the same CNN-based detector. The last image shows the output of a copy-move detector operating on the manipulated version. Therefore, multiple clues were found: splicing and cloning. Also in this case deciding ",
+  "kind": "raster",
+  "width": 1022,
+  "height": 276,
+  "source_title": "Media_Forensics_and_DeepFakes_An_Overview.pdf"
+ }
+]

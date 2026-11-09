@@ -1,0 +1,11 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 5,
+  "caption": "Figure 3: The pipeline of FakeShield. Given an image Iori for detection, it is first processed by the Domain Tag Generator Gdt to obtain a data domain tag Ttag. The tag Ttag, along with the text instruction Tins and image tokens Timg, are simultaneously input into the fine-tuned LLM, generating tamper detection result and explanation Odet. Subsequently, Odet and Timg are input into the Tamper Comp",
+  "kind": "vector",
+  "width": 795,
+  "height": 410,
+  "source_title": "FakeShield_Explainable_Image_Forgery_Detection_and_Localization_via_Multi_modal.pdf"
+ }
+]

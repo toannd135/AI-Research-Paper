@@ -18,11 +18,19 @@ Nguồn sự thật: code ở `app/api/routes/*` và `app/core/schemas.py`; Open
 | GET | /users | admin: danh sách user |
 | PATCH | /users/{user_id} | admin: đổi role/is_active |
 
+## Workspaces `/workspaces` (cần đăng nhập) — phiên/đề tài nghiên cứu
+| Method | Path | Ghi chú |
+|---|---|---|
+| POST | "" | body `{name}`; 201 `WorkspaceResponse` (id, name, created_at) |
+| GET | "" | workspace của user (admin: tất cả) |
+
+Cách ly: paper thuộc đúng 1 user và (tuỳ chọn) 1 workspace. Research/chat chỉ truy xuất paper của workspace được chỉ định; không chỉ định → user thường chỉ thấy paper chưa gán workspace (admin: tất cả). Workspace của người khác → 404.
+
 ## Papers `/papers` (cần đăng nhập)
 | Method | Path | Ghi chú |
 |---|---|---|
-| POST | /upload | multipart PDF; 201 `PaperUploadResponse`; enqueue `process_paper` |
-| GET | "" | `PaperListResponse` |
+| POST | /upload?workspace_id= | multipart PDF; 201 `PaperUploadResponse` (kèm `workspace_id`); enqueue `process_paper` |
+| GET | ""?workspace_id= | `PaperListResponse`; lọc theo workspace nếu có |
 | GET | /{paper_id} | `PaperStatusResponse` (status, error) |
 | POST | /{paper_id}/reprocess | chạy lại pipeline |
 | DELETE | /{paper_id} | 204; xóa file + vector |
@@ -31,7 +39,7 @@ Nguồn sự thật: code ở `app/api/routes/*` và `app/core/schemas.py`; Open
 | Method | Path | Ghi chú |
 |---|---|---|
 | GET | "" | `?limit&offset&status`; trả `{items[], total, limit, offset}` (items: id, question, refined_question, status, has_report, citation_count, error, created_at) |
-| POST | / | body `ResearchRequest` (question, clarification_answers, audience, field, contribution_type, target_venue, user_results). Trả `ResearchTaskResponse` (status `pending`) **hoặc** `ResearchClarificationResponse` (`needs_clarification` + questions). Enqueue `run_research` |
+| POST | / | body `ResearchRequest` (workspace_id?, question, clarification_answers, audience, field, contribution_type, target_venue, user_results). Trả `ResearchTaskResponse` (status `pending`) **hoặc** `ResearchClarificationResponse` (`needs_clarification` + questions). Enqueue `run_research` |
 | GET | /{task_id} | `ResearchTaskResponse`: report, citations[], research_model (dict hoặc null), error |
 | DELETE | /{task_id} | 204 |
 | GET | /{task_id}/bib | BibTeX |

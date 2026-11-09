@@ -196,10 +196,21 @@ class RetrieveEvidenceInput(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class WorkspaceCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200, description="Tên phiên/đề tài nghiên cứu")
+
+
+class WorkspaceResponse(BaseModel):
+    id: str
+    name: str
+    created_at: datetime
+
+
 class PaperUploadResponse(BaseModel):
     id: str
     filename: str
     status: PaperStatus
+    workspace_id: str | None = None
 
 
 class PaperStatusResponse(BaseModel):
@@ -208,6 +219,7 @@ class PaperStatusResponse(BaseModel):
     status: PaperStatus
     error: str | None = None
     created_at: datetime
+    workspace_id: str | None = None
 
 
 class PaperListResponse(BaseModel):
@@ -233,6 +245,9 @@ class ChatResponse(BaseModel):
 
 
 class ResearchRequest(BaseModel):
+    workspace_id: str | None = Field(
+        default=None, description="Phiên/đề tài: chỉ dùng paper đã upload vào workspace này; bỏ trống = paper chưa gán workspace"
+    )
     question: str = Field(..., min_length=3, max_length=2000, description="Câu hỏi nghiên cứu")
     clarification_answers: dict[str, str] | None = None
     audience: Literal["lecturer", "student", "professional"] = Field(

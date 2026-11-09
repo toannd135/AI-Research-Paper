@@ -1,0 +1,65 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 2,
+  "caption": "Fig. 1: Overview. We extract biological signals (c) from face regions (b) of authentic and fake portrait video pairs (a). We apply transformations (d) to compute spatial coherence and temporal consistency, capture signal characteristics in feature sets (e) and PPG maps, and train a probabilistic SVM (f) and a CNN (g). Then, we aggregate authenticity probabilities (h) to classify the authenticity.",
+  "kind": "raster",
+  "width": 1023,
+  "height": 505,
+  "source_title": "FakeCatcher_Detection_of_Synthetic_Portrait_Videos_using_Biological_Signals.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 4,
+  "caption": "Fig. 2: Biological Signals. Green (G∗- top) and chrom-PPG (C∗- middle) from left (∗L - red), middle (∗M - green), and right (∗R - blue) regions. Heart rates (HR∗- bottom), and sample frames of original (left, ∗∗O - solid) and synthetic (right, ∗∗S - dashed) videos.",
+  "kind": "raster",
+  "width": 1076,
+  "height": 259,
+  "source_title": "FakeCatcher_Detection_of_Synthetic_Portrait_Videos_using_Biological_Signals.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 5,
+  "caption": "Fig. 3: Pairwise Analysis. Example original and synthetic signal pair CMo and CMs, their derivatives δCM, power spectral densities P(L(CM)), discrete cosine transforms X(CM), cross correlation φ(CM, CL)), and cross power spectral density Ap(SC) (left). Histograms of mean differences of these values for all pairs in the dataset (right).",
+  "kind": "raster",
+  "width": 1076,
+  "height": 687,
+  "source_title": "FakeCatcher_Detection_of_Synthetic_Portrait_Videos_using_Biological_Signals.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 6,
+  "caption": "Fig. 4: Raw Signals. Characteristics of biological signals (top), same analysis on derivative of signals (bottom), from original (blue) and synthetic (orange) video pairs.",
+  "kind": "raster",
+  "width": 1075,
+  "height": 369,
+  "source_title": "FakeCatcher_Detection_of_Synthetic_Portrait_Videos_using_Biological_Signals.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 8,
+  "caption": "Fig. 7: Deep Fakes Dataset. We introduce a diverse dataset of original (top) and fake (bottom) video pairs from online sources.",
+  "kind": "raster",
+  "width": 525,
+  "height": 431,
+  "source_title": "FakeCatcher_Detection_of_Synthetic_Portrait_Videos_using_Biological_Signals.pdf"
+ },
+ {
+  "file": "fig_6.png",
+  "page": 11,
+  "caption": "Fig. 8: ROI Contours. Whole face (a), big ROI (b), default (c), small ROI (d), few pixels (e), for GL and CL (blue), for GM and CM (green), and for GR and CR (red).",
+  "kind": "raster",
+  "width": 1075,
+  "height": 224,
+  "source_title": "FakeCatcher_Detection_of_Synthetic_Portrait_Videos_using_Biological_Signals.pdf"
+ },
+ {
+  "file": "fig_7.png",
+  "page": 12,
+  "caption": "Fig. 10: Face Detection Dependency. FakeCatcher catches a fake video with multiple faces (top) as 91.7% fake, a fake video with 3% face detection conﬁdence (left) as 99.97% fake, and a real video with 17% face detection conﬁdence (right) as 65.47% real.",
+  "kind": "raster",
+  "width": 421,
+  "height": 460,
+  "source_title": "FakeCatcher_Detection_of_Synthetic_Portrait_Videos_using_Biological_Signals.pdf"
+ }
+]

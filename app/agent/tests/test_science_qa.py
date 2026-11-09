@@ -138,3 +138,12 @@ def test_scope_flags_abstract_range_shorter_than_reference_years():
     out = check_scope(text)
     assert out and "2019–2025" in out[0]
     assert check_scope(text.replace("2012–2021", "2019–2025")) == []
+
+
+def test_terminology_flags_deepfake_variants():
+    from app.agent.evidence.science_qa import check_terminology
+
+    out = check_terminology("A deepfake detector. Many deep-fakes exist. multimodal and multi-modal cues; AUROC and ROC-AUC.")
+    joined = " ".join(out)
+    assert "deepfake" in joined and "multimodal" in joined and "AUROC" in joined
+    assert check_terminology("Only deepfake and multimodal and AUROC here.") == []

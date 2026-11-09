@@ -321,8 +321,27 @@ def _extract_blocks(md: str) -> tuple[str, list[str]]:
         svg = re.sub(r'^(<svg\b[^>]*?)\s+width="[^"]*"\s+height="[^"]*"', r"\1", svg, count=1)
         return keep(f'<figure class="fig chart{span}" data-kind="figure" data-caption="{caption}">{svg}__CAPTION__</figure>')
 
-    # dòng '**Figure N: ...**' ngay trên khối chart lặp caption trong JSON → bỏ, không in thành đoạn văn lạc
-    md = re.sub(r"^\*\*(?:Figure|Fig\.)\s*\d+\s*[:.][^\n]*\*\*[ \t]*\n+(?=```chart)", "", md, flags=re.M)
+    # mermaid không có caption trong thân khối → tiêu đề lấy từ nhãn '**Figure N: tiêu đề**' ngay phía trên
+    def mermaid_with_title(m: re.Match) -> str:
+        title, rest, body = (m.group(1) or "").strip(), (m.group(2) or "").strip(), m.group(3).strip()
+        span = " wide" if mermaid_span(body) == WIDE else ""
+        cap = html.escape(title.rstrip("."))
+        fig = keep(f'<figure class="fig{span}" data-kind="figure" data-caption="{cap}"><pre class="mermaid">{html.escape(body)}</pre>__CAPTION__</figure>')
+        return (f"{rest}\n\n" if rest else "") + fig
+
+    md = re.sub(
+        r"^\*\*(?:Figure|Fig\.)\s*\d+\s*[:.]\s*((?:(?!\*\*)[^\n])*)\*\*[ \t]*([^\n]*)\n+```mermaid[ \t]*\n(.*?)```",
+        mermaid_with_title,
+        md,
+        flags=re.M | re.DOTALL,
+    )
+    # nhãn '**Figure N: tiêu đề.**' ngay trên khối hình lặp số mà figcaption đã đánh → bỏ nhãn, giữ câu mô tả phía sau (nếu có)
+    md = re.sub(
+        r"^\*\*(?:Figure|Fig\.)\s*\d+\s*[:.](?:(?!\*\*)[^\n])*\*\*[ \t]*([^\n]*)\n+(?=```(?:chart|image|mermaid))",
+        lambda m: f"{m.group(1).strip()}\n\n" if m.group(1).strip() else "",
+        md,
+        flags=re.M,
+    )
     md = _FENCE_RE.sub(fence, md)
     md = _DISPLAY_MATH_RE.sub(lambda m: keep(f'<div class="math">\\[{html.escape(m.group(1).strip())}\\]</div>'), md)
     md = _INLINE_MATH_RE.sub(lambda m: keep(f"\\({html.escape(m.group(1))}\\)", block=False), md)
