@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 1,
+  "caption": "Figure 1. Overview of UNETR. Our proposed model consists of a transformer encoder that directly utilizes 3D patches and is connected to a CNN-based decoder via skip connection.",
+  "kind": "vector",
+  "width": 501,
+  "height": 382,
+  "source_title": "2c7f7129-1278-579f-b95d-55854a5ab7e5.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 4,
+  "caption": "Figure 2. Overview of UNETR architecture. A 3D input volume (e.g. C =4 channels for MRI images), is divided into a sequence of uniform non-overlapping patches and projected into an embedding space using a linear layer. The sequence is added with a position embedding and used as an input to a transformer model. The encoded representations of different layers in the transformer are extracted and mer",
+  "kind": "vector",
+  "width": 1040,
+  "height": 564,
+  "source_title": "2c7f7129-1278-579f-b95d-55854a5ab7e5.pdf"
+ }
+]

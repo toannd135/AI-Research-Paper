@@ -285,6 +285,7 @@ class ResearchTaskResponse(BaseModel):
     research_model: dict | None = None
     error: str | None = None
     created_at: datetime
+    workspace_id: str | None = None
 
 
 class ResearchTaskSummary(BaseModel):

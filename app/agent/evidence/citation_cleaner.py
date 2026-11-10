@@ -19,12 +19,19 @@ from typing import Any
 
 from app.agent.evidence.citation_validator import expand_citation_clusters
 from app.core.config import get_settings
+from app.core.scope import get_run_catalog
 
 logger = logging.getLogger(__name__)
 
 
-@lru_cache(maxsize=1)
 def _local_catalog() -> dict[str, dict[str, str]]:
+    """Metadata của lượt research đang chạy (đúng phạm vi); ngoài lượt chạy thì là catalog.json chung."""
+    scoped = get_run_catalog()
+    return scoped if scoped is not None else file_catalog()
+
+
+@lru_cache(maxsize=1)
+def file_catalog() -> dict[str, dict[str, str]]:
     """Metadata của PDF nội bộ (`<upload_dir>/catalog.json`, khóa = paper_id); rỗng nếu không có."""
     path = Path(get_settings().upload_dir) / "catalog.json"
     if not path.is_file():
@@ -50,7 +57,7 @@ def _extract_citation_metadata(paper_id: str, snippet: str = "") -> dict[str, st
         authors = [a.strip() for a in local.get("authors", "").split(",") if a.strip()]
         return {
             "title": local.get("title", paper_id)[:180],
-            "authors": f"{authors[0]} et al." if len(authors) > 2 else " and ".join(authors) or "Anonymous",
+            "authors": f"{authors[0]} et al." if len(authors) > 2 else " and ".join(authors),
             "year": local.get("year", ""),
             "venue": local.get("venue", ""),
             "doi": local.get("doi", ""),
@@ -268,7 +275,9 @@ def clean_and_deduplicate_citations_ex(
         venue = meta["venue"]
         doi_part = f", DOI: {meta['doi']}" if meta["doi"] else ""
 
-        ref_entry = f"[{new_i}] {authors}, \"{title},\" *{venue}*, {year}{doi_part}."
+        # Thiếu metadata thì ghi rõ là thiếu, không bịa tác giả/nơi xuất bản/năm.
+        venue_part = f"*{venue}*, " if venue else ""
+        ref_entry = f"[{new_i}] {authors or 'Unknown authors'}, \"{title},\" {venue_part}{year or 'n.d'}{doi_part}."
         formatted_references.append(ref_entry)
 
     return updated_text, formatted_references, numbered

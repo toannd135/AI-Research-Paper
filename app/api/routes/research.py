@@ -98,7 +98,7 @@ def create_research(
 
     return ResearchTaskResponse(
         id=task.id, question=task.question, refined_question=task.refined_question,
-        status=ResearchStatus.PENDING, created_at=task.created_at,
+        status=ResearchStatus.PENDING, created_at=task.created_at, workspace_id=task.workspace_id,
     )
 
 
@@ -122,6 +122,7 @@ def get_research(
         research_model=json.loads(task.research_model) if task.research_model else None,
         error=task.error,
         created_at=task.created_at,
+        workspace_id=task.workspace_id,
     )
 
 

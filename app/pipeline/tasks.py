@@ -116,6 +116,32 @@ def _research_scope(db, allowed: set[str] | None) -> set[str] | None:
     return done if allowed is None else allowed & done
 
 
+def _run_catalog(db, scope: set[str] | None) -> dict[str, dict[str, str]] | None:
+    """Metadata của đúng các paper trong phạm vi: ưu tiên catalog.json, bài tải lên thì đọc từ chính PDF."""
+    if scope is None:
+        return None
+    from sqlalchemy import select
+
+    from app.agent.evidence.citation_cleaner import file_catalog
+    from app.api.models.paper import Paper
+    from app.pipeline.paper_metadata import extract_paper_metadata
+
+    curated = file_catalog()
+    papers = db.scalars(select(Paper).where(Paper.id.in_(scope))).all()
+    return {p.id: curated.get(p.id) or extract_paper_metadata(p.file_path, p.filename) for p in papers}
+
+
+def _require_indexed_papers(db, workspace_id: str) -> None:
+    """Workspace chỉ dùng PDF riêng: không có PDF nào xử lý xong thì dừng, không sinh báo cáo rỗng."""
+    from sqlalchemy import func, select
+
+    from app.api.models.paper import Paper
+
+    stmt = select(func.count()).select_from(Paper).where(Paper.workspace_id == workspace_id, Paper.status == PaperStatus.DONE.value)
+    if not db.scalar(stmt):
+        raise ValueError("Phiên này chưa có PDF nào xử lý xong để nghiên cứu")
+
+
 @celery_app.task(name="app.pipeline.tasks.run_research")
 def run_research(task_id: str) -> dict:
     """Chạy LangGraph research agent cho 1 ResearchTask, cập nhật report/citations/status."""
@@ -139,10 +165,14 @@ def run_research(task_id: str) -> dict:
 
         try:
             from app.api.models.user import User
-            from app.core.scope import allowed_paper_ids_for, set_allowed_paper_ids, set_local_only
+            from app.core.scope import allowed_paper_ids_for, set_allowed_paper_ids, set_local_only, set_run_catalog
 
+            if task.workspace_id:
+                _require_indexed_papers(db, task.workspace_id)
             owner = db.get(User, task.user_id) if task.user_id else None
-            set_allowed_paper_ids(_research_scope(db, allowed_paper_ids_for(db, owner, task.workspace_id)))
+            scope = _research_scope(db, allowed_paper_ids_for(db, owner, task.workspace_id))
+            set_allowed_paper_ids(scope)
+            set_run_catalog(_run_catalog(db, scope))
             set_local_only(bool(task.workspace_id))
             question = task.refined_question or task.question
             state = run_graph(
@@ -182,8 +212,9 @@ def run_research(task_id: str) -> dict:
             db.commit()
             raise
     finally:
-        from app.core.scope import set_allowed_paper_ids, set_local_only
+        from app.core.scope import set_allowed_paper_ids, set_local_only, set_run_catalog
 
         set_allowed_paper_ids(None)
+        set_run_catalog(None)
         set_local_only(False)
         db.close()

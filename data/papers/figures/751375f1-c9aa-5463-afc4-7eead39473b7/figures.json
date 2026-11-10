@@ -1,0 +1,29 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 4,
+  "caption": "Fig. 1. Proposed multimodal generative adversarial network (MM-GAN) training process. The generator is a UNet architecture, while the discriminator is a PatchGAN architecture with L2 loss (least squares GAN). The green “Copy” blocks transfer the input channels as is to its output, while the red “Drop” block deletes its input channels. The generator L1 loss is computed only between the synthesized ",
+  "kind": "vector",
+  "width": 779,
+  "height": 477,
+  "source_title": "751375f1-c9aa-5463-afc4-7eead39473b7.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 9,
+  "caption": "Fig. 3. Qualitative results from multimodal synthesis experiments with BRaTS2018 dataset. Each row corresponds to a particular sequence (row names on the left in order T1, T2, T1c and T2flair). Columns are indexed at the bottom of the ﬁgure by alphabets (a) through (h), and have a column name written on top of each slice. Column names are 4-bit strings where a zero (0) represents missing sequence ",
+  "kind": "raster",
+  "width": 831,
+  "height": 477,
+  "source_title": "751375f1-c9aa-5463-afc4-7eead39473b7.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 11,
+  "caption": "Fig. 4. Illustration of MM-GAN ﬁlling up parts in the scan that are originally missing in the ground truth. Red arrow shows the top part of brain that is missing, and is synthesized in all scenarios. Blue arrow highlights the high- frequency details that are missing in ground truth, but are synthesized in most images. We also notice that when all sequences are present, the T2flair synthesis is the",
+  "kind": "vector",
+  "width": 373,
+  "height": 210,
+  "source_title": "751375f1-c9aa-5463-afc4-7eead39473b7.pdf"
+ }
+]

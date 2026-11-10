@@ -39,7 +39,7 @@ Cách ly: paper thuộc đúng 1 user và (tuỳ chọn) 1 workspace. Research/c
 | Method | Path | Ghi chú |
 |---|---|---|
 | GET | "" | `?limit&offset&status`; trả `{items[], total, limit, offset}` (items: id, question, refined_question, status, has_report, citation_count, error, created_at) |
-| POST | / | body `ResearchRequest` (workspace_id?, question, clarification_answers, audience, field, contribution_type, target_venue, user_results). Trả `ResearchTaskResponse` (status `pending`) **hoặc** `ResearchClarificationResponse` (`needs_clarification` + questions). Enqueue `run_research` |
+| POST | / | Response và `GET /{id}` có thêm `workspace_id` (khác null = chỉ dùng PDF của workspace, không gọi OpenAlex). body `ResearchRequest` (workspace_id?, question, clarification_answers, audience, field, contribution_type, target_venue, user_results). Trả `ResearchTaskResponse` (status `pending`) **hoặc** `ResearchClarificationResponse` (`needs_clarification` + questions). Enqueue `run_research` |
 | GET | /{task_id} | `ResearchTaskResponse`: report, citations[], research_model (dict hoặc null), error |
 | DELETE | /{task_id} | 204 |
 | GET | /{task_id}/bib | BibTeX |

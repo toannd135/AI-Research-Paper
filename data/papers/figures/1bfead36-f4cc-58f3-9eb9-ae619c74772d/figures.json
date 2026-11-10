@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Fig. 1. Proposed multimodal segmentation framework. Left: Feature disentanglement for multimodal learning. Right: Detailed structure of the gated feature fusion module.",
+  "kind": "vector",
+  "width": 730,
+  "height": 275,
+  "source_title": "1bfead36-f4cc-58f3-9eb9-ae619c74772d.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 7,
+  "caption": "Fig. 2. Segmentation results from our method for complete tumor (yellow), tumor core (red), and enhancing tumor (blue). Input modalities at inference are indicated.",
+  "kind": "raster",
+  "width": 634,
+  "height": 252,
+  "source_title": "1bfead36-f4cc-58f3-9eb9-ae619c74772d.pdf"
+ }
+]

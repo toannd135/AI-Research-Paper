@@ -1,0 +1,29 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Fig. 1: (a) UNet++ consists of an encoder and decoder that are connected through a series of nested dense convolutional blocks. The main idea behind UNet++ is to bridge the semantic gap between the feature maps of the encoder and decoder prior to fusion. For example, the semantic gap between (X0,0,X1,3) is bridged using a dense convolution block with three convolution layers. In the graphical abst",
+  "kind": "raster",
+  "width": 722,
+  "height": 445,
+  "source_title": "1e3809fd-f5bc-5bb8-a2ca-31c045126404.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 6,
+  "caption": "Fig. 2: Qualitative comparison between U-Net, wide U-Net, and UNet++, show- ing segmentation results for polyp, liver, and cell nuclei datasets (2D-only for a distinct visualization).",
+  "kind": "raster",
+  "width": 692,
+  "height": 421,
+  "source_title": "1e3809fd-f5bc-5bb8-a2ca-31c045126404.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 7,
+  "caption": "Fig. 3: Complexity, speed, and accuracy of UNet++ after pruning on (a) cell nuclei, (b) colon polyp, (c) liver, and (d) lung nodule segmentation tasks respec- tively. The inference time is the time taken to process 10k test images using one NVIDIA TITAN X (Pascal) with 12 GB memory.",
+  "kind": "raster",
+  "width": 722,
+  "height": 244,
+  "source_title": "1e3809fd-f5bc-5bb8-a2ca-31c045126404.pdf"
+ }
+]

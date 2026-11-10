@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 2,
+  "caption": "Fig. 1. U-net architecture (example for 32x32 pixels in the lowest resolution). Each blue box corresponds to a multi-channel feature map. The number of channels is denoted on top of the box. The x-y-size is provided at the lower left edge of the box. White boxes represent copied feature maps. The arrows denote the diﬀerent operations.",
+  "kind": "vector",
+  "width": 730,
+  "height": 473,
+  "source_title": "6ccaf6ea-14bd-5a7e-ad03-053dca5bc1bc.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 3,
+  "caption": "Fig. 2. Overlap-tile strategy for seamless segmentation of arbitrary large images (here segmentation of neuronal structures in EM stacks). Prediction of the segmentation in the yellow area, requires image data within the blue area as input. Missing input data is extrapolated by mirroring",
+  "kind": "vector",
+  "width": 514,
+  "height": 270,
+  "source_title": "6ccaf6ea-14bd-5a7e-ad03-053dca5bc1bc.pdf"
+ }
+]

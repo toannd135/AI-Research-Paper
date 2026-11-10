@@ -195,3 +195,18 @@ Không làm: hình định tính BraTS (hệ thống chỉ dùng hình có thậ
 Kiểm chứng: `pytest app/agent/tests/test_report_checks.py app/agent/tests/test_science_qa.py app/agent/tests/test_evidence_pipeline.py`.
 Chưa làm: tự sinh bảng viết tắt; kiểm caption bảng (đơn vị/protocol/nguồn); đối chiếu Journal fit; kiểm DPI/cỡ chữ hình.
 
+## Research từ PDF người dùng tải lên (2026-11-10)
+Frontend `frontend-paper-ai`: chọn "Dùng bài báo của tôi" -> tạo workspace -> upload -> chờ lập chỉ mục -> `POST /research` kèm `workspace_id` (chỉ dùng PDF, không gọi OpenAlex).
+
+| # | Việc | Kiểm chứng |
+|---|---|---|
+| 1 | `pipeline/paper_metadata.py`: title/authors/year/doi đọc từ PDF, thiếu thì để trống | `pytest app/pipeline/tests/test_paper_metadata.py` |
+| 2 | `scope.set_run_catalog` + `tasks._run_catalog`: catalog đúng phạm vi lượt chạy; reference thiếu metadata ghi rõ | `pytest app/agent/tests/test_uploaded_scope.py` |
+| 3 | `coverage.local_chunks_per_paper`: kho nhỏ lấy nhiều chunk hơn | như trên |
+| 4 | `_review_facts` đúng theo chế độ chỉ-nội-bộ / có OpenAlex | như trên |
+| 5 | Workspace không có PDF xử lý xong -> task failed có thông báo; response research có `workspace_id` | `pytest app/pipeline/tests/test_research_scope.py app/api` |
+| 6 | Frontend: chọn nguồn, upload nhiều PDF, panel nguồn, `target_venue` | `npm run build`, `npx playwright test tests/research-flow.spec.ts` |
+
+## Luồng chạy thử riêng cho deepfake (2026-11-10)
+`scripts/run_deepfake.py` chạy graph trên `data/papers_deepfake` (chỉ PDF, không OpenAlex, không tạo research task). Prompt gốc không đổi: `app/agent/overlays/deepfake.py` nối chỉ dẫn vào system prompt qua `OverlayGateway`; luồng chính không import module này.
+Kiểm chứng: `pytest app/agent/tests/test_deepfake_overlay.py`, `python scripts/run_deepfake.py --dry-run`.

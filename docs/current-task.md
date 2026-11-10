@@ -2,7 +2,14 @@
 
 > Cập nhật tệp này MỖI KHI đổi task. Claude đọc nó trước khi code. Trống/lỗi thời -> hỏi người dùng.
 
-## Task hiện tại: Hệ thống hình theo đánh giá phần hình `survey_c5d84302.pdf` (2026-11-09)
+## Task hiện tại (2026-11-10): nhập đề tài kèm PDF của người dùng
+Chi tiết + kiểm chứng: `docs/implementation-plan.md` mục "Research từ PDF người dùng tải lên", ADR 0010.
+- [x] Backend: metadata từ PDF, catalog đúng phạm vi, giới hạn chunk theo cỡ kho, chặn workspace rỗng, review facts đúng chế độ
+- [ ] Chạy thật cần migration 0009 (chưa chạy trên DB thật, chờ người dùng đồng ý)
+
+---
+
+## Task trước: Hệ thống hình theo đánh giá phần hình `survey_c5d84302.pdf` (2026-11-09)
 Chi tiết + kiểm chứng: `docs/implementation-plan.md` mục "Hệ thống hình…", ADR 0008.
 - [x] 1 đánh số hình theo khối, bỏ hình ma · [x] 2–3 chặn trộn protocol + `panels`/`protocol_panels` · [x] 4 scatter ≥4 điểm, bảng chi phí mở rộng
 - [x] 5 sơ đồ corpus (không phải PRISMA) · [x] 6 taxonomy TD rộng → LR · [x] 7 timeline (năm theo References) + roadmap (prompt)

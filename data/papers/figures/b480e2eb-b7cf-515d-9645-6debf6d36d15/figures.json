@@ -1,0 +1,29 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 4,
+  "caption": "Fig. 1. Network architecture. Our architecture is derived from the U-Net [10]. The context pathway (left) aggregates high level information that is subsequently localized precisely in the localization pathway (right). Inspired by [9] we inject gradient signals deep into the network through deep supervision.",
+  "kind": "raster",
+  "width": 703,
+  "height": 304,
+  "source_title": "b480e2eb-b7cf-515d-9645-6debf6d36d15.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 6,
+  "caption": "Fig. 2. Qualitative segmentation result. Our approach is capable of segmenting the large necrotic cores while also detecting the small structures within the tumor core. Edema is shown in blue, enhancing tumor in green and non-enhancing and necrotic tumor in red.",
+  "kind": "raster",
+  "width": 703,
+  "height": 250,
+  "source_title": "b480e2eb-b7cf-515d-9645-6debf6d36d15.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 7,
+  "caption": "Fig. 3. The most prominent mode of error for the tumor core is the non enhancing tumor region. Edema is shown in blue, enhancing tumor in green and non-enhancing and necrotic tumor in red.",
+  "kind": "raster",
+  "width": 703,
+  "height": 248,
+  "source_title": "b480e2eb-b7cf-515d-9645-6debf6d36d15.pdf"
+ }
+]

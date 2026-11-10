@@ -3,11 +3,22 @@
 from __future__ import annotations
 
 import re
+from math import ceil
 from typing import Any
 
 from app.core.config import get_settings
 
 MIN_CITED_PAPERS = 25  # kho lớn hơn giới hạn phủ trọn: chỉ yêu cầu tối thiểu chừng này paper khác nhau
+_LOCAL_EVIDENCE_TARGET = 40  # số chunk evidence muốn có ở chế độ chỉ-nội-bộ
+_LOCAL_MAX_CHUNKS_CEILING = 12  # kho rất nhỏ vẫn không dồn quá nhiều chunk cho một paper
+
+
+def local_chunks_per_paper(n_papers: int) -> int:
+    """Giới hạn chunk mỗi paper ở chế độ chỉ-nội-bộ: kho càng nhỏ càng được lấy nhiều, để có đủ bằng chứng."""
+    base = get_settings().local_max_chunks_per_paper
+    if n_papers <= 0:
+        return base
+    return max(base, min(_LOCAL_MAX_CHUNKS_CEILING, ceil(_LOCAL_EVIDENCE_TARGET / n_papers)))
 
 
 def full_coverage_applies(n_available: int) -> bool:

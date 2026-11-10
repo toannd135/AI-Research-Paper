@@ -38,6 +38,19 @@ def get_allowed_paper_ids() -> set[str] | None:
     return _allowed_paper_ids
 
 
+_run_catalog: dict[str, dict[str, str]] | None = None
+
+
+def set_run_catalog(catalog: dict[str, dict[str, str]] | None) -> None:
+    """Metadata đúng phạm vi của lượt research đang chạy; None = dùng catalog.json chung."""
+    global _run_catalog
+    _run_catalog = catalog
+
+
+def get_run_catalog() -> dict[str, dict[str, str]] | None:
+    return _run_catalog
+
+
 def allowed_paper_ids_for(db: Session, user: User | None, workspace_id: str | None = None) -> set[str] | None:
     """Tập id paper được xem; None nếu không giới hạn.
 

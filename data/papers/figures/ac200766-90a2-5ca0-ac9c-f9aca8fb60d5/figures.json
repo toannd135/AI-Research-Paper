@@ -1,0 +1,29 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 4,
+  "caption": "Fig. 1. Overview of the Swin UNETR architecture. The input to our model is 3D multi-modal MRI images with 4 channels. The Swin UNETR creates non-overlapping patches of the input data and uses a patch partition layer to create windows with a desired size for computing the self-attention. The encoded feature representations in the Swin transformer are fed to a CNN-decoder via skip connection at mult",
+  "kind": "vector",
+  "width": 730,
+  "height": 278,
+  "source_title": "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 6,
+  "caption": "Fig. 2. Overview of the shifted windowing mechanism. Note that 8 × 8 × 8 3D tokens and 4 × 4 × 4 window size are illustrated.",
+  "kind": "raster",
+  "width": 705,
+  "height": 248,
+  "source_title": "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 7,
+  "caption": "Fig. 3. A typical segmentation example of the predicted labels whic are overlaid on T1, T1c, T2 and FLAIR MRI axial slices in each row. The ﬁrst two rows depict ∼75th percentile performance based on the Dice score. Rows 3 and 4 depict ∼50th percentile performance while the last two rows are at ∼25th percentile performance. The image intensities are on a gray color scale. The blue, red and green co",
+  "kind": "raster",
+  "width": 650,
+  "height": 924,
+  "source_title": "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5.pdf"
+ }
+]

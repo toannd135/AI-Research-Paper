@@ -19,10 +19,9 @@ import re
 from datetime import date
 from typing import Any
 
-from app.core.scope import external_search_allowed
 from app.agent.evidence.citation_cleaner import _local_catalog, clean_and_deduplicate_citations_ex
 from app.agent.evidence.claim_scan import find_leaked_claims, soften_leaked_claims
-from app.agent.evidence.coverage import coverage_target, full_coverage_applies
+from app.agent.evidence.coverage import coverage_target, full_coverage_applies, local_chunks_per_paper
 from app.agent.evidence.dataset_catalog import get_dataset_grounding_context
 from app.agent.evidence.quality_gate import merge_structure_issues, trace_text_records
 from app.agent.evidence.redact import redact_untraced_cells
@@ -41,6 +40,7 @@ from app.agent.state import ResearchState
 from app.ai.llm_gateway.base import LLMGateway, Message
 from app.ai.llm_gateway.default import get_default_agent_gateway
 from app.core.config import get_settings
+from app.core.scope import external_search_allowed
 from app.pipeline.figures import load_figures
 
 logger = logging.getLogger(__name__)
@@ -485,27 +485,34 @@ def _review_facts(state: ResearchState, mode: str) -> str:
             + ". Every extracted value is checked to appear verbatim in the cited PDF passage.\n"
             + _CITATION_COUNT_RULE
         )
-    scope = "the curated internal PDF repository only" if not external_search_allowed() else "the internal repository plus an external scholarly index (OpenAlex)"
+    local_only = not external_search_allowed()
+    scope = "the curated internal PDF repository only" if local_only else "the internal repository plus an external scholarly index (OpenAlex)"
+    chunk_cap = local_chunks_per_paper(len(catalog))
     return surveys + (
         "REVIEW FACTS (the only facts about the search process you may state in Section 2; do not add others):\n"
         f"- Sources searched: {scope}.\n"
-        f"- Corpus size: {corpus} papers in the repository catalog; {len(cited)} distinct papers were retrieved as evidence for this manuscript.\n"
+        + (
+            f"- Corpus size: {corpus} papers in the repository catalog; {len(cited)} distinct papers were retrieved as evidence for this manuscript.\n"
+            if local_only
+            else f"- {len(cited)} distinct papers were retrieved as evidence for this manuscript.\n"
+        )
         + _CITATION_COUNT_RULE
         + _year_range_fact(catalog, cited)
         + (
             f"- {not_retrieved} catalog papers were not returned by any query and are therefore not discussed. They were not excluded by a screening decision "
             "with recorded reasons; state this plainly as a retrieval limitation (relevant work may have been missed).\n"
-            if not_retrieved
+            if not_retrieved and local_only
             else ""
         )
         +
         f"- Search queries used (hybrid dense+sparse retrieval with reranking): {queries}.\n"
         f"- Search date: {date.today().isoformat()}.\n"
         f"- Retrieval configuration: embedding model {settings.embedding_model}, reranker {settings.reranker_model}, hybrid score weights "
-        f"dense {settings.hybrid_alpha} / sparse {settings.hybrid_beta}, at most {settings.local_max_chunks_per_paper} chunks per paper kept as evidence.\n"
-        "- Inclusion rule actually applied: a paper is included if it is in the repository and was returned by the retrieval for at least one query. "
+        f"dense {settings.hybrid_alpha} / sparse {settings.hybrid_beta}"
+        + (f", at most {chunk_cap} chunks per paper kept as evidence.\n" if local_only else ".\n")
+        + f"- Inclusion rule actually applied: a paper is included if it is in {'the repository' if local_only else 'the repository or the external index'} and was returned by the retrieval for at least one query. "
         "No other inclusion or exclusion criterion, and no manual screening, was applied; do not state any other criterion.\n"
-        "- Quality assessment actually applied: automatic checks only (each reported value must appear verbatim in the cited PDF passage; comparability of "
+        "- Quality assessment actually applied: automatic checks only (each reported value must appear verbatim in the cited passage; comparability of "
         "dataset version, split, region and metric). No per-study risk-of-bias score and no independent second reviewer.\n"
         "- No independent title/abstract screening or PRISMA flow was performed beyond retrieval relevance. "
         "Never call this a systematic review and never mention PRISMA except to say that it was not applied.\n"
@@ -575,7 +582,7 @@ def _format_references_prompt(citations: list[Any]) -> str:
         snippet = getattr(c, "text_snippet", "") or (c.get("text_snippet") if isinstance(c, dict) else "")
 
         local = _local_catalog().get(str(pid))
-        ref_line = f"[{i}] {pid}" if not local else f"[{i}] {local.get('title')} ({local.get('year')})"
+        ref_line = f"[{i}] {pid}" if not local else f"[{i}] {local.get('title')}" + (f" ({local['year']})" if local.get("year") else "")
         if page:
             ref_line += f", Page: {page}"
         if section:

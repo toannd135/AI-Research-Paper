@@ -1,0 +1,38 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Figure 1. Overview of the proposed architecture. The system processes inputs through three specialized expert streams. The Localized Facial and Global Texture streams maintain native signal integrity (252×252) utilizing a shared DINOv2-Giant backbone [29]. The Hybrid Semantic Fusion stream (224×224) concatenates geometric features from DINOv2 [29] with semantic features from a frozen CLIP-Large mo",
+  "kind": "raster",
+  "width": 953,
+  "height": 642,
+  "source_title": "088f9c9c-8eb6-4743-9aac-8247d5d8eb33.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 6,
+  "caption": "Figure 3. Complementary Ensemble Voting. Evaluation of in- dividual streams and aggregation strategies. All ensembles uti- lize discretized voting unless explicitly labeled as continuous. The calibrated 1:2:2 discretized ensemble yields the highest stability across both evaluation sets.",
+  "kind": "vector",
+  "width": 502,
+  "height": 366,
+  "source_title": "088f9c9c-8eb6-4743-9aac-8247d5d8eb33.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 7,
+  "caption": "Figure 4. Prediction Correlation Matrix. While the streams nat- urally exhibit high correlation due to shared ground-truth targets, their strictly sub-unity values confirm that they do not redundantly collapse, but rather contribute complementary predictive signals to the ensemble.",
+  "kind": "vector",
+  "width": 305,
+  "height": 229,
+  "source_title": "088f9c9c-8eb6-4743-9aac-8247d5d8eb33.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 7,
+  "caption": "Figure 6. Score-CAM [34] Spatial Attribution under Com- pound Degradation. Evaluated on a Fake Public test image (Top- left: forgery probability; Green=Correct, Red=Incorrect). At low noise (0.0–0.2, where 0.0 denotes the image’s inherent noise), all models successfully localize the face. Under extreme noise (0.3– 0.5), the Vanilla and Global models suffer severe attention drift, scattering attent",
+  "kind": "vector",
+  "width": 458,
+  "height": 453,
+  "source_title": "088f9c9c-8eb6-4743-9aac-8247d5d8eb33.pdf"
+ }
+]

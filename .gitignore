@@ -32,3 +32,4 @@ node_modules/
 
 # Cache phản hồi LLM của bước trích xuất (sinh lại được)
 data/cache/
+data/papers.zip

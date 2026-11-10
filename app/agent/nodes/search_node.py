@@ -1,11 +1,11 @@
 import logging
 import time
 
+from app.agent.evidence.coverage import local_chunks_per_paper
 from app.agent.profiles import field_profile
 from app.agent.state import ResearchState
 from app.agent.tools.ensure_coverage import ensure_corpus_coverage
-from app.core.config import get_settings
-from app.core.scope import external_search_allowed
+from app.core.scope import external_search_allowed, get_allowed_paper_ids
 
 logger = logging.getLogger(__name__)
 
@@ -37,10 +37,9 @@ def search_node(state: ResearchState) -> ResearchState:
     from app.agent.tools.search_external_papers import retrieve_external_evidence
 
     queries = state.get("search_queries") or [state["question"]]
-    settings = get_settings()
 
     if not external_search_allowed():
-        return {**state, "evidence": _local_only_evidence(queries, settings.local_max_chunks_per_paper)}
+        return {**state, "evidence": _local_only_evidence(queries, local_chunks_per_paper(len(get_allowed_paper_ids() or ())))}
 
     # 1. Tìm kiếm evidence trên CSDL nội bộ (Qdrant)
     internal_evidence = retrieve_evidence(queries)
