@@ -48,10 +48,10 @@ def test_ensure_coverage_respects_owner_scope_and_limit(limit, monkeypatch):
     assert ensure_coverage.ensure_corpus_coverage([], "q") == []  # kho quá lớn: giữ hành vi cũ
 
 
-def test_gate_warns_about_papers_in_corpus_but_not_cited(limit):
+def test_gate_blocks_papers_in_corpus_but_not_cited(limit):
     cits = [Citation(paper_id="a", chunk_id="1"), Citation(paper_id="b", chunk_id="2"), Citation(paper_id="c", chunk_id="3")]
     cat = {"c": {"title": "Paper C title"}}
     rep = run_quality_gate({"citations": cits, "evidence": []}, "Intro [1] and [2].", catalog=cat)
-    assert any("độ phủ kho: 1/3" in w and "Paper C title" in w for w in rep["warnings"])
+    assert any("độ phủ kho: 1/3" in w and "Paper C title" in w for w in rep["blocking"])
     full = run_quality_gate({"citations": cits, "evidence": []}, "[1] [2] [3]", catalog=cat)
-    assert not any("độ phủ kho" in w for w in full["warnings"])
+    assert not any("độ phủ kho" in w for w in full["blocking"])

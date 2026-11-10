@@ -201,19 +201,22 @@ def _draw_timeline(ax, spec: dict) -> int:
         return 0
     groups = list(dict.fromkeys(g for _, _, g in events))
     lane = {g: i for i, g in enumerate(groups)}
-    slot: dict[tuple[int, str], int] = {}
+    slot: dict[str, int] = {}
     for year, label, group in events:
-        k = slot.get((year, group), 0)
-        slot[(year, group)] = k + 1
+        # so le trên/dưới theo thứ tự mốc trong làn (không chỉ cùng năm) để nhãn của các năm gần nhau không đè lên nhau
+        k = slot.get(group, 0)
+        slot[group] = k + 1
         y = lane[group]
         color = _PALETTE[lane[group] % len(_PALETTE)]
         ax.scatter([year], [y], s=22, color=color, marker=_MARKERS[lane[group] % len(_MARKERS)], zorder=3)
-        dy = (0.28 + 0.2 * (k // 2)) * (1 if k % 2 == 0 else -1)
+        dy = (0.28 + 0.14 * ((k // 2) % 2)) * (1 if k % 2 == 0 else -1)
         ax.annotate(label, (year, y), xytext=(year, y + dy), fontsize=6.3, ha="center", va="center", color="#222",
                     arrowprops={"arrowstyle": "-", "color": "#bbb", "linewidth": 0.5})
     years = [y for y, _, _ in events]
     ax.set_xlim(min(years) - 0.7, max(years) + 0.7)
-    ax.set_xticks(range(min(years), max(years) + 1))
+    # chỉ ghi năm có mốc (ghi mọi năm trên khung hẹp làm các số 2018 2019... dính vào nhau)
+    ax.set_xticks(sorted(set(years)))
+    ax.tick_params(axis="x", labelsize=7)
     ax.set_yticks(range(len(groups)), groups)
     ax.set_ylim(len(groups) - 0.4, -0.6)
     for i in range(len(groups)):

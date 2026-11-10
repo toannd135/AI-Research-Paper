@@ -232,9 +232,9 @@ def test_gate_on_renumbered_text_traces_through_numbered_citations():
     final_view = run_quality_gate(state, text, catalog, numbered_citations=[all_cites[1]])
 
     assert raw_view["traceability"]["counts"][UNTRACED] == 1
-    assert final_view["traceability"]["counts"][TRACED] == 1 and final_view["passed"]
+    assert final_view["traceability"]["counts"][TRACED] == 1
     # độ phủ kho tính trên kho đầy đủ: p1 không còn reference nào trong bản cuối → "1/2 paper chưa được cite"
-    assert any("độ phủ kho: 1/2" in w for w in final_view["warnings"])
+    assert any("độ phủ kho: 1/2" in w for w in final_view["blocking"])
 
 
 def test_final_gate_flags_method_name_attributed_to_wrong_paper():
@@ -245,3 +245,13 @@ def test_final_gate_flags_method_name_attributed_to_wrong_paper():
     assert any("gán sai nguồn" in w and "UNETR" in w for w in bad["warnings"])
     good = run_quality_gate(state, "nnU-Net [1] is a strong baseline.", catalog, numbered_citations=cites)
     assert not any("gán sai nguồn" in w for w in good["warnings"])
+
+
+def test_gate_blocks_when_small_corpus_not_fully_cited():
+    """Kho nhỏ (≤ giới hạn phủ trọn) phải cite hết: paper bị bỏ sót là lỗi chặn, không chỉ cảnh báo."""
+    state = {"citations": [SimpleNamespace(paper_id="p1"), SimpleNamespace(paper_id="p2")], "evidence": []}
+    catalog = {pid: {"title": pid, "authors": "A", "year": "2021", "url": "u"} for pid in ("p1", "p2")}
+    partial = run_quality_gate(state, "Only one source [1].", catalog)
+    assert not partial["passed"] and any(b.startswith("độ phủ kho: 1/2") for b in partial["blocking"])
+    full = run_quality_gate(state, "Both sources [1][2].", catalog)
+    assert not any(b.startswith("độ phủ kho") for b in full["blocking"])

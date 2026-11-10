@@ -141,7 +141,8 @@ def run_quality_gate(
             missing = sorted(available_ids - used)
         if missing:
             titles = [(catalog.get(pid) or {}).get("title") or pid for pid in missing]
-            warnings.append(f"độ phủ kho: {len(missing)}/{len(available_ids)} paper trong kho chưa được cite ({'; '.join(t[:60] for t in titles[:8])}{'…' if len(titles) > 8 else ''})")
+            # kho nhỏ phải cite hết: thiếu paper là lỗi chặn (không chỉ cảnh báo) để bài không xuất khi reference thiếu
+            blocking.append(f"độ phủ kho: {len(missing)}/{len(available_ids)} paper trong kho chưa được cite ({'; '.join(t[:60] for t in titles[:8])}{'…' if len(titles) > 8 else ''})")
     from app.agent.research_model import contribution_profile
 
     display = check_display_items(text, state.get("paper_type") or contribution_profile(state)["paper_type"])

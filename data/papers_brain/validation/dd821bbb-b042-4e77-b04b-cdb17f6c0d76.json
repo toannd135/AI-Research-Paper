@@ -1,0 +1,1130 @@
+{
+  "passed": false,
+  "blocking": [
+    "tham chiếu tài liệu: Table [6, 7, 8, 9, 10, 11, 12] được nhắc trong thân bài nhưng bài chỉ có 5 table có chú thích"
+  ],
+  "warnings": [
+    "26/29 reference là preprint/arXiv, chưa chắc đã bình duyệt — ghi rõ khi dùng làm bằng chứng",
+    "novelty: bài không cite survey/review trước nào (theo tiêu đề catalog) — không chứng minh được điểm mới so với các survey đã có; thêm các survey liên quan vào kho rồi chạy lại",
+    "độ phủ kho: 2/31 paper trong kho chưa được cite (ACN: Adversarial Co-training Network for Brain Tumor Segment; Analysis of the MICCAI Brain Tumor Segmentation -- Metastase)",
+    "Figure: có 10, vượt mục tiêu 5–9",
+    "Figure: 10 khối nhưng chỉ 3 số được nhắc trong thân bài",
+    "Table: có 8, vượt mục tiêu 3–6",
+    "Table [9, 10, 11, 12] được nhắc trong thân bài nhưng không có khối tương ứng",
+    "nhất quán: tên method khác nhau cho cùng nguồn [5] giữa các bảng: ['Multi-view Fusion', 'Wang et al. (2017) cascaded anisotropic networks with multi-view fusion']",
+    "nhất quán: tên method khác nhau cho cùng nguồn [1] giữa các bảng: ['Chen et al.', 'Chen et al.  (attention-gated)']",
+    "nhất quán: tên method khác nhau cho cùng nguồn [8] giữa các bảng: ['Isensee et al.  (Ensemble 10)', 'Isensee et al.  (Single)']",
+    "nhất quán: tên method khác nhau cho cùng nguồn [10] giữa các bảng: ['Swin UNETR', 'Swin UNETR  (Table 4)']",
+    "nhất quán: tên method khác nhau cho cùng nguồn [25] giữa các bảng: ['CNMCPMI2023', 'DeepRadOnc', 'MIASINTEF', 'NVAUTO', 'SY', 'blackbean', 'isahajmistry']",
+    "nhất quán: Abstract chưa nêu rõ phát hiện định lượng chính",
+    "nhất quán: viết tắt HD95 dùng 26 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (HD95)'",
+    "nhất quán: viết tắt M3AE dùng 21 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (M3AE)'",
+    "nhất quán: viết tắt SSIM dùng 18 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (SSIM)'",
+    "nhất quán: viết tắt SMU dùng 17 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (SMU)'",
+    "nhất quán: viết tắt SMML dùng 16 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (SMML)'",
+    "nhất quán: viết tắt PSNR dùng 16 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (PSNR)'",
+    "nhất quán: viết tắt CV dùng 10 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (CV)'",
+    "nhất quán: viết tắt MRI dùng 8 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (MRI)'",
+    "nhất quán: viết tắt RQ3 dùng 7 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (RQ3)'",
+    "nhất quán: viết tắt GPU dùng 7 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (GPU)'",
+    "nhất quán: viết tắt SAM dùng 7 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (SAM)'",
+    "nhất quán: viết tắt RQ2 dùng 6 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (RQ2)'",
+    "nhất quán: viết tắt SOTA dùng 6 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (SOTA)'",
+    "nhất quán: viết tắt V100 dùng 6 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (V100)'",
+    "nhất quán: viết tắt GAE dùng 5 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (GAE)'",
+    "nhất quán: viết tắt SSA dùng 5 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (SSA)'",
+    "nhất quán: viết tắt OOD dùng 4 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (OOD)'",
+    "nhất quán: viết tắt RQ1 dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (RQ1)'",
+    "nhất quán: viết tắt RQ4 dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (RQ4)'",
+    "nhất quán: viết tắt HCC dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (HCC)'",
+    "nhất quán: viết tắt ECE dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (ECE)'",
+    "nhất quán: viết tắt EMMA dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (EMMA)'",
+    "nhất quán: viết tắt KL dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (KL)'",
+    "nhất quán: viết tắt MMG dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (MMG)'",
+    "nhất quán: viết tắt PACS dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (PACS)'",
+    "nhất quán: viết tắt METS dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (METS)'",
+    "nhất quán: viết tắt F4 dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (F4)'",
+    "nhất quán: có 40 viết tắt nhưng không có mục/bảng danh sách viết tắt (Abbreviations)",
+    "nhất quán: đánh số Figure caption không liên tục/trùng: [1, 2, 10]",
+    "nhất quán: bảng 'Segmentation performance (Dice, HD95) by fusion paradigm, BraTS edition, split, ' trộn Dice dạng tỷ lệ (0–1) và % (0–100) trong cùng cột; tách cột hoặc ghi rõ đơn vị từng dòng",
+    "gán sai nguồn: 'Only [8]' bị gán sai nguồn: Bài báo [8] ('3D MRI brain tumor segmentation using autoencoder ...') không chứa thông tin về 'Only'",
+    "gán sai nguồn: 'Chen et al. [1]' bị gán sai nguồn: Bài báo [1] ('CCSD: Cross-Modal Compositional Self-Distillation ...') không chứa thông tin về 'Chen'",
+    "gán sai nguồn: 'ShaSpec [7]' bị gán sai nguồn: Bài báo [7] ('Multi-modal Learning with Missing Modality via Sha...') không chứa thông tin về 'ShaSpec'",
+    "gán sai nguồn: 'SMML [18]' bị gán sai nguồn: Bài báo [18] ('Semantic-guided Masked Mutual Learning for Multi-m...') không chứa thông tin về 'SMML'",
+    "gán sai nguồn: 'HeMIS [23]' bị gán sai nguồn: Bài báo [23] ('Hetero-Modal Variational Encoder-Decoder for Joint...') không chứa thông tin về 'HeMIS'",
+    "gán sai nguồn: 'VAE [23]' bị gán sai nguồn: Bài báo [23] ('Hetero-Modal Variational Encoder-Decoder for Joint...') không chứa thông tin về 'VAE'",
+    "gán sai nguồn: 'Hyper-GAE [3]' bị gán sai nguồn: Bài báo [3] ('No Modality Left Behind: Adapting to Missing Modal...') không chứa thông tin về 'Hyper-GAE'",
+    "gán sai nguồn: 'BraTS-SSA [29]' bị gán sai nguồn: Bài báo [29] ('The Brain Tumor Segmentation (BraTS) Challenge 202...') không chứa thông tin về 'BraTS-SSA'",
+    "gán sai nguồn: 'Encoders [4]' bị gán sai nguồn: Bài báo [4] ('Robust Multimodal Brain Tumor Segmentation via Fea...') không chứa thông tin về 'Encoders'",
+    "gán sai nguồn: 'A100 [1]' bị gán sai nguồn: Bài báo [1] ('CCSD: Cross-Modal Compositional Self-Distillation ...') không chứa thông tin về 'A100'",
+    "gán sai nguồn: 'Dice [11]' bị gán sai nguồn: Bài báo [11] ('nnU-Net for Brain Tumor Segmentation...') không chứa thông tin về 'Dice'",
+    "gán sai nguồn: 'Sens [3]' bị gán sai nguồn: Bài báo [3] ('No Modality Left Behind: Adapting to Missing Modal...') không chứa thông tin về 'Sens'",
+    "gán sai nguồn: 'BraSyn-2025 [22]' bị gán sai nguồn: Bài báo [22] ('SLaM-DiMM: Shared Latent Modeling for Diffusion Ba...') không chứa thông tin về 'BraSyn-2025'",
+    "gán sai nguồn: 'LGRM [3]' bị gán sai nguồn: Bài báo [3] ('No Modality Left Behind: Adapting to Missing Modal...') không chứa thông tin về 'LGRM'",
+    "gán sai nguồn: 'SAM [18]' bị gán sai nguồn: Bài báo [18] ('Semantic-guided Masked Mutual Learning for Multi-m...') không chứa thông tin về 'SAM'",
+    "gán sai nguồn: 'MMG [22]' bị gán sai nguồn: Bài báo [22] ('SLaM-DiMM: Shared Latent Modeling for Diffusion Ba...') không chứa thông tin về 'MMG'",
+    "gán sai nguồn: 'Isensee et al. [8]' bị gán sai nguồn: Bài báo [8] ('3D MRI brain tumor segmentation using autoencoder ...') không chứa thông tin về 'Isensee'",
+    "gán sai nguồn: 'Transformers [9]' bị gán sai nguồn: Bài báo [9] ('mmFormer: Multimodal Medical Transformer for Incom...') không chứa thông tin về 'Transformers'",
+    "gán sai nguồn: 'Dice [13]' bị gán sai nguồn: Bài báo [13] ('Learnable Cross-modal Knowledge Distillation for M...') không chứa thông tin về 'Dice'",
+    "gán sai nguồn: 'MRI [29]' bị gán sai nguồn: Bài báo [29] ('The Brain Tumor Segmentation (BraTS) Challenge 202...') không chứa thông tin về 'MRI'",
+    "gán sai nguồn: 'T1ce [20]' bị gán sai nguồn: Bài báo [20] ('The Brain Tumor Segmentation (BraTS) Challenge 202...') không chứa thông tin về 'T1ce'",
+    "gán sai nguồn: 'References [1]' bị gán sai nguồn: Bài báo [1] ('CCSD: Cross-Modal Compositional Self-Distillation ...') không chứa thông tin về 'References'",
+    "science QA: claim–evidence: 'Key findings include consistent modality-contribution asymmetry (FLAIR dominant for whole tumor, T1ce for tumor core and enhancing tumor), s' phủ nhận uncertainty/calibration nhưng có 2 bằng chứng đã trích/xác minh",
+    "science QA: claim–evidence: '- **Evidence-dense benchmark matrices** for four analytical dimensions populated *only* with explicitly reported numbers from 11 of 31 paper' phủ nhận uncertainty/calibration nhưng có 2 bằng chứng đã trích/xác minh",
+    "science QA: claim–evidence: '- **Absent** (no retrieved evidence): uncertainty quantification, calibration, failure detection, external clinical validation beyond BraTS ' phủ nhận uncertainty/calibration nhưng có 2 bằng chứng đã trích/xác minh",
+    "science QA: claim–evidence: '**Clinical reliability evidence void.** No method in the corpus reports formal uncertainty quantification, calibration curves, or failure de' phủ nhận uncertainty/calibration nhưng có 2 bằng chứng đã trích/xác minh",
+    "science QA: claim–evidence: 'Early/late fusion lack missing-modality robustness; synthesis methods report image quality (PSNR/SSIM) without downstream segmentation Dice;' phủ nhận uncertainty/calibration nhưng có 2 bằng chứng đã trích/xác minh",
+    "science QA: khẳng định tuyệt đối ở thân bài: 'Unavailable information is marked **NR** (Not Reported); absence of evidence is never treated as evidence of absence.' — hạ giọng (may/suggests) hoặc gắn nguồn/phạm vi corpus",
+    "science QA: khẳng định tuyệt đối ở thân bài: 'Is synthesis necessary if distillation matches segmentation? |' — hạ giọng (may/suggests) hoặc gắn nguồn/phạm vi corpus",
+    "science QA: khẳng định tuyệt đối ở thân bài: 'The baselines, BraTS editions, missing configurations, and metric scales differ, making cross-study ranking impossible.' — hạ giọng (may/suggests) hoặc gắn nguồn/phạm vi corpus",
+    "science QA: khẳng định tuyệt đối ở thân bài: 'The synthesized evidence reveals fundamental trade-offs across fusion strategies and missing-modality learning families ' — hạ giọng (may/suggests) hoặc gắn nguồn/phạm vi corpus",
+    "science QA: khẳng định tuyệt đối ở thân bài: '3. **Evaluation-protocol heterogeneity prevents meta-analysis.** As detailed in Section 5.1.1, BraTS edition mismatch (2' — hạ giọng (may/suggests) hoặc gắn nguồn/phạm vi corpus",
+    "science QA: sổ cái: '…other 20 contributed no verifiable record in the retrieved passages. The ledger is **not exhaustive** of every number in the corpus — it reflects only…' — sổ cái chỉ gồm số liệu in nguyên văn trong đoạn truy xuất, không phải 'exhaustive'",
+    "science QA: thuật ngữ không nhất quán: full-modality ×12, full-modal ×2, full modality ×1 — chọn một cách viết (định nghĩa viết tắt một lần)",
+    "science QA: overclaim (abstract): 'Key findings include consistent modality-contribution asymmetry (FLAIR dominant for whole tumor, T1ce for tumor core and' — xếp hạng/khẳng định mạnh không gắn với cùng giao thức đánh giá",
+    "science QA: taxonomy: [1] nằm ở 3 nhóm của trục 'A. Fusion Strategy' (Adaptive; Attention-Based; Hybrid) — chọn nhóm chính hoặc giải thích",
+    "science QA: taxonomy: [21] nằm ở 2 nhóm của trục 'A. Fusion Strategy' (Hybrid; Modality-Specific Encoder) — chọn nhóm chính hoặc giải thích",
+    "science QA: taxonomy: [3] nằm ở 2 nhóm của trục 'A. Fusion Strategy' (Adaptive; Hybrid) — chọn nhóm chính hoặc giải thích",
+    "science QA: taxonomy: [4] nằm ở 3 nhóm của trục 'A. Fusion Strategy' (Adaptive; Hybrid; Modality-Specific Encoder) — chọn nhóm chính hoặc giải thích",
+    "science QA: taxonomy: [5] nằm ở 2 nhóm của trục 'A. Fusion Strategy' (Early; Late) — chọn nhóm chính hoặc giải thích",
+    "science QA: taxonomy: [7] nằm ở 2 nhóm của trục 'A. Fusion Strategy' (Hybrid; Modality-Specific Encoder) — chọn nhóm chính hoặc giải thích",
+    "science QA: bảng '**Table 4: Datasets and evaluation metrics reported in the s' dùng NR nhưng không định nghĩa (NR = không báo cáo/không trích được, không phải 'không làm')"
+  ],
+  "references": {
+    "references": [
+      {
+        "paper_id": "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "b5895376-8243-58fb-b03e-fc9ffd10e765",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "published"
+      },
+      {
+        "paper_id": "ea02235e-0e39-5af4-9ea7-f43e4c28f31a",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "1bfead36-f4cc-58f3-9eb9-ae619c74772d",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "3b54afea-d9b8-5c98-9371-b3953db3b746",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "b480e2eb-b7cf-515d-9645-6debf6d36d15",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "bc635452-5fc5-55c9-8ccf-a9bb07ba8564",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "published"
+      },
+      {
+        "paper_id": "f7f5d237-2215-54d5-887a-06f70c5259e5",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "5695a1e0-d789-5bbf-86b2-a99973fd53b5",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "07f7d522-2cc2-55e6-96ae-4d8b99cca9a2",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "4cce1762-0486-55fa-ad6c-de87810a4e5d",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "1ba755f8-1476-5d5d-ad54-adbbd07f6d38",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "3b847447-be75-5088-960a-40728863b18c",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "b859a356-dfc5-52ef-b123-00cb8eb55e90",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "ad9ae7f0-cb16-57d4-8386-e1a11958c3c1",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "02494c8f-9abd-58ab-9caf-ee286015080d",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "af9e8061-7ae7-5701-8d22-55ee60f2bd08",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "published"
+      },
+      {
+        "paper_id": "6fb521c4-4ab3-586d-88f0-dafbae167f8c",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "6a620f46-3d57-5e17-8f19-3403ff11f91f",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "4509ed48-ee93-5aab-b501-e3825db27c7d",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "2879ced4-852d-5bca-a2cf-350ccbfb96a2",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "846a4576-9186-5828-b5f1-f62cc4417c97",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "0479694d-bf2b-5dc3-b0c4-25c378f15e8b",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "677bfa1c-eecb-5873-bb3b-780d2d724931",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "51ab6624-90c8-5904-bcce-21e1fc2f6e0e",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "92e311e0-aa46-5e4c-9f4f-3fe4557ef629",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      },
+      {
+        "paper_id": "962104b3-9b9d-5d27-a067-a22816f46bef",
+        "status": "CATALOG_MATCHED",
+        "missing": [],
+        "issues": [],
+        "publication": "preprint"
+      }
+    ],
+    "counts": {
+      "CATALOG_MATCHED": 29
+    },
+    "duplicates": 0,
+    "publication": {
+      "preprint": 26,
+      "published": 3
+    }
+  },
+  "traceability": {
+    "counts": {
+      "TRACED": 74,
+      "UNTRACED": 0,
+      "NO_CITATION": 0
+    },
+    "untraced": [],
+    "traced_sample": [
+      {
+        "block": "table#2",
+        "location": "row 1, WT Dice",
+        "value": "88.95",
+        "cites": [
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "07f7d522-2cc2-55e6-96ae-4d8b99cca9a2",
+        "pages": [
+          1,
+          11
+        ],
+        "pdf_sha256": "e23c2e128bb60a9a36df502d876581e37c2315f3c0905f154623805c68c0ffb6"
+      },
+      {
+        "block": "table#2",
+        "location": "row 1, TC Dice",
+        "value": "85.06",
+        "cites": [
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "07f7d522-2cc2-55e6-96ae-4d8b99cca9a2",
+        "pages": [
+          1,
+          11
+        ],
+        "pdf_sha256": "e23c2e128bb60a9a36df502d876581e37c2315f3c0905f154623805c68c0ffb6"
+      },
+      {
+        "block": "table#2",
+        "location": "row 1, ET Dice",
+        "value": "82.03",
+        "cites": [
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "07f7d522-2cc2-55e6-96ae-4d8b99cca9a2",
+        "pages": [
+          1,
+          11
+        ],
+        "pdf_sha256": "e23c2e128bb60a9a36df502d876581e37c2315f3c0905f154623805c68c0ffb6"
+      },
+      {
+        "block": "table#2",
+        "location": "row 1, WT HD95 (mm)",
+        "value": "8.498",
+        "cites": [
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "07f7d522-2cc2-55e6-96ae-4d8b99cca9a2",
+        "pages": [
+          1,
+          11
+        ],
+        "pdf_sha256": "e23c2e128bb60a9a36df502d876581e37c2315f3c0905f154623805c68c0ffb6"
+      },
+      {
+        "block": "table#2",
+        "location": "row 1, TC HD95 (mm)",
+        "value": "17.337",
+        "cites": [
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "07f7d522-2cc2-55e6-96ae-4d8b99cca9a2",
+        "pages": [
+          1,
+          11
+        ],
+        "pdf_sha256": "e23c2e128bb60a9a36df502d876581e37c2315f3c0905f154623805c68c0ffb6"
+      },
+      {
+        "block": "table#2",
+        "location": "row 1, ET HD95 (mm)",
+        "value": "17.805",
+        "cites": [
+          11
+        ],
+        "status": "TRACED",
+        "paper_id": "07f7d522-2cc2-55e6-96ae-4d8b99cca9a2",
+        "pages": [
+          1,
+          11
+        ],
+        "pdf_sha256": "e23c2e128bb60a9a36df502d876581e37c2315f3c0905f154623805c68c0ffb6"
+      },
+      {
+        "block": "table#2",
+        "location": "row 2, WT Dice",
+        "value": "90.09",
+        "cites": [
+          16
+        ],
+        "status": "TRACED",
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "pages": [
+          7
+        ],
+        "pdf_sha256": "4fa7cdd035bc8075c9db46b2540f76ff802a18b514af7baf8ca5b72ae1b8a591"
+      },
+      {
+        "block": "table#2",
+        "location": "row 2, TC Dice",
+        "value": "81.73",
+        "cites": [
+          16
+        ],
+        "status": "TRACED",
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "pages": [
+          7
+        ],
+        "pdf_sha256": "4fa7cdd035bc8075c9db46b2540f76ff802a18b514af7baf8ca5b72ae1b8a591"
+      },
+      {
+        "block": "table#2",
+        "location": "row 2, ET Dice",
+        "value": "78.73",
+        "cites": [
+          16
+        ],
+        "status": "TRACED",
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "pages": [
+          7
+        ],
+        "pdf_sha256": "4fa7cdd035bc8075c9db46b2540f76ff802a18b514af7baf8ca5b72ae1b8a591"
+      },
+      {
+        "block": "table#2",
+        "location": "row 2, WT HD95 (mm)",
+        "value": "4.964",
+        "cites": [
+          16
+        ],
+        "status": "TRACED",
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "pages": [
+          7
+        ],
+        "pdf_sha256": "4fa7cdd035bc8075c9db46b2540f76ff802a18b514af7baf8ca5b72ae1b8a591"
+      },
+      {
+        "block": "table#2",
+        "location": "row 2, TC HD95 (mm)",
+        "value": "9.769",
+        "cites": [
+          16
+        ],
+        "status": "TRACED",
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "pages": [
+          7
+        ],
+        "pdf_sha256": "4fa7cdd035bc8075c9db46b2540f76ff802a18b514af7baf8ca5b72ae1b8a591"
+      },
+      {
+        "block": "table#2",
+        "location": "row 2, ET HD95 (mm)",
+        "value": "17.947",
+        "cites": [
+          16
+        ],
+        "status": "TRACED",
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "pages": [
+          7
+        ],
+        "pdf_sha256": "4fa7cdd035bc8075c9db46b2540f76ff802a18b514af7baf8ca5b72ae1b8a591"
+      },
+      {
+        "block": "table#2",
+        "location": "row 3, WT Dice",
+        "value": "90.00",
+        "cites": [
+          16
+        ],
+        "status": "TRACED",
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "pages": [
+          7
+        ],
+        "pdf_sha256": "4fa7cdd035bc8075c9db46b2540f76ff802a18b514af7baf8ca5b72ae1b8a591"
+      },
+      {
+        "block": "table#2",
+        "location": "row 3, TC Dice",
+        "value": "81.94",
+        "cites": [
+          16
+        ],
+        "status": "TRACED",
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "pages": [
+          7
+        ],
+        "pdf_sha256": "4fa7cdd035bc8075c9db46b2540f76ff802a18b514af7baf8ca5b72ae1b8a591"
+      },
+      {
+        "block": "table#2",
+        "location": "row 3, ET Dice",
+        "value": "78.93",
+        "cites": [
+          16
+        ],
+        "status": "TRACED",
+        "paper_id": "ec18533d-52b1-5c32-b395-a74c3c070396",
+        "pages": [
+          7
+        ],
+        "pdf_sha256": "4fa7cdd035bc8075c9db46b2540f76ff802a18b514af7baf8ca5b72ae1b8a591"
+      },
+      {
+        "block": "table#2",
+        "location": "row 4, WT Dice",
+        "value": "0.9050",
+        "cites": [
+          5
+        ],
+        "status": "TRACED",
+        "paper_id": "3b54afea-d9b8-5c98-9371-b3953db3b746",
+        "pages": [
+          8,
+          10
+        ],
+        "pdf_sha256": "151d663965b5d26808f08818021238a66d97a35cd380477b0dbde08dbbf46395"
+      },
+      {
+        "block": "table#2",
+        "location": "row 4, TC Dice",
+        "value": "0.8378",
+        "cites": [
+          5
+        ],
+        "status": "TRACED",
+        "paper_id": "3b54afea-d9b8-5c98-9371-b3953db3b746",
+        "pages": [
+          8,
+          10
+        ],
+        "pdf_sha256": "151d663965b5d26808f08818021238a66d97a35cd380477b0dbde08dbbf46395"
+      },
+      {
+        "block": "table#2",
+        "location": "row 4, ET Dice",
+        "value": "0.7859",
+        "cites": [
+          5
+        ],
+        "status": "TRACED",
+        "paper_id": "3b54afea-d9b8-5c98-9371-b3953db3b746",
+        "pages": [
+          8,
+          10
+        ],
+        "pdf_sha256": "151d663965b5d26808f08818021238a66d97a35cd380477b0dbde08dbbf46395"
+      },
+      {
+        "block": "table#2",
+        "location": "row 5, WT Dice",
+        "value": "0.8739",
+        "cites": [
+          5
+        ],
+        "status": "TRACED",
+        "paper_id": "3b54afea-d9b8-5c98-9371-b3953db3b746",
+        "pages": [
+          8,
+          10
+        ],
+        "pdf_sha256": "151d663965b5d26808f08818021238a66d97a35cd380477b0dbde08dbbf46395"
+      },
+      {
+        "block": "table#2",
+        "location": "row 5, TC Dice",
+        "value": "0.7748",
+        "cites": [
+          5
+        ],
+        "status": "TRACED",
+        "paper_id": "3b54afea-d9b8-5c98-9371-b3953db3b746",
+        "pages": [
+          8,
+          10
+        ],
+        "pdf_sha256": "151d663965b5d26808f08818021238a66d97a35cd380477b0dbde08dbbf46395"
+      },
+      {
+        "block": "table#2",
+        "location": "row 5, ET Dice",
+        "value": "0.7831",
+        "cites": [
+          5
+        ],
+        "status": "TRACED",
+        "paper_id": "3b54afea-d9b8-5c98-9371-b3953db3b746",
+        "pages": [
+          8,
+          10
+        ],
+        "pdf_sha256": "151d663965b5d26808f08818021238a66d97a35cd380477b0dbde08dbbf46395"
+      },
+      {
+        "block": "table#2",
+        "location": "row 6, WT Dice",
+        "value": "86.47",
+        "cites": [
+          1
+        ],
+        "status": "TRACED",
+        "paper_id": "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7",
+        "pages": [
+          16
+        ],
+        "pdf_sha256": "910e232ab97c83c8cea4383cc49970df670a88497d3658fceac0aff384bd1f2a"
+      },
+      {
+        "block": "table#2",
+        "location": "row 6, TC Dice",
+        "value": "78.23",
+        "cites": [
+          1
+        ],
+        "status": "TRACED",
+        "paper_id": "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7",
+        "pages": [
+          16
+        ],
+        "pdf_sha256": "910e232ab97c83c8cea4383cc49970df670a88497d3658fceac0aff384bd1f2a"
+      },
+      {
+        "block": "table#2",
+        "location": "row 6, ET Dice",
+        "value": "62.70",
+        "cites": [
+          1
+        ],
+        "status": "TRACED",
+        "paper_id": "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7",
+        "pages": [
+          16
+        ],
+        "pdf_sha256": "910e232ab97c83c8cea4383cc49970df670a88497d3658fceac0aff384bd1f2a"
+      },
+      {
+        "block": "table#2",
+        "location": "row 6, WT Dice",
+        "value": "86.47",
+        "cites": [
+          1
+        ],
+        "status": "TRACED",
+        "paper_id": "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7",
+        "pages": [
+          16
+        ],
+        "pdf_sha256": "910e232ab97c83c8cea4383cc49970df670a88497d3658fceac0aff384bd1f2a"
+      },
+      {
+        "block": "table#2",
+        "location": "row 6, TC Dice",
+        "value": "78.23",
+        "cites": [
+          1
+        ],
+        "status": "TRACED",
+        "paper_id": "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7",
+        "pages": [
+          16
+        ],
+        "pdf_sha256": "910e232ab97c83c8cea4383cc49970df670a88497d3658fceac0aff384bd1f2a"
+      },
+      {
+        "block": "table#2",
+        "location": "row 6, ET Dice",
+        "value": "62.70",
+        "cites": [
+          1
+        ],
+        "status": "TRACED",
+        "paper_id": "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7",
+        "pages": [
+          16
+        ],
+        "pdf_sha256": "910e232ab97c83c8cea4383cc49970df670a88497d3658fceac0aff384bd1f2a"
+      },
+      {
+        "block": "table#2",
+        "location": "row 7, WT Dice",
+        "value": "90.40",
+        "cites": [
+          1
+        ],
+        "status": "TRACED",
+        "paper_id": "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7",
+        "pages": [
+          16
+        ],
+        "pdf_sha256": "910e232ab97c83c8cea4383cc49970df670a88497d3658fceac0aff384bd1f2a"
+      },
+      {
+        "block": "table#2",
+        "location": "row 10, WT Dice",
+        "value": "86.47",
+        "cites": [
+          1
+        ],
+        "status": "TRACED",
+        "paper_id": "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7",
+        "pages": [
+          16
+        ],
+        "pdf_sha256": "910e232ab97c83c8cea4383cc49970df670a88497d3658fceac0aff384bd1f2a"
+      },
+      {
+        "block": "table#2",
+        "location": "row 10, TC Dice",
+        "value": "78.23",
+        "cites": [
+          1
+        ],
+        "status": "TRACED",
+        "paper_id": "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7",
+        "pages": [
+          16
+        ],
+        "pdf_sha256": "910e232ab97c83c8cea4383cc49970df670a88497d3658fceac0aff384bd1f2a"
+      },
+      {
+        "block": "table#2",
+        "location": "row 10, ET Dice",
+        "value": "62.70",
+        "cites": [
+          1
+        ],
+        "status": "TRACED",
+        "paper_id": "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7",
+        "pages": [
+          16
+        ],
+        "pdf_sha256": "910e232ab97c83c8cea4383cc49970df670a88497d3658fceac0aff384bd1f2a"
+      },
+      {
+        "block": "table#2",
+        "location": "row 10, WT Dice",
+        "value": "86.47",
+        "cites": [
+          1
+        ],
+        "status": "TRACED",
+        "paper_id": "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7",
+        "pages": [
+          16
+        ],
+        "pdf_sha256": "910e232ab97c83c8cea4383cc49970df670a88497d3658fceac0aff384bd1f2a"
+      },
+      {
+        "block": "table#2",
+        "location": "row 10, TC Dice",
+        "value": "78.23",
+        "cites": [
+          1
+        ],
+        "status": "TRACED",
+        "paper_id": "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7",
+        "pages": [
+          16
+        ],
+        "pdf_sha256": "910e232ab97c83c8cea4383cc49970df670a88497d3658fceac0aff384bd1f2a"
+      },
+      {
+        "block": "table#2",
+        "location": "row 10, ET Dice",
+        "value": "62.70",
+        "cites": [
+          1
+        ],
+        "status": "TRACED",
+        "paper_id": "181bb2ae-e29d-5ecd-826b-8f9953c3e5a7",
+        "pages": [
+          16
+        ],
+        "pdf_sha256": "910e232ab97c83c8cea4383cc49970df670a88497d3658fceac0aff384bd1f2a"
+      },
+      {
+        "block": "table#2",
+        "location": "row 15, WT Dice",
+        "value": "0.9100",
+        "cites": [
+          8
+        ],
+        "status": "TRACED",
+        "paper_id": "f7f5d237-2215-54d5-887a-06f70c5259e5",
+        "pages": [
+          7
+        ],
+        "pdf_sha256": "020c3b4626b320f1b812351f1ace754f7366d7e33040787120c973b75b9ef583"
+      },
+      {
+        "block": "table#2",
+        "location": "row 15, TC Dice",
+        "value": "0.8668",
+        "cites": [
+          8
+        ],
+        "status": "TRACED",
+        "paper_id": "f7f5d237-2215-54d5-887a-06f70c5259e5",
+        "pages": [
+          7
+        ],
+        "pdf_sha256": "020c3b4626b320f1b812351f1ace754f7366d7e33040787120c973b75b9ef583"
+      },
+      {
+        "block": "table#2",
+        "location": "row 15, ET Dice",
+        "value": "0.8233",
+        "cites": [
+          8
+        ],
+        "status": "TRACED",
+        "paper_id": "f7f5d237-2215-54d5-887a-06f70c5259e5",
+        "pages": [
+          7
+        ],
+        "pdf_sha256": "020c3b4626b320f1b812351f1ace754f7366d7e33040787120c973b75b9ef583"
+      },
+      {
+        "block": "table#2",
+        "location": "row 15, WT HD95 (mm)",
+        "value": "4.516",
+        "cites": [
+          8
+        ],
+        "status": "TRACED",
+        "paper_id": "f7f5d237-2215-54d5-887a-06f70c5259e5",
+        "pages": [
+          7
+        ],
+        "pdf_sha256": "020c3b4626b320f1b812351f1ace754f7366d7e33040787120c973b75b9ef583"
+      },
+      {
+        "block": "table#2",
+        "location": "row 16, WT Dice",
+        "value": "0.9042",
+        "cites": [
+          8
+        ],
+        "status": "TRACED",
+        "paper_id": "f7f5d237-2215-54d5-887a-06f70c5259e5",
+        "pages": [
+          7
+        ],
+        "pdf_sha256": "020c3b4626b320f1b812351f1ace754f7366d7e33040787120c973b75b9ef583"
+      },
+      {
+        "block": "table#2",
+        "location": "row 16, TC Dice",
+        "value": "0.8596",
+        "cites": [
+          8
+        ],
+        "status": "TRACED",
+        "paper_id": "f7f5d237-2215-54d5-887a-06f70c5259e5",
+        "pages": [
+          7
+        ],
+        "pdf_sha256": "020c3b4626b320f1b812351f1ace754f7366d7e33040787120c973b75b9ef583"
+      }
+    ]
+  },
+  "comparability": {
+    "chart_problems": []
+  },
+  "research_questions": {
+    "problems": []
+  },
+  "review_claims": {
+    "problems": [],
+    "declared_review_type": null,
+    "protocol_problems": []
+  },
+  "display_items": {
+    "counts": {
+      "figures": 10,
+      "tables": 8
+    },
+    "target": {
+      "figures": [
+        5,
+        9
+      ],
+      "tables": [
+        3,
+        6
+      ]
+    },
+    "chart_types": [
+      "timeline",
+      "heatmap",
+      "xyline",
+      "panels",
+      "evidence_map"
+    ],
+    "warnings": [
+      "Figure: có 10, vượt mục tiêu 5–9",
+      "Figure: 10 khối nhưng chỉ 3 số được nhắc trong thân bài",
+      "Table: có 8, vượt mục tiêu 3–6",
+      "Table [9, 10, 11, 12] được nhắc trong thân bài nhưng không có khối tương ứng"
+    ]
+  },
+  "consistency": [
+    "tên method khác nhau cho cùng nguồn [5] giữa các bảng: ['Multi-view Fusion', 'Wang et al. (2017) cascaded anisotropic networks with multi-view fusion']",
+    "tên method khác nhau cho cùng nguồn [1] giữa các bảng: ['Chen et al.', 'Chen et al.  (attention-gated)']",
+    "tên method khác nhau cho cùng nguồn [8] giữa các bảng: ['Isensee et al.  (Ensemble 10)', 'Isensee et al.  (Single)']",
+    "tên method khác nhau cho cùng nguồn [10] giữa các bảng: ['Swin UNETR', 'Swin UNETR  (Table 4)']",
+    "tên method khác nhau cho cùng nguồn [25] giữa các bảng: ['CNMCPMI2023', 'DeepRadOnc', 'MIASINTEF', 'NVAUTO', 'SY', 'blackbean', 'isahajmistry']",
+    "Abstract chưa nêu rõ phát hiện định lượng chính",
+    "viết tắt HD95 dùng 26 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (HD95)'",
+    "viết tắt M3AE dùng 21 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (M3AE)'",
+    "viết tắt SSIM dùng 18 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (SSIM)'",
+    "viết tắt SMU dùng 17 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (SMU)'",
+    "viết tắt SMML dùng 16 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (SMML)'",
+    "viết tắt PSNR dùng 16 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (PSNR)'",
+    "viết tắt CV dùng 10 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (CV)'",
+    "viết tắt MRI dùng 8 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (MRI)'",
+    "viết tắt RQ3 dùng 7 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (RQ3)'",
+    "viết tắt GPU dùng 7 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (GPU)'",
+    "viết tắt SAM dùng 7 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (SAM)'",
+    "viết tắt RQ2 dùng 6 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (RQ2)'",
+    "viết tắt SOTA dùng 6 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (SOTA)'",
+    "viết tắt V100 dùng 6 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (V100)'",
+    "viết tắt GAE dùng 5 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (GAE)'",
+    "viết tắt SSA dùng 5 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (SSA)'",
+    "viết tắt OOD dùng 4 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (OOD)'",
+    "viết tắt RQ1 dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (RQ1)'",
+    "viết tắt RQ4 dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (RQ4)'",
+    "viết tắt HCC dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (HCC)'",
+    "viết tắt ECE dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (ECE)'",
+    "viết tắt EMMA dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (EMMA)'",
+    "viết tắt KL dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (KL)'",
+    "viết tắt MMG dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (MMG)'",
+    "viết tắt PACS dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (PACS)'",
+    "viết tắt METS dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (METS)'",
+    "viết tắt F4 dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (F4)'",
+    "có 40 viết tắt nhưng không có mục/bảng danh sách viết tắt (Abbreviations)",
+    "đánh số Figure caption không liên tục/trùng: [1, 2, 10]",
+    "bảng 'Segmentation performance (Dice, HD95) by fusion paradigm, BraTS edition, split, ' trộn Dice dạng tỷ lệ (0–1) và % (0–100) trong cùng cột; tách cột hoặc ghi rõ đơn vị từng dòng"
+  ],
+  "science_qa": [
+    "claim–evidence: 'Key findings include consistent modality-contribution asymmetry (FLAIR dominant for whole tumor, T1ce for tumor core and enhancing tumor), s' phủ nhận uncertainty/calibration nhưng có 2 bằng chứng đã trích/xác minh",
+    "claim–evidence: '- **Evidence-dense benchmark matrices** for four analytical dimensions populated *only* with explicitly reported numbers from 11 of 31 paper' phủ nhận uncertainty/calibration nhưng có 2 bằng chứng đã trích/xác minh",
+    "claim–evidence: '- **Absent** (no retrieved evidence): uncertainty quantification, calibration, failure detection, external clinical validation beyond BraTS ' phủ nhận uncertainty/calibration nhưng có 2 bằng chứng đã trích/xác minh",
+    "claim–evidence: '**Clinical reliability evidence void.** No method in the corpus reports formal uncertainty quantification, calibration curves, or failure de' phủ nhận uncertainty/calibration nhưng có 2 bằng chứng đã trích/xác minh",
+    "claim–evidence: 'Early/late fusion lack missing-modality robustness; synthesis methods report image quality (PSNR/SSIM) without downstream segmentation Dice;' phủ nhận uncertainty/calibration nhưng có 2 bằng chứng đã trích/xác minh",
+    "khẳng định tuyệt đối ở thân bài: 'Unavailable information is marked **NR** (Not Reported); absence of evidence is never treated as evidence of absence.' — hạ giọng (may/suggests) hoặc gắn nguồn/phạm vi corpus",
+    "khẳng định tuyệt đối ở thân bài: 'Is synthesis necessary if distillation matches segmentation? |' — hạ giọng (may/suggests) hoặc gắn nguồn/phạm vi corpus",
+    "khẳng định tuyệt đối ở thân bài: 'The baselines, BraTS editions, missing configurations, and metric scales differ, making cross-study ranking impossible.' — hạ giọng (may/suggests) hoặc gắn nguồn/phạm vi corpus",
+    "khẳng định tuyệt đối ở thân bài: 'The synthesized evidence reveals fundamental trade-offs across fusion strategies and missing-modality learning families ' — hạ giọng (may/suggests) hoặc gắn nguồn/phạm vi corpus",
+    "khẳng định tuyệt đối ở thân bài: '3. **Evaluation-protocol heterogeneity prevents meta-analysis.** As detailed in Section 5.1.1, BraTS edition mismatch (2' — hạ giọng (may/suggests) hoặc gắn nguồn/phạm vi corpus",
+    "sổ cái: '…other 20 contributed no verifiable record in the retrieved passages. The ledger is **not exhaustive** of every number in the corpus — it reflects only…' — sổ cái chỉ gồm số liệu in nguyên văn trong đoạn truy xuất, không phải 'exhaustive'",
+    "thuật ngữ không nhất quán: full-modality ×12, full-modal ×2, full modality ×1 — chọn một cách viết (định nghĩa viết tắt một lần)",
+    "overclaim (abstract): 'Key findings include consistent modality-contribution asymmetry (FLAIR dominant for whole tumor, T1ce for tumor core and' — xếp hạng/khẳng định mạnh không gắn với cùng giao thức đánh giá",
+    "taxonomy: [1] nằm ở 3 nhóm của trục 'A. Fusion Strategy' (Adaptive; Attention-Based; Hybrid) — chọn nhóm chính hoặc giải thích",
+    "taxonomy: [21] nằm ở 2 nhóm của trục 'A. Fusion Strategy' (Hybrid; Modality-Specific Encoder) — chọn nhóm chính hoặc giải thích",
+    "taxonomy: [3] nằm ở 2 nhóm của trục 'A. Fusion Strategy' (Adaptive; Hybrid) — chọn nhóm chính hoặc giải thích",
+    "taxonomy: [4] nằm ở 3 nhóm của trục 'A. Fusion Strategy' (Adaptive; Hybrid; Modality-Specific Encoder) — chọn nhóm chính hoặc giải thích",
+    "taxonomy: [5] nằm ở 2 nhóm của trục 'A. Fusion Strategy' (Early; Late) — chọn nhóm chính hoặc giải thích",
+    "taxonomy: [7] nằm ở 2 nhóm của trục 'A. Fusion Strategy' (Hybrid; Modality-Specific Encoder) — chọn nhóm chính hoặc giải thích",
+    "bảng '**Table 4: Datasets and evaluation metrics reported in the s' dùng NR nhưng không định nghĩa (NR = không báo cáo/không trích được, không phải 'không làm')"
+  ],
+  "study_profile": {
+    "ea02235e-0e39-5af4-9ea7-f43e4c28f31a": {
+      "missing_random": {
+        "value": "Yes",
+        "page": 24,
+        "quote": "Comparative Experiments We conducted systematic comparative experiments by randomly omitting input modalities to mimic clinical modality-missing scenarios, thus creating 15 input configurations encompassing single-, dual"
+      }
+    },
+    "b480e2eb-b7cf-515d-9645-6debf6d36d15": {
+      "cross_validation": {
+        "value": "Yes",
+        "page": 8,
+        "quote": "Train: 5 fold cross-validation on the training data (285 cases)."
+      }
+    },
+    "bc635452-5fc5-55c9-8ccf-a9bb07ba8564": {
+      "code_available": {
+        "value": "Yes",
+        "page": 1,
+        "quote": "The code repository address is https://github.com/billhhh/ShaSpec/.1 1."
+      }
+    },
+    "5695a1e0-d789-5bbf-86b2-a99973fd53b5": {
+      "code_available": {
+        "value": "Yes",
+        "page": 1,
+        "quote": "The code is available at https://github.com/YaoZhang93/mmFormer."
+      }
+    },
+    "ac200766-90a2-5ca0-ac9c-f9aca8fb60d5": {
+      "cross_validation": {
+        "value": "Yes",
+        "page": 9,
+        "quote": "Five-fold cross-validation benchmarks in terms of mean Dice score values."
+      }
+    },
+    "b5895376-8243-58fb-b03e-fc9ffd10e765": {
+      "uncertainty": {
+        "value": "Yes",
+        "page": 2,
+        "quote": "Therefore, applying multi-modal images can reduce the information uncertainty and improve clinical diagnosis and segmentation accuracy."
+      },
+      "cross_validation": {
+        "value": "Yes",
+        "page": 2,
+        "quote": "The main contributions of our method are three-fold: 1) A correlation representation block is introduced to discover the latent multi-source correlation representation. 2) A fusion strategy based on attention mechanism w"
+      }
+    },
+    "b859a356-dfc5-52ef-b123-00cb8eb55e90": {
+      "uncertainty": {
+        "value": "No",
+        "page": 13,
+        "quote": "The AUC is a metric that measures the overall discriminatory capacity of a model for all possible thresholds and allows for comparing the performance of the entries by each participant, even though it has no straightforw"
+      }
+    },
+    "ec18533d-52b1-5c32-b395-a74c3c070396": {
+      "cross_validation": {
+        "value": "No",
+        "page": 7,
+        "quote": "Since the ground truth for the validation set is not available, we conduct ﬁve-fold cross-validation evaluation on the training set for all methods."
+      }
+    },
+    "02494c8f-9abd-58ab-9caf-ee286015080d": {
+      "missing_random": {
+        "value": "Yes",
+        "page": 1,
+        "quote": "We then randomly mask one or more modalities in each branch."
+      }
+    },
+    "af9e8061-7ae7-5701-8d22-55ee60f2bd08": {
+      "missing_random": {
+        "value": "Yes",
+        "page": 1,
+        "quote": "In the ﬁrst stage, a multimodal masked autoencoder (M3AE) is proposed, where both ran- dom modalities (i.e., modality dropout) and random patches of the remaining modalities are masked for a reconstruc- tion task, for se"
+      },
+      "code_available": {
+        "value": "Yes",
+        "page": 1,
+        "quote": "Our code is available at: https://github.com/ccarliu/m3ae."
+      }
+    },
+    "6fb521c4-4ab3-586d-88f0-dafbae167f8c": {
+      "code_available": {
+        "value": "Yes",
+        "page": 3,
+        "quote": "Furthermore, skull-stripping mitigates potential facial reconstruction/recognition of the 1 https://cbica.github.io/CaPTk/ 2 https://github.com/FETS-AI/Front-End/"
+      }
+    },
+    "07f7d522-2cc2-55e6-96ae-4d8b99cca9a2": {
+      "cross_validation": {
+        "value": "Yes",
+        "page": 11,
+        "quote": "On the training set cross-validation, the performance of the nnU-Net baseline is very close to the conﬁgurations that were speciﬁcally modiﬁed for the BraTS challenge."
+      }
+    },
+    "6a620f46-3d57-5e17-8f19-3403ff11f91f": {
+      "uncertainty": {
+        "value": "Yes",
+        "page": 1,
+        "quote": "Our style matching module adaptively recalibrates the representation space by learning a matching function to transfer the informative and textural features from full-modality path into a missing-modality path."
+      }
+    },
+    "4509ed48-ee93-5aab-b501-e3825db27c7d": {
+      "missing_random": {
+        "value": "Yes",
+        "page": 8,
+        "quote": "In contrast, for validation and testing, one of the modalities is randomly omitted in each sample to evaluate the model’s ability to synthesize the missing modality."
+      }
+    },
+    "92e311e0-aa46-5e4c-9f4f-3fe4557ef629": {
+      "cross_validation": {
+        "value": "Yes",
+        "page": 14,
+        "quote": "Because distribution of the intensity values in this dataset is very variable from one subject to another, we used a 7 fold cross validation for training."
+      }
+    }
+  },
+  "draft_gate": {
+    "passed": false,
+    "blocking": 1,
+    "warnings": 60
+  },
+  "redacted_cells": [
+    {
+      "block": "table#2",
+      "location": "row 15, TC HD95 (mm)",
+      "value": "6.855",
+      "cites": [
+        8
+      ]
+    },
+    {
+      "block": "table#2",
+      "location": "row 15, ET HD95 (mm)",
+      "value": "3.926",
+      "cites": [
+        8
+      ]
+    }
+  ]
+}
