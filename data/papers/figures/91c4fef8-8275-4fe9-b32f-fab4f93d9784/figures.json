@@ -1,0 +1,74 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 2,
+  "caption": "Figure 1: Comparison of current Deepfake datasets. Both axes are shown in log scale - the DFDC is over an or- der of magnitude larger than any other available dataset, both in terms of the number of frames and number of videos. Rough boundaries for dataset ”generation” (as given in [18]) also shown. Overlapping circles do not in- dicate inclusion; circle sizes are merely a visualization of the num",
+  "kind": "raster",
+  "width": 493,
+  "height": 495,
+  "source_title": "The_DeepFake_Detection_Challenge_DFDC_Dataset.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 7,
+  "caption": "Figure 3: A sample frame containing the various augmentations that were applied to the videos. Top row (from left to right): original, brightness, contrast, a logo overlay. Second row: dog ﬁlter, dots overlay, faces overlay, and ﬂower crown ﬁlter. Third row: grayscale, horizontal ﬂip, noise, and images overlay. Bottom row: shapes overlay, encoding quality level change, rotation, and text overlay. ",
+  "kind": "raster",
+  "width": 1032,
+  "height": 582,
+  "source_title": "The_DeepFake_Detection_Challenge_DFDC_Dataset.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 8,
+  "caption": "Figure 4: The average log loss for each augmenter and distractor. As expected, videos containing the noise and faces augmentations were among the most difﬁcult to predict accurately. Surprisingly however, the ﬂower ﬁlter, which only covers a portion of the forehead, was the most difﬁcult distractor while the dog ﬁlter, which covers the nose and mouth, was one of the easier ones to predict. Horizon",
+  "kind": "raster",
+  "width": 1032,
+  "height": 372,
+  "source_title": "The_DeepFake_Detection_Challenge_DFDC_Dataset.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 9,
+  "caption": "Figure 5: A selection of results of varying quality, where each row corresponds to a method (from top-to-bottom, MM/NN, DFAE, FSGAN, NTH, StyleGAN), and each column shows increasing quality from left to right. For a more detailed overview, see Section 5.",
+  "kind": "raster",
+  "width": 1032,
+  "height": 861,
+  "source_title": "The_DeepFake_Detection_Challenge_DFDC_Dataset.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 10,
+  "caption": "Figure 6: Correlation between the average precision of sub- mitted models for DFDC and real videos.",
+  "kind": "raster",
+  "width": 493,
+  "height": 490,
+  "source_title": "The_DeepFake_Detection_Challenge_DFDC_Dataset.pdf"
+ },
+ {
+  "file": "fig_6.png",
+  "page": 11,
+  "caption": "Figure 7: Detection metrics broken down by video type.",
+  "kind": "raster",
+  "width": 1032,
+  "height": 342,
+  "source_title": "The_DeepFake_Detection_Challenge_DFDC_Dataset.pdf"
+ },
+ {
+  "file": "fig_7.png",
+  "page": 12,
+  "caption": "Figure 8: Distribution of private test set log loss scores. The vertical line indicates random performance (i.e. predicting 0.5 for every video).",
+  "kind": "raster",
+  "width": 493,
+  "height": 486,
+  "source_title": "The_DeepFake_Detection_Challenge_DFDC_Dataset.pdf"
+ },
+ {
+  "file": "fig_8.png",
+  "page": 12,
+  "caption": "Figure 9: Weighted P/R curve, as described in Section 4. We set α = 100, which weights false positives 100x more than usual when calculating precision, and is designed to represent a more realistic distribution of DeepFake videos. Note that performance drops precipitously as more false positives are encountered.",
+  "kind": "raster",
+  "width": 493,
+  "height": 500,
+  "source_title": "The_DeepFake_Detection_Challenge_DFDC_Dataset.pdf"
+ }
+]

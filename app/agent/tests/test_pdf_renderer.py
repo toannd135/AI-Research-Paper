@@ -272,3 +272,16 @@ def test_single_column_figure_stays_in_one_column(browser):
         assert full.bounding_box()["width"] >= body * 0.95
     finally:
         page.close()
+
+
+def test_dead_image_dropped_and_figure_references_renumbered():
+    from app.pipeline.export.pdf_renderer import _drop_dead_images, report_to_html
+
+    md = (
+        "## 1. A\nSee Figure 2 for the flow.\n\n"
+        '**Figure 1: Dead photo**\n\n```image\n{"path": "does-not-exist.png", "caption": "x"}\n```\n\n'
+        '**Figure 2: Real chart**\n\n```chart\n{"type": "bar", "labels": ["a", "b"], "series": [{"name": "s", "values": [1, 2]}]}\n```\n'
+    )
+    assert "Dead photo" not in _drop_dead_images(md)
+    html = report_to_html(md)
+    assert "See Figure 1 for the flow" in html  # tham chiếu theo số hình mới sau khi bỏ hình hỏng

@@ -1,0 +1,83 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Figure 1: A side-by-side comparison of real and generated faces in image and frequency domain. The left side shows an example and the mean DCT spectrum of the FFHQ data set. The right side shows an example and the mean DCT spectrum of a data set sampled from StyleGAN trained on FFHQ. We plot the mean by averaging over 10,000 images.",
+  "kind": "raster",
+  "width": 946,
+  "height": 232,
+  "source_title": "Leveraging_Frequency_Analysis_for_Deep_Fake_Image_Recognition.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 5,
+  "caption": "Figure 3: The frequency spectrum resulting from different upsampling techniques. We plot the mean of the DCT spectrum. We estimate E[D(I)] by averaging over 10,000 images sampled from the corresponding network or the training data.",
+  "kind": "raster",
+  "width": 948,
+  "height": 234,
+  "source_title": "Leveraging_Frequency_Analysis_for_Deep_Fake_Image_Recognition.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 6,
+  "caption": "Figure 4: A heatmap of which frequencies are used for classiﬁcation. We extracted the weight vector of the regression classiﬁer trained on the different upsampling techniques. Then, we mapped it back to the corresponding frequencies. We plot the absolute value of the individual weights and clip their maximum value to 0.04 for better visibility.",
+  "kind": "raster",
+  "width": 914,
+  "height": 302,
+  "source_title": "Leveraging_Frequency_Analysis_for_Deep_Fake_Image_Recognition.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 8,
+  "caption": "Figure 5: Validation accuracy for the CCN-classiﬁer by Yu et al.. We report the validation accuracy during training for the ﬁrst 1,000 gradient steps, while dropping off in the pixel domain.",
+  "kind": "vector",
+  "width": 1048,
+  "height": 259,
+  "source_title": "Leveraging_Frequency_Analysis_for_Deep_Fake_Image_Recognition.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 8,
+  "caption": "Figure 6: Validation accuracy for our CNN-classiﬁer. We re- port the validation accuracy during training for the ﬁrst 20 epochs.",
+  "kind": "vector",
+  "width": 1054,
+  "height": 265,
+  "source_title": "Leveraging_Frequency_Analysis_for_Deep_Fake_Image_Recognition.pdf"
+ },
+ {
+  "file": "fig_6.png",
+  "page": 13,
+  "caption": "Figure 7: The frequency spectrum for real and generated faces (grayscale)",
+  "kind": "raster",
+  "width": 978,
+  "height": 365,
+  "source_title": "Leveraging_Frequency_Analysis_for_Deep_Fake_Image_Recognition.pdf"
+ },
+ {
+  "file": "fig_7.png",
+  "page": 13,
+  "caption": "Figure 8: The absolute difference between the spectra (grayscale)",
+  "kind": "raster",
+  "width": 609,
+  "height": 456,
+  "source_title": "Leveraging_Frequency_Analysis_for_Deep_Fake_Image_Recognition.pdf"
+ },
+ {
+  "file": "fig_8.png",
+  "page": 14,
+  "caption": "Figure 9: A heatmap of which frequencies the LASSO-regression uses. We extracted the weight vector of the regression classiﬁer and mapped it back to the corresponding frequencies. We plot the absolute value of the individual weights and clip their maximum value to 0.05 for better visibility. Note the general focus towards higher frequencies, as well as the top right and lower left corner.",
+  "kind": "raster",
+  "width": 425,
+  "height": 424,
+  "source_title": "Leveraging_Frequency_Analysis_for_Deep_Fake_Image_Recognition.pdf"
+ },
+ {
+  "file": "fig_9.png",
+  "page": 16,
+  "caption": "Figure 11: The frequency spectrum resulting from different upsampling techniques, as well as the absolute difference (grayscale)",
+  "kind": "raster",
+  "width": 784,
+  "height": 328,
+  "source_title": "Leveraging_Frequency_Analysis_for_Deep_Fake_Image_Recognition.pdf"
+ }
+]

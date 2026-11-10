@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 4,
+  "caption": "Fig. 1: Number of scholarly articles that are related to DeepFake in years from 2015 to 2020, obtained from Google Scholar on April 2021 with the query keyword “deepfake” applied to either title or full text of the papers.",
+  "kind": "vector",
+  "width": 622,
+  "height": 420,
+  "source_title": "DeepFakes_Detecting_Forged_and_Synthetic_Media_Content_Using_Machine_Learning.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 7,
+  "caption": "Fig. 2: A DeepFake creation model using two encoder-decoder combina- tions. In the training phases, the encoder-decoder set is used to learn the latent features of the input faces. While generation, two decoders are in- terchanged, such that latent face A is subjected to decoder B to generate the face A including the features of face B. The face images used in the ﬁgure are obtained from [35].",
+  "kind": "vector",
+  "width": 645,
+  "height": 673,
+  "source_title": "DeepFakes_Detecting_Forged_and_Synthetic_Media_Content_Using_Machine_Learning.pdf"
+ }
+]

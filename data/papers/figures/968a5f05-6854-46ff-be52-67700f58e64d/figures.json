@@ -1,0 +1,11 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 8,
+  "caption": "Figure 2. AUCROC Plots: Receiver Operating Characteristic (ROC) curves for a) DDIM, b) DDPM, and c) LDM, depicting the models’ performance in terms of the Area Under the Curve (AUC), along with their true positive and false positive rates.",
+  "kind": "raster",
+  "width": 517,
+  "height": 362,
+  "source_title": "Wavelet_Driven_Generalizable_Framework_for_Deepfake_Face_Forgery_Detection.pdf"
+ }
+]

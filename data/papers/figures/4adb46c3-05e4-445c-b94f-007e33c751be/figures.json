@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 10,
+  "caption": "Figure 6: Construction pipeline for the cross-generator evaluation set.",
+  "kind": "vector",
+  "width": 1064,
+  "height": 603,
+  "source_title": "Harnessing_CLIP_and_DINO_An_Uncertainty_Aware_Cascaded_Fusion_Network_for_Genera.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 14,
+  "caption": "Figure 9: t-SNE visualization of cross-domain detection features.",
+  "kind": "vector",
+  "width": 1264,
+  "height": 1300,
+  "source_title": "Harnessing_CLIP_and_DINO_An_Uncertainty_Aware_Cascaded_Fusion_Network_for_Genera.pdf"
+ }
+]

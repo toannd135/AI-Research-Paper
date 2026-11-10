@@ -24,6 +24,10 @@ celery_app.conf.update(
     # Task bị kill giữa chừng (worker restart) sẽ được giao lại thay vì mất hẳn.
     task_acks_late=True,
     worker_prefetch_multiplier=1,
+    # Mặc định Celery sinh số tiến trình = số CPU (16), mỗi tiến trình ~650MB (nạp model embedding/rerank)
+    # -> hết RAM. Giới hạn 3 tiến trình và thay tiến trình sau 20 task để trả bộ nhớ.
+    worker_concurrency=3,
+    worker_max_tasks_per_child=20,
     # 1 research task gồm ~10 lời gọi LLM tuần tự + embedding/rerank CPU; khi bị rate limit LLM có thể
     # chậm hơn nhiều -> cho phép tối đa 2 giờ (soft limit 1 giờ 55 phút).
     task_time_limit=7200,

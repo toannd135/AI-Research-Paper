@@ -1,0 +1,29 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 1,
+  "caption": "Fig. 1: The top image illustrates the conventional approach of packaging video frames into a patch-wise tokenize scheme. The bottom image showcases our proposed method, employing an n-frame-wise tokenize strategy.",
+  "kind": "vector",
+  "width": 544,
+  "height": 351,
+  "source_title": "AVT_2_DWF_Improving_Deepfake_Detection_With_Audio_Visual_Fusion_and_Dynamic_Weig.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 2,
+  "caption": "Fig. 2: The AVT2-DWF training process is as follows: the audio is combined into MFCC features and fed into the audio conversion encoder for training; at the same time, each group of 30 visual frames is input into the face conversion encoder for training. Their outputs are concatenated and fed into a dynamic weight fusion (DWF) train to obtain audio and visual weight features. These weighted featur",
+  "kind": "vector",
+  "width": 533,
+  "height": 423,
+  "source_title": "AVT_2_DWF_Improving_Deepfake_Detection_With_Audio_Visual_Fusion_and_Dynamic_Weig.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 3,
+  "caption": "Fig. 3: DWF Architecture. The input comprises features Fℓand Aℓextracted by the face and audio transformer encoders. Initially, weights WF and WA are initialized, and the MHCA is utilized to train weight values relevant to the modalities. Subsequently, these weight values are propagated to the subsequent layer of DWF training.",
+  "kind": "vector",
+  "width": 537,
+  "height": 327,
+  "source_title": "AVT_2_DWF_Improving_Deepfake_Detection_With_Audio_Visual_Fusion_and_Dynamic_Weig.pdf"
+ }
+]

@@ -1,0 +1,47 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 8,
+  "caption": "Figure 1: Schematic diagram of the proposed MSBA-CLIP framework. The input image undergoes MSBA augmentation. The CLIP-based encoder fuses image and text prompts. The Multivariate Forgery Intensity Estimation (MFIE) module predicts both the spatial intensity map and the method-specific blending weights. The final prediction is a fusion of a classification head output and a text-image similarity sc",
+  "kind": "raster",
+  "width": 681,
+  "height": 455,
+  "source_title": "Detecting_Deepfakes_with_Multivariate_Soft_Blending_and_CLIP_based_Image_Text_Al.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 12,
+  "caption": "Figure 2: Detailed architecture of the Multivariate Forgery Intensity Estimation (MFIE) module. It takes patch-level features from the visual encoder, upsamples them, and estimates both a per-pixel forgery intensity map and the method-wise blending weights.",
+  "kind": "raster",
+  "width": 573,
+  "height": 247,
+  "source_title": "Detecting_Deepfakes_with_Multivariate_Soft_Blending_and_CLIP_based_Image_Text_Al.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 13,
+  "caption": "Figure 3: Illustration of the Multivariate and Soft Blending Augmentation (MSBA) process. (a) Step 1: Calculate per-method forgery intensity maps (Mi) between the real image and each forged version. (b) Step 2: Synthesize a blended intensity map ˜ M by linearly combining individual maps with random weights αi. (c) Step 3: Generate the final blended forgery image ˜I by subtract- ing the scaled blen",
+  "kind": "raster",
+  "width": 681,
+  "height": 511,
+  "source_title": "Detecting_Deepfakes_with_Multivariate_Soft_Blending_and_CLIP_based_Image_Text_Al.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 17,
+  "caption": "Figure 4: Robustness evaluation under five types of image perturbations at vary- ing intensity levels. Our method (MSBA-CLIP) demonstrates superior stability compared to state-of-the-art baselines.",
+  "kind": "raster",
+  "width": 609,
+  "height": 261,
+  "source_title": "Detecting_Deepfakes_with_Multivariate_Soft_Blending_and_CLIP_based_Image_Text_Al.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 20,
+  "caption": "Figure 5: Visualization of forgery intensity maps. (a) Input images (Real, Blended, DF, FF, FS, NT). (b) Ground-truth intensity maps (patch-level, mul- tiplied by 5 for visibility). (c) Predicted intensity maps from our MFIE module. The model accurately localizes manipulated regions across various forgery types and complex blends.",
+  "kind": "raster",
+  "width": 681,
+  "height": 1021,
+  "source_title": "Detecting_Deepfakes_with_Multivariate_Soft_Blending_and_CLIP_based_Image_Text_Al.pdf"
+ }
+]

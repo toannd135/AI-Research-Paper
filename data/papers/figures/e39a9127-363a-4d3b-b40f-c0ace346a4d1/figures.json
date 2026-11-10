@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 5,
+  "caption": "Figure 1: Base generation pipeline for one identity (ID_139, frame 3), shown at the final 256×256 submission resolution. (a) PuLID reference crop; (b) competition-supplied MediaPipe landmark map; (c) our OpenPose-style ControlNet input; (d) final submission image. Panel (d) was generated at 512×512 by FLUX.1-dev with PuLID identity injection and OpenPose-style ControlNet conditioning, downsampled ",
+  "kind": "raster",
+  "width": 941,
+  "height": 227,
+  "source_title": "Adversarial_Deepfake_Generation_and_an_Investigation_of_Purification_Based_Adver.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 26,
+  "caption": "Figure 4: Section 6.3.3 — EFFORT single median-3 AUROC across the JPEG quality range. The sharp transition between 𝑄70 and 𝑄80 (red shading) marks where adversarial residuals survive compression sufficiently to be discriminated; at 𝑄70 and below all sources collapse to random. At 𝑄95 the single-operator signal alone clears the broad-claim threshold of AUROC 0.85 (dashed line) on every source: prod",
+  "kind": "raster",
+  "width": 800,
+  "height": 487,
+  "source_title": "Adversarial_Deepfake_Generation_and_an_Investigation_of_Purification_Based_Adver.pdf"
+ }
+]

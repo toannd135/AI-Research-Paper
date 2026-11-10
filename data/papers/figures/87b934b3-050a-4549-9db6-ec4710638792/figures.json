@@ -1,0 +1,38 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 2,
+  "caption": "Fig. 1: Detecting swapped faces by comparing faces and their context. Two example fake (swapped) faces from DFD [1]. Left: The arm of the eyeglasses does not extend from face to context. Right: An apparent identity mismatch between face and context. We show how these and similar discrepancies can be used as powerful signals for automatic detection of swapped faces.",
+  "kind": "raster",
+  "width": 1075,
+  "height": 265,
+  "source_title": "DeepFake_Detection_Based_on_Discrepancies_Between_Faces_and_Their_Context.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 4,
+  "caption": "Fig. 4: Method overview. Following initial preprocessing, we obtain regions for the face, If, and its context, Ic. The two are processed by the face identiﬁcation networks, Ef and Ec, respectively. A separate network, Es, considers the input image, I, seeking apparent swapping artifacts to decides if it is a face swapping result. The pseudo-probability vectors of the two face identiﬁcation network",
+  "kind": "raster",
+  "width": 1076,
+  "height": 373,
+  "source_title": "DeepFake_Detection_Based_on_Discrepancies_Between_Faces_and_Their_Context.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 7,
+  "caption": "Fig. 5: Extending FaceForensics++ with unseen methods. Examples shown for the same source / target face pair, using the 3D-based methods, FaceSwap [6] and Nirkin et al. [14], and the GAN-based methods, Deepfakes [4] and FSGAN [7]. Despite using the same image pairs in all four examples, the results are different, each exhibiting its own artifacts.",
+  "kind": "raster",
+  "width": 1076,
+  "height": 260,
+  "source_title": "DeepFake_Detection_Based_on_Discrepancies_Between_Faces_and_Their_Context.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 8,
+  "caption": "Fig. 7: Qualitative detection results. Examples taken from the DFDC collection. (a) Fakes detected by our method, but undetected by a leading baseline, XceptionNet fake detector [57]. (b) Fakes detected by XceptionNet but missed by our approach. (c) Fakes missed by both methods. See Sec. 5.4 for more details.",
+  "kind": "raster",
+  "width": 1023,
+  "height": 505,
+  "source_title": "DeepFake_Detection_Based_on_Discrepancies_Between_Faces_and_Their_Context.pdf"
+ }
+]

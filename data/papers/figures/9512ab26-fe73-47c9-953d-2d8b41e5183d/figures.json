@@ -1,0 +1,11 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 6,
+  "caption": "Fig. 1. Demonstrations of the three challenges from top to bottom. Transferability (top) refers to models that focus on stable detection ability on unseen benchmark datasets; interpretability (middle) refers to efforts on explaining the model detected falsification; robustness (bottom) refers to models that handle Deepfake suspects under different real-life conditions and scenarios.",
+  "kind": "raster",
+  "width": 823,
+  "height": 731,
+  "source_title": "Deepfake_Detection_A_Comprehensive_Survey_from_the_Reliability_Perspective.pdf"
+ }
+]

@@ -255,3 +255,63 @@ def test_gate_blocks_when_small_corpus_not_fully_cited():
     assert not partial["passed"] and any(b.startswith("độ phủ kho: 1/2") for b in partial["blocking"])
     full = run_quality_gate(state, "Both sources [1][2].", catalog)
     assert not any(b.startswith("độ phủ kho") for b in full["blocking"])
+
+
+def test_axis_count_must_agree_across_sections():
+    from app.agent.evidence.consistency_check import check_axis_count
+
+    bad = "## Abstract\nA five-axis taxonomy.\n\n## 3. Taxonomy\nWe organize methods along four non-orthogonal axes."
+    assert check_axis_count(bad) and "4 trục" in check_axis_count(bad)[0] and "5 trục" in check_axis_count(bad)[0]
+    assert not check_axis_count("## Abstract\nFour axes.\n\n## 3.\nWe use four method-design axes and Axis A to D.")
+
+
+def test_ledger_claim_contradiction_only_when_no_missing_modality_groups():
+    from app.agent.evidence.consistency_check import check_ledger_claims
+
+    claim = "We report 262 verified records, each with a missing-modality configuration."
+    assert check_ledger_claims(claim, missing_groups=0)
+    assert not check_ledger_claims(claim, missing_groups=3)  # sổ cái thật có nhóm missing-modality
+    assert not check_ledger_claims("No missing-modality result was extracted into the records.", missing_groups=0)
+
+
+def test_novelty_first_claim_is_warning_not_blocking():
+    from app.agent.evidence.consistency_check import check_novelty_claims
+
+    out = check_novelty_claims("This is the first comprehensive mapping of fusion.", n_prior_surveys=1)
+    assert out and "kho chỉ có 1 survey" in out[0]
+    assert not check_novelty_claims("Prior work is not the first comprehensive survey.")
+
+
+def test_limitation_denial_only_when_ledger_has_missing_modality_groups():
+    from app.agent.evidence.consistency_check import check_limitation_denial
+
+    text = "No missing-modality result was extracted into structured records."
+    assert check_limitation_denial(text, missing_groups=3)
+    assert not check_limitation_denial(text, missing_groups=0)  # đúng sự thật khi sổ cái không có
+
+
+def test_prior_survey_claim_must_point_to_survey_titles():
+    from app.agent.evidence.consistency_check import check_prior_survey_claims
+
+    titles = {3: "Identifying the Best Machine Learning Algorithms for Brain Tumor Segmentation", 6: "The BraTS Challenge 2023: BraSyn", 8: "Diffusion Models for Medical Image Analysis: A Comprehensive Survey"}
+    out = check_prior_survey_claims("Prior surveys [3], [6], [8] predate transformers.", titles)
+    assert [o[:3] for o in out] == ["[3]", "[6]"]
+    assert not check_prior_survey_claims("Prior surveys [8] cover diffusion.", titles)
+    assert not check_prior_survey_claims("Methods are described in [3].", titles)  # không nhắc 'prior survey'
+
+
+def test_overgeneralization_needs_scope():
+    from app.agent.evidence.consistency_check import check_overgeneralization
+
+    bad = "mmFormer outperforms HeMIS on all 15 subsets, so attention-based fusion is the most effective paradigm in the field overall."
+    assert check_overgeneralization(bad)
+    ok = "Within the protocol of [23], mmFormer outperforms HeMIS on all 15 subsets; this does not generalise to the field."
+    assert not check_overgeneralization(ok)
+
+
+def test_reference_years_flags_two_years_but_ignores_arxiv_ids():
+    from app.agent.evidence.consistency_check import check_reference_years
+
+    text = "Body.\n## References\n[37] A, \"T,\" *Venue*, 2024. Preprint 2022.\n[38] B, \"U,\" arXiv:2007.09479, 2020.\n"
+    out = check_reference_years(text)
+    assert len(out) == 1 and out[0].startswith("[37]")

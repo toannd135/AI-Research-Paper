@@ -1,0 +1,38 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Figure 1. Artificial neural networks architecture.",
+  "kind": "raster",
+  "width": 528,
+  "height": 279,
+  "source_title": "Deepfakes_Detection_Techniques_Using_Deep_Learning_A_Survey.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 6,
+  "caption": "Figure 2. GNA architecture.",
+  "kind": "raster",
+  "width": 664,
+  "height": 296,
+  "source_title": "Deepfakes_Detection_Techniques_Using_Deep_Learning_A_Survey.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 7,
+  "caption": "Figure 3. Two-stream neural networks.",
+  "kind": "raster",
+  "width": 686,
+  "height": 270,
+  "source_title": "Deepfakes_Detection_Techniques_Using_Deep_Learning_A_Survey.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 10,
+  "caption": "Figure 5. The proposed method is a two-step process. The first step is for face detection, cropping and alignment. The second step is for manipulation detection.",
+  "kind": "raster",
+  "width": 694,
+  "height": 214,
+  "source_title": "Deepfakes_Detection_Techniques_Using_Deep_Learning_A_Survey.pdf"
+ }
+]

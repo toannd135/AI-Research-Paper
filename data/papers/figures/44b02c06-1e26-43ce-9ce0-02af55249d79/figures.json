@@ -1,0 +1,38 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 2,
+  "caption": "Fig. 1. Scope of research questions with exemplar question-answer pairs from the proposed FakeBench dataset. (a) Fake image detection; (b) fake image reasoning; (c) fake image interpretation; (d) fine-grained forgery analyses. The responses are exemplars provided by humans.",
+  "kind": "raster",
+  "width": 258,
+  "height": 259,
+  "source_title": "FakeBench_Probing_Explainable_Fake_Image_Detection_via_Large_Multimodal_Models.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 4,
+  "caption": "Fig. 3. Subjective analyses on image authenticity judgment. (a) Human distinguishing analyses regarding accuracy on genuine and fake images. The left part illustrates the estimated distributions for the accuracy of each authenticity category, and the detailed statistics are on the right side. (b) The proposed taxonomy of authenticity-relevant judging criteria and human-rating statistics. Different",
+  "kind": "vector",
+  "width": 538,
+  "height": 418,
+  "source_title": "FakeBench_Probing_Explainable_Fake_Image_Detection_via_Large_Multimodal_Models.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 6,
+  "caption": "Fig. 6. The illustration of word frequency statistics of FakeBench. (a) The distribution of feedback length in FakeClue. (b) Top-frequency national words of descriptions on forgery flaws in FakeClue. (c) Word-cloud of FakeClue.",
+  "kind": "raster",
+  "width": 1035,
+  "height": 312,
+  "source_title": "FakeBench_Probing_Explainable_Fake_Image_Detection_via_Large_Multimodal_Models.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 6,
+  "caption": "Fig. 5. Human-in-the-loop strategy for producing the golden clues. Human and GPT-4V work in collaboration to ensure the quality of descriptions.",
+  "kind": "raster",
+  "width": 228,
+  "height": 228,
+  "source_title": "FakeBench_Probing_Explainable_Fake_Image_Detection_via_Large_Multimodal_Models.pdf"
+ }
+]

@@ -1,0 +1,47 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 2,
+  "caption": "Fig. 2: Existing DFA (a) or DFD (b) tasks conduct the coarse- grained evaluation, with generators that are mixed and lack flow models, and fail to achieve collaboration between DFA and DFD. (c) Our DFAD task features the fine-grained evalua- tion of the model generalization on advanced generators, such as diffusion and flow models, and realize the synergy of DFA and DFD. (d) Existing CLIP-based mo",
+  "kind": "vector",
+  "width": 523,
+  "height": 279,
+  "source_title": "GazeCLIP_Gaze_Guided_CLIP_with_Adaptive_Enhanced_Fine_Grained_Language_Prompt_fo.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 5,
+  "caption": "Fig. 4: The pipeline of the gaze injector. Image forgery embeddings are decomposed into the class token and patch tokens, and only the class token is used as a query to interact with gaze features to extract gaze-aware common forgery patterns.",
+  "kind": "vector",
+  "width": 532,
+  "height": 250,
+  "source_title": "GazeCLIP_Gaze_Guided_CLIP_with_Adaptive_Enhanced_Fine_Grained_Language_Prompt_fo.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 6,
+  "caption": "Fig. 5: The architecture of the adaptive-enhanced word selec- tor. The brighter (yellow) the color, the more important the word features.",
+  "kind": "vector",
+  "width": 1080,
+  "height": 277,
+  "source_title": "GazeCLIP_Gaze_Guided_CLIP_with_Adaptive_Enhanced_Fine_Grained_Language_Prompt_fo.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 7,
+  "caption": "Fig. 6: Resilience to unseen image distortions.",
+  "kind": "vector",
+  "width": 532,
+  "height": 271,
+  "source_title": "GazeCLIP_Gaze_Guided_CLIP_with_Adaptive_Enhanced_Fine_Grained_Language_Prompt_fo.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 12,
+  "caption": "Fig. 8: The heatmap visualizations of our GazeCLIP model (w/o or w/ gaze) on different generator samples. The hotter (red color) a position is, the more forgery features are captured by the network.",
+  "kind": "vector",
+  "width": 1080,
+  "height": 258,
+  "source_title": "GazeCLIP_Gaze_Guided_CLIP_with_Adaptive_Enhanced_Fine_Grained_Language_Prompt_fo.pdf"
+ }
+]

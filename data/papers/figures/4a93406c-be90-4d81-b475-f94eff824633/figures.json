@@ -1,0 +1,101 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Figure 1. Generic scheme of a GAN architecture. The Generator and the Discriminator are the main components of the GAN. The objective of the Generator is to capture the data distribution of the training set. The goal of the Discriminator is to distinguish the images coming from the Generator compared to the training data. When the Generator creates images with the same data distribution of the tra",
+  "kind": "raster",
+  "width": 656,
+  "height": 376,
+  "source_title": "The_Face_Deepfake_Detection_Challenge.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 6,
+  "caption": "Figure 2. Task I: Deepfake detection task. Given a set of Real and Deepfake images created by different GAN engines, the objective is to create a detector able to correctly classify Deepfake images in any scenario.",
+  "kind": "raster",
+  "width": 795,
+  "height": 328,
+  "source_title": "The_Face_Deepfake_Detection_Challenge.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 7,
+  "caption": "Figure 3. Examples of real (CelebA and FFHQ) and Deepfake images created by different GAN engines (AttGAN, StyleGAN, StyleGAN2, StarGAN, and GDWCT). The columns denote the source of the images. The rows (Raw images and Manipulated images) show examples of images without and with attacks.",
+  "kind": "raster",
+  "width": 811,
+  "height": 370,
+  "source_title": "The_Face_Deepfake_Detection_Challenge.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 7,
+  "caption": "Figure 4. Task II: Source image reconstruction task.",
+  "kind": "raster",
+  "width": 1070,
+  "height": 407,
+  "source_title": "The_Face_Deepfake_Detection_Challenge.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 8,
+  "caption": "Figure 5. Name structure of source images, reference images and Deepfake images.",
+  "kind": "raster",
+  "width": 983,
+  "height": 1047,
+  "source_title": "The_Face_Deepfake_Detection_Challenge.pdf"
+ },
+ {
+  "file": "fig_6.png",
+  "page": 10,
+  "caption": "Figure 6. Sample output of random-crop with size 128 × 128.",
+  "kind": "raster",
+  "width": 613,
+  "height": 383,
+  "source_title": "The_Face_Deepfake_Detection_Challenge.pdf"
+ },
+ {
+  "file": "fig_7.png",
+  "page": 10,
+  "caption": "Figure 7. Model employed by the DC-GAN (Amped Team).",
+  "kind": "raster",
+  "width": 492,
+  "height": 846,
+  "source_title": "The_Face_Deepfake_Detection_Challenge.pdf"
+ },
+ {
+  "file": "fig_8.png",
+  "page": 11,
+  "caption": "Figure 8. Sample of output results with conﬁdence score: the red label is fake, and green label is real.",
+  "kind": "raster",
+  "width": 744,
+  "height": 669,
+  "source_title": "The_Face_Deepfake_Detection_Challenge.pdf"
+ },
+ {
+  "file": "fig_9.png",
+  "page": 13,
+  "caption": "Figure 9. Convolutional Cross ViT architecture.",
+  "kind": "raster",
+  "width": 738,
+  "height": 939,
+  "source_title": "The_Face_Deepfake_Detection_Challenge.pdf"
+ },
+ {
+  "file": "fig_10.png",
+  "page": 15,
+  "caption": "Figure 10. Construction of the representation used as input of the model, designed to be robust to resizing and compressions typical of Deepfakes exchanged on the web. General overview (a) and tensor representation (b) [55].",
+  "kind": "raster",
+  "width": 656,
+  "height": 664,
+  "source_title": "The_Face_Deepfake_Detection_Challenge.pdf"
+ },
+ {
+  "file": "fig_11.png",
+  "page": 16,
+  "caption": "Figure 11. Real samples classiﬁed as fake by the “PRA Lab—Div. Biometria” method. In particular: (a) 1420.jpg, (b) 1794.jpg, (c) 3938.jpg, (d) 4184.jpg and other real images from the competition dataset contain manipulations external to the facial region that affect the detector.",
+  "kind": "raster",
+  "width": 812,
+  "height": 280,
+  "source_title": "The_Face_Deepfake_Detection_Challenge.pdf"
+ }
+]

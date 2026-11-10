@@ -1,0 +1,11 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 2,
+  "caption": "Fig. 1. SingFake dataset partition. Each color represents a subset, and each slice denotes an AI singer. T03 is excluded here since it contains the same song clips as T02 but is repeated 4 times through 4 different codecs.",
+  "kind": "raster",
+  "width": 342,
+  "height": 342,
+  "source_title": "SingFake_Singing_Voice_Deepfake_Detection.pdf"
+ }
+]

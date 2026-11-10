@@ -11,7 +11,18 @@ import re
 from pathlib import Path
 from typing import Any
 
-from app.agent.evidence.consistency_check import check_consistency, check_paper_counts, check_review_claims
+from app.agent.evidence.consistency_check import (
+    check_axis_count,
+    check_consistency,
+    check_ledger_claims,
+    check_limitation_denial,
+    check_novelty_claims,
+    check_overgeneralization,
+    check_paper_counts,
+    check_prior_survey_claims,
+    check_reference_years,
+    check_review_claims,
+)
 from app.agent.evidence.display_check import check_display_items
 from app.agent.evidence.quant_check import check_chart_block
 from app.agent.evidence.reference_check import (
@@ -60,6 +71,19 @@ def trace_text_records(state: dict[str, Any], text: str, numbered_citations: lis
     """Truy vết mọi giá trị số trong bảng/biểu đồ của `text` về chunk của paper được cite (đầy đủ, không cắt)."""
     citations = state.get("citations", []) if numbered_citations is None else numbered_citations
     return trace_claims(extract_numeric_claims(text), _build_sources(citations, state.get("evidence", [])))
+
+
+def _missing_modality_groups(state: dict[str, Any]) -> int:
+    """Số nhóm method/setting có kết quả missing-modality trong sổ cái; không có sổ cái (chưa trích xuất) -> coi là có, để không chặn nhầm."""
+    if state.get("results") is None:
+        return 1
+    from app.agent.evidence.extractor import records_from_dicts
+    from app.agent.evidence.quant_analysis import modality_matrix_stats
+
+    paper_to_n: dict[str, int] = {}
+    for n, cit in enumerate(state.get("citations", []), start=1):
+        paper_to_n.setdefault(getattr(cit, "paper_id", ""), n)
+    return modality_matrix_stats(records_from_dicts(state["results"]), paper_to_n)["groups"]
 
 
 def run_quality_gate(
@@ -119,6 +143,12 @@ def run_quality_gate(
     declared = protocol["review_type"] if protocol and not protocol_problems else None
     review_claims = check_review_claims(text, declared)
     blocking += [f"tuyên bố sai về quy trình tổng quan: {p}" for p in review_claims]
+    blocking += check_axis_count(text)
+    titles = {n: str((catalog.get(c.paper_id) or {}).get("title", "")) for n, c in enumerate(citations, start=1)}
+    blocking += [f"gán sai loại nguồn: {p}" for p in check_prior_survey_claims(text, titles)]
+    n_missing_groups = _missing_modality_groups(state)
+    blocking += [f"phủ nhận sai: sổ cái có {n_missing_groups} nhóm missing-modality nhưng bài nói chưa trích xuất: {p}" for p in check_limitation_denial(text, n_missing_groups)]
+    blocking += [f"bản ghi/ledger bị mô tả có cấu hình missing-modality nhưng sổ cái không có: {p}" for p in check_ledger_claims(text, n_missing_groups)]
     distinct_papers = {getattr(c, "paper_id", None) for c in all_citations} - {None, ""}
     blocking += [f"số lượng nghiên cứu sai: {p}" for p in check_paper_counts(text, max(len(catalog), len(distinct_papers)))]
     if state.get("research_mode", "survey") != "novel_research" and not any(
@@ -128,6 +158,10 @@ def run_quality_gate(
             "novelty: bài không cite survey/review trước nào (theo tiêu đề catalog) — không chứng minh được điểm mới so với các survey đã có; "
             "thêm các survey liên quan vào kho rồi chạy lại"
         )
+    n_surveys = sum(1 for pid in cited_ids if _SURVEY_TITLE_RE.search(str((catalog.get(pid) or {}).get("title", ""))))
+    warnings += check_novelty_claims(text, n_surveys)
+    warnings += [f"kết luận khái quát vượt phạm vi bằng chứng (nêu rõ nghiên cứu/protocol): {p}" for p in check_overgeneralization(text)]
+    warnings += [f"metadata reference không nhất quán: {p}" for p in check_reference_years(text)]
     if len(cited_numbers) < 2:
         warnings.append("bài cite ít hơn 2 nguồn")
     from app.agent.evidence.coverage import full_coverage_applies, uncited_papers

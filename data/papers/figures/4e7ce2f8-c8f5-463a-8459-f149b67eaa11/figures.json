@@ -1,0 +1,29 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Figure 1: Categorization of Audio and Visual Deepfakes",
+  "kind": "raster",
+  "width": 969,
+  "height": 253,
+  "source_title": "Deepfakes_generation_and_detection_state_of_the_art_open_challenges_countermeasu.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 5,
+  "caption": "Figure 2: The timeline of Deepfakes evolution",
+  "kind": "raster",
+  "width": 971,
+  "height": 460,
+  "source_title": "Deepfakes_generation_and_detection_state_of_the_art_open_challenges_countermeasu.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 32,
+  "caption": "Figure 10: Categorization of deepfake detection techniques (The red color shows Face-Swap detection approaches, purple for Face-Reenactment, Orange for lip-syncing, Blue for facial image synthesis, and pink for facial attribute manipulation detection techniques, where * shows deep-learning based approaches)",
+  "kind": "raster",
+  "width": 919,
+  "height": 564,
+  "source_title": "Deepfakes_generation_and_detection_state_of_the_art_open_challenges_countermeasu.pdf"
+ }
+]

@@ -1,0 +1,182 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Figure 1. Eye-blinking detection on an original video (Top) and a DeepFake-generated video (Bottom).",
+  "kind": "raster",
+  "width": 803,
+  "height": 492,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 4,
+  "caption": "Figure 2. Overview of LRCN method. (a) is the original sequence. (b) is the sequence after face alignment and passed to (c) LRCN, which consists of three parts: feature extraction, sequence learning, and state prediction.",
+  "kind": "raster",
+  "width": 803,
+  "height": 362,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 4,
+  "caption": "Figure 3. The network architecture of Meso-4.",
+  "kind": "raster",
+  "width": 697,
+  "height": 534,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 5,
+  "caption": "Figure 4. The network architecture of MesoInception-4.",
+  "kind": "raster",
+  "width": 656,
+  "height": 459,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 5,
+  "caption": "Figure 5. The architecture of Capsule Network.",
+  "kind": "raster",
+  "width": 738,
+  "height": 270,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ },
+ {
+  "file": "fig_6.png",
+  "page": 6,
+  "caption": "Figure 6. Examples of face swaps.",
+  "kind": "raster",
+  "width": 574,
+  "height": 294,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ },
+ {
+  "file": "fig_7.png",
+  "page": 7,
+  "caption": "Figure 7. Triplet architecture used for clustering and classification of real videos embedding vectors.",
+  "kind": "raster",
+  "width": 558,
+  "height": 313,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ },
+ {
+  "file": "fig_8.png",
+  "page": 8,
+  "caption": "Figure 8. Extraction of the face from the frame using MTCNN algorithm.",
+  "kind": "raster",
+  "width": 803,
+  "height": 341,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ },
+ {
+  "file": "fig_9.png",
+  "page": 9,
+  "caption": "Figure 9. Baseline DeepFake detection pipeline.",
+  "kind": "raster",
+  "width": 803,
+  "height": 251,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ },
+ {
+  "file": "fig_10.png",
+  "page": 10,
+  "caption": "Figure 10. Flow diagram to train a visual-audio detection modelWubet.",
+  "kind": "raster",
+  "width": 754,
+  "height": 316,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ },
+ {
+  "file": "fig_11.png",
+  "page": 10,
+  "caption": "Figure 11. Coordinates to detect eye regions and the blinking of the eye.",
+  "kind": "raster",
+  "width": 492,
+  "height": 389,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ },
+ {
+  "file": "fig_12.png",
+  "page": 11,
+  "caption": "Figure 12. Grayscale histogram of an unaltered video (left) and grayscale histogram of a face swap DeepFake of the same video (right).",
+  "kind": "raster",
+  "width": 574,
+  "height": 210,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ },
+ {
+  "file": "fig_13.png",
+  "page": 11,
+  "caption": "Figure 13. An architecture of non-temporal DFD pipeline.",
+  "kind": "raster",
+  "width": 492,
+  "height": 268,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ },
+ {
+  "file": "fig_14.png",
+  "page": 12,
+  "caption": "Figure 15. DFD method based on a two-stage network structure.",
+  "kind": "raster",
+  "width": 1064,
+  "height": 327,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ },
+ {
+  "file": "fig_15.png",
+  "page": 13,
+  "caption": "Figure 16. Unrealistic facial samples in feature space.",
+  "kind": "raster",
+  "width": 656,
+  "height": 222,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ },
+ {
+  "file": "fig_16.png",
+  "page": 13,
+  "caption": "Figure 17. Proposed DPNet architecture for detecting fake images.",
+  "kind": "raster",
+  "width": 804,
+  "height": 233,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ },
+ {
+  "file": "fig_17.png",
+  "page": 14,
+  "caption": "Figure 18. Detailed description of Face X-ray detection architecture.",
+  "kind": "raster",
+  "width": 656,
+  "height": 289,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ },
+ {
+  "file": "fig_18.png",
+  "page": 14,
+  "caption": "Figure 19. Noise analysis (middle) and error level analysis (right) of (a) a real image and (b) a fake image.",
+  "kind": "raster",
+  "width": 492,
+  "height": 302,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ },
+ {
+  "file": "fig_19.png",
+  "page": 14,
+  "caption": "Figure 20. AEI-Net is composed of an Identity Encoder, a Multi-level Attributes Encoder (a), and an AAD-Generator. The AAD-Generator uses cascaded AAD ResBlks (b), which are based on AAD layers (c), to combine identity and attribute information at different feature levels [42].",
+  "kind": "raster",
+  "width": 1064,
+  "height": 296,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ },
+ {
+  "file": "fig_20.png",
+  "page": 15,
+  "caption": "Figure 21. Proposed video-based face manipulation detection architecture.",
+  "kind": "raster",
+  "width": 811,
+  "height": 302,
+  "source_title": "A_Comprehensive_Review_of_DeepFake_Detection_Using_Advanced_Machine_Learning_and.pdf"
+ }
+]

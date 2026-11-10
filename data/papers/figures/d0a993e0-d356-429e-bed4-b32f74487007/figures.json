@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 4,
+  "caption": "Figure 2: In this figure, we present four distinct transfer learning strategies that are explored for 𝑟𝑒𝑎𝑙/𝑓𝑎𝑘𝑒image classification. At bottom right we list the number of trainable parameters for each approach.",
+  "kind": "raster",
+  "width": 999,
+  "height": 547,
+  "source_title": "CLIPping_the_Deception_Adapting_Vision_Language_Models_for_Universal_Deepfake_De.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 8,
+  "caption": "Figure 5: This figure shows how different transfer learning strategies cope with post-processing operations including JPEG compression and Gaussian blurring. Our models perform well with GAN and Diffusion images but struggle with those from commercial tools like DALL-E 3 and Adobe FireFly. Surprisingly, the Fine-tuned CLIP model is more robust against compressed images sampled using Commercial too",
+  "kind": "raster",
+  "width": 999,
+  "height": 353,
+  "source_title": "CLIPping_the_Deception_Adapting_Vision_Language_Models_for_Universal_Deepfake_De.pdf"
+ }
+]

@@ -1,0 +1,438 @@
+{
+  "passed": false,
+  "blocking": [
+    "tuyên bố sai về quy trình tổng quan: 'A systematic mapping of the literature uncovers several persistent gaps that impede the deployment of trustworthy multim'",
+    "độ phủ kho: 30/50 paper trong kho chưa được cite (088f9c9c-8eb6-4743-9aac-8247d5d8eb33; 1ac843d1-34cd-4eb4-8fc5-792e1a0ccd69; 2c3e504a-2f8d-4bbf-bddb-af26275772ac; 34449e36-03f3-4b50-94e9-da51527df8a5; 3a5cd9eb-9c56-4097-81da-2104b3a18bb5; 41ab4719-7588-4409-8d5e-c3bf37fa70b3; 44b02c06-1e26-43ce-9ce0-02af55249d79; 46f83ead-e941-4484-9021-f275a51dbd2c…)",
+    "tham chiếu tài liệu: Table [1, 2, 4, 5] được nhắc trong thân bài nhưng bài chỉ có 0 table có chú thích"
+  ],
+  "warnings": [
+    "reference 06445bcb-a0db-442b-a4b8-c9b4dc4e975d: UNVERIFIED — không có metadata trong catalog",
+    "reference 5b70e485-458f-4678-aeb9-6020b45bbc04: UNVERIFIED — không có metadata trong catalog",
+    "reference 76832c7e-9323-4e17-8bb1-8616c687a5fd: UNVERIFIED — không có metadata trong catalog",
+    "reference ef6610aa-8576-4f4c-a4b1-1afc1619ccbb: UNVERIFIED — không có metadata trong catalog",
+    "reference 9459eb31-5cf2-44a5-b07c-5a95d109527f: UNVERIFIED — không có metadata trong catalog",
+    "reference d0a993e0-d356-429e-bed4-b32f74487007: UNVERIFIED — không có metadata trong catalog",
+    "reference 6c1daaec-3877-40e3-9a25-d33e6fa3b5c9: UNVERIFIED — không có metadata trong catalog",
+    "reference df8fccab-2ecc-4acb-ad9b-2a833a026b30: UNVERIFIED — không có metadata trong catalog",
+    "reference e00f5156-5ce5-4ab8-84b3-0c6db18c6d83: UNVERIFIED — không có metadata trong catalog",
+    "reference 0d5da35e-1bdd-4cdf-8fc2-0d3f9c8fa842: UNVERIFIED — không có metadata trong catalog",
+    "reference 1b4a3a5c-d069-4f6c-9643-966583a13ccd: UNVERIFIED — không có metadata trong catalog",
+    "reference a231f80b-71ac-4a21-b10f-481e4bf00e96: UNVERIFIED — không có metadata trong catalog",
+    "reference e39a9127-363a-4d3b-b40f-c0ace346a4d1: UNVERIFIED — không có metadata trong catalog",
+    "reference e6db4111-788f-4423-b9ed-c72773f11677: UNVERIFIED — không có metadata trong catalog",
+    "reference 6c0d0f09-50ac-4951-81ee-dd63bbc2e54f: UNVERIFIED — không có metadata trong catalog",
+    "reference 8d0afcfe-167f-44c1-8828-df7b52925eec: UNVERIFIED — không có metadata trong catalog",
+    "reference 4adb46c3-05e4-445c-b94f-007e33c751be: UNVERIFIED — không có metadata trong catalog",
+    "reference 2802dc61-89ac-4089-986e-4a3327c4a13f: UNVERIFIED — không có metadata trong catalog",
+    "reference eff1d6ee-771b-4804-b811-aeec5dcd2ad9: UNVERIFIED — không có metadata trong catalog",
+    "reference 87b934b3-050a-4549-9db6-ec4710638792: UNVERIFIED — không có metadata trong catalog",
+    "novelty: bài không cite survey/review trước nào (theo tiêu đề catalog) — không chứng minh được điểm mới so với các survey đã có; thêm các survey liên quan vào kho rồi chạy lại",
+    "Figure: có 2, thấp hơn mục tiêu 5–9 (không bịa thêm để cho đủ số)",
+    "Figure: 2 khối nhưng chỉ 1 số được nhắc trong thân bài",
+    "Table: có 8, vượt mục tiêu 3–6",
+    "Table: 8 khối nhưng chỉ 4 số được nhắc trong thân bài",
+    "nhất quán: viết tắt AUC dùng 61 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (AUC)'",
+    "nhất quán: viết tắt CLIP dùng 30 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (CLIP)'",
+    "nhất quán: viết tắt ACC dùng 25 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (ACC)'",
+    "nhất quán: viết tắt CNN dùng 18 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (CNN)'",
+    "nhất quán: viết tắt GAN dùng 14 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (GAN)'",
+    "nhất quán: viết tắt DF dùng 8 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (DF)'",
+    "nhất quán: viết tắt AI dùng 4 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (AI)'",
+    "nhất quán: viết tắt BAAI dùng 4 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (BAAI)'",
+    "nhất quán: viết tắt GPU dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (GPU)'",
+    "nhất quán: viết tắt F1 dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (F1)'",
+    "nhất quán: có 18 viết tắt nhưng không có mục/bảng danh sách viết tắt (Abbreviations)",
+    "nhất quán: đánh số Table caption không liên tục/trùng: [5]",
+    "gán sai nguồn: 'Raw [8]' bị gán sai nguồn: Bài báo [8] ('df8fccab-2ecc-4acb-ad9b-2a833a026b30...') không chứa thông tin về 'Raw'",
+    "gán sai nguồn: 'CLIP [6]' bị gán sai nguồn: Bài báo [6] ('d0a993e0-d356-429e-bed4-b32f74487007...') không chứa thông tin về 'CLIP'",
+    "gán sai nguồn: 'Ricker et al. [3]' bị gán sai nguồn: Bài báo [3] ('76832c7e-9323-4e17-8bb1-8616c687a5fd...') không chứa thông tin về 'Ricker et al.'",
+    "gán sai nguồn: 'References [1]' bị gán sai nguồn: Bài báo [1] ('06445bcb-a0db-442b-a4b8-c9b4dc4e975d...') không chứa thông tin về 'References'",
+    "science QA: claim–evidence: 'The analysis reveals persistent gaps—most notably the scarcity of systematic cross‑modal generalisation studies, limited robustness reportin' phủ nhận uncertainty/calibration nhưng có 2 bằng chứng đã trích/xác minh",
+    "science QA: claim–evidence: 'The lack of extracted calibration or OOD assessments (only two sentences mentioning such concepts) limits our ability to comment on the trus' phủ nhận uncertainty/calibration nhưng có 2 bằng chứng đã trích/xác minh",
+    "science QA: sổ cái: '…rmly documented. \n\n### 2.6 Limitations of the evidence base \n\nThe present review is **not exhaustive**. The 15 numeric records represent a **partial s…' — sổ cái chỉ gồm số liệu in nguyên văn trong đoạn truy xuất, không phải 'exhaustive'",
+    "science QA: thuật ngữ không nhất quán: modeling ×1, modelling ×1 — chọn một cách viết (định nghĩa viết tắt một lần)"
+  ],
+  "references": {
+    "references": [
+      {
+        "paper_id": "06445bcb-a0db-442b-a4b8-c9b4dc4e975d",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      },
+      {
+        "paper_id": "5b70e485-458f-4678-aeb9-6020b45bbc04",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      },
+      {
+        "paper_id": "76832c7e-9323-4e17-8bb1-8616c687a5fd",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      },
+      {
+        "paper_id": "ef6610aa-8576-4f4c-a4b1-1afc1619ccbb",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      },
+      {
+        "paper_id": "9459eb31-5cf2-44a5-b07c-5a95d109527f",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      },
+      {
+        "paper_id": "d0a993e0-d356-429e-bed4-b32f74487007",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      },
+      {
+        "paper_id": "6c1daaec-3877-40e3-9a25-d33e6fa3b5c9",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      },
+      {
+        "paper_id": "df8fccab-2ecc-4acb-ad9b-2a833a026b30",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      },
+      {
+        "paper_id": "e00f5156-5ce5-4ab8-84b3-0c6db18c6d83",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      },
+      {
+        "paper_id": "0d5da35e-1bdd-4cdf-8fc2-0d3f9c8fa842",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      },
+      {
+        "paper_id": "1b4a3a5c-d069-4f6c-9643-966583a13ccd",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      },
+      {
+        "paper_id": "a231f80b-71ac-4a21-b10f-481e4bf00e96",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      },
+      {
+        "paper_id": "e39a9127-363a-4d3b-b40f-c0ace346a4d1",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      },
+      {
+        "paper_id": "e6db4111-788f-4423-b9ed-c72773f11677",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      },
+      {
+        "paper_id": "6c0d0f09-50ac-4951-81ee-dd63bbc2e54f",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      },
+      {
+        "paper_id": "8d0afcfe-167f-44c1-8828-df7b52925eec",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      },
+      {
+        "paper_id": "4adb46c3-05e4-445c-b94f-007e33c751be",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      },
+      {
+        "paper_id": "2802dc61-89ac-4089-986e-4a3327c4a13f",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      },
+      {
+        "paper_id": "eff1d6ee-771b-4804-b811-aeec5dcd2ad9",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      },
+      {
+        "paper_id": "87b934b3-050a-4549-9db6-ec4710638792",
+        "status": "UNVERIFIED",
+        "missing": [
+          "catalog"
+        ],
+        "issues": [
+          "không có metadata trong catalog"
+        ],
+        "publication": "unknown"
+      }
+    ],
+    "counts": {
+      "UNVERIFIED": 20
+    },
+    "duplicates": 0,
+    "publication": {
+      "unknown": 20
+    }
+  },
+  "traceability": {
+    "counts": {
+      "TRACED": 0,
+      "UNTRACED": 0,
+      "NO_CITATION": 0
+    },
+    "untraced": [],
+    "traced_sample": []
+  },
+  "comparability": {
+    "chart_problems": []
+  },
+  "research_questions": {
+    "problems": []
+  },
+  "review_claims": {
+    "problems": [
+      "'A systematic mapping of the literature uncovers several persistent gaps that impede the deployment of trustworthy multim'"
+    ],
+    "declared_review_type": null,
+    "protocol_problems": []
+  },
+  "display_items": {
+    "counts": {
+      "figures": 2,
+      "tables": 8
+    },
+    "target": {
+      "figures": [
+        5,
+        9
+      ],
+      "tables": [
+        3,
+        6
+      ]
+    },
+    "chart_types": [
+      "evidence_map"
+    ],
+    "warnings": [
+      "Figure: có 2, thấp hơn mục tiêu 5–9 (không bịa thêm để cho đủ số)",
+      "Figure: 2 khối nhưng chỉ 1 số được nhắc trong thân bài",
+      "Table: có 8, vượt mục tiêu 3–6",
+      "Table: 8 khối nhưng chỉ 4 số được nhắc trong thân bài"
+    ]
+  },
+  "consistency": [
+    "viết tắt AUC dùng 61 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (AUC)'",
+    "viết tắt CLIP dùng 30 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (CLIP)'",
+    "viết tắt ACC dùng 25 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (ACC)'",
+    "viết tắt CNN dùng 18 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (CNN)'",
+    "viết tắt GAN dùng 14 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (GAN)'",
+    "viết tắt DF dùng 8 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (DF)'",
+    "viết tắt AI dùng 4 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (AI)'",
+    "viết tắt BAAI dùng 4 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (BAAI)'",
+    "viết tắt GPU dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (GPU)'",
+    "viết tắt F1 dùng 3 lần nhưng chưa được định nghĩa lần đầu dạng 'Tên đầy đủ (F1)'",
+    "có 18 viết tắt nhưng không có mục/bảng danh sách viết tắt (Abbreviations)",
+    "đánh số Table caption không liên tục/trùng: [5]"
+  ],
+  "science_qa": [
+    "claim–evidence: 'The analysis reveals persistent gaps—most notably the scarcity of systematic cross‑modal generalisation studies, limited robustness reportin' phủ nhận uncertainty/calibration nhưng có 2 bằng chứng đã trích/xác minh",
+    "claim–evidence: 'The lack of extracted calibration or OOD assessments (only two sentences mentioning such concepts) limits our ability to comment on the trus' phủ nhận uncertainty/calibration nhưng có 2 bằng chứng đã trích/xác minh",
+    "sổ cái: '…rmly documented. \n\n### 2.6 Limitations of the evidence base \n\nThe present review is **not exhaustive**. The 15 numeric records represent a **partial s…' — sổ cái chỉ gồm số liệu in nguyên văn trong đoạn truy xuất, không phải 'exhaustive'",
+    "thuật ngữ không nhất quán: modeling ×1, modelling ×1 — chọn một cách viết (định nghĩa viết tắt một lần)"
+  ],
+  "study_profile": {
+    "d0a993e0-d356-429e-bed4-b32f74487007": {
+      "code_available": {
+        "value": "Yes",
+        "page": 1,
+        "quote": "Code and pre-trained models will be made available: https://github.com/ KEYWORDS deepfake detection, transfer learning, vision-language models ACM Reference Format: Sohail Ahmed Khan and Duc-Tien Dang-Nguyen. 2024."
+      }
+    },
+    "0d5da35e-1bdd-4cdf-8fc2-0d3f9c8fa842": {
+      "code_available": {
+        "value": "Yes",
+        "page": 1,
+        "quote": "The code has been released at https://github.com/rshaojimmy/DeepFake-Adapter/."
+      }
+    },
+    "1b4a3a5c-d069-4f6c-9643-966583a13ccd": {
+      "code_available": {
+        "value": "Yes",
+        "page": 1,
+        "quote": "Code is available at https://github.com/raining-dev/AVT2-DWF."
+      }
+    },
+    "e6db4111-788f-4423-b9ed-c72773f11677": {
+      "code_available": {
+        "value": "Yes",
+        "page": 1,
+        "quote": "Our code is available at https://github.com/Zig-HS/MM-DDL. 1 Introduction The rapid advancement of generative adversarial networks (GANs) and diffusion models has revolutionized audio-visual synthesis technologies, enabl"
+      }
+    },
+    "4adb46c3-05e4-445c-b94f-007e33c751be": {
+      "uncertainty": {
+        "value": "Yes",
+        "page": 1,
+        "quote": "Harnessing CLIP and DINO: An Uncertainty-Aware Cascaded Fusion Network for Generalizable Deepfake Image Detection Xuechao Zou1, Yi Zhou1, Kai Li2, Shun Zhang1, Yuhui Chen3, Congyan Lang1, Junliang Xing2 1Beijing Jiaotong"
+      }
+    },
+    "2802dc61-89ac-4089-986e-4a3327c4a13f": {
+      "cross_validation": {
+        "value": "Yes",
+        "page": 13,
+        "quote": "K-Fold Cross Validation Results The performance validation of our novel proposed approach is analyzed in Table 9."
+      }
+    },
+    "6c0d0f09-50ac-4951-81ee-dd63bbc2e54f": {
+      "code_available": {
+        "value": "Yes",
+        "page": 1,
+        "quote": "The code is available at: https://github.com/ yermandy/deepfake-detection 1 Introduction This work studies partially manipulated facial deepfakes, which are facial images or videos altered through techniques like face re"
+      }
+    },
+    "a231f80b-71ac-4a21-b10f-481e4bf00e96": {
+      "code_available": {
+        "value": "Yes",
+        "page": 1,
+        "quote": "Codes are available at https://github.com/Jenine-321/GazeCLIP."
+      }
+    },
+    "e39a9127-363a-4d3b-b40f-c0ace346a4d1": {
+      "uncertainty": {
+        "value": "Yes",
+        "page": 20,
+        "quote": "Collectively, the generation and detection limitations point to concrete engineering remedies (broader transfer objectives, rate-based calibration), while the purification limitations invite deeper mechanistic study. 7.4"
+      }
+    },
+    "eff1d6ee-771b-4804-b811-aeec5dcd2ad9": {
+      "code_available": {
+        "value": "Yes",
+        "page": 9,
+        "quote": "This observation highlights the need to further explore whether and why forgeries with different types can exhibit similar patterns in frequency. 3https://github.com/facefusion/facefusion/blob/master/facefusion/processor"
+      }
+    },
+    "76832c7e-9323-4e17-8bb1-8616c687a5fd": {
+      "code_available": {
+        "value": "Yes",
+        "page": 2,
+        "quote": "Our code and data are available at https://github.com/jonasricker/ diffusion-model-deepfake-detection. 2 RELATED WORK Fake Image Detection."
+      }
+    }
+  },
+  "draft_gate": {
+    "passed": false,
+    "blocking": 2,
+    "warnings": 32
+  },
+  "redacted_cells": []
+}

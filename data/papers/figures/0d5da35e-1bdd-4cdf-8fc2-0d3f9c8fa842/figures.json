@@ -1,0 +1,47 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 4,
+  "caption": "Fig. 2: Overall architecture of proposed model. The model consists of N stages. Each stage contains MHSA and MLP layers of pre-trained ViT, GBA and LSA (LSA-H and LSA-I) of proposed DeepFake-Adapter.",
+  "kind": "raster",
+  "width": 1029,
+  "height": 408,
+  "source_title": "DeepFake_Adapter_Dual_Level_Adapter_for_DeepFake_Detection.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 5,
+  "caption": "Fig. 3: Details of GBA and LSA of proposed DeepFake-Adapter. (a) Head part and (b) Interaction part of LSA capture local low-level forgeries that interact with features from pre-trained ViT via a series of cross-attention. (c) GBA adapts the pre-trained ViT with global low-level forgeries in a bottleneck structure.",
+  "kind": "raster",
+  "width": 1029,
+  "height": 327,
+  "source_title": "DeepFake_Adapter_Dual_Level_Adapter_for_DeepFake_Detection.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 11,
+  "caption": "Fig. 4: Comparison of Grad-CAM visualizations between Xception and the proposed model in cross-manipulation evaluation. (Best viewed in color)",
+  "kind": "raster",
+  "width": 497,
+  "height": 230,
+  "source_title": "DeepFake_Adapter_Dual_Level_Adapter_for_DeepFake_Detection.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 12,
+  "caption": "Fig. 5: Comparison of Grad-CAM visualizations between Xception and the proposed model in cross-dataset evaluation among DFDC, Celeb-DF and DF1.0 datasets. (Best viewed in color)",
+  "kind": "raster",
+  "width": 1029,
+  "height": 317,
+  "source_title": "DeepFake_Adapter_Dual_Level_Adapter_for_DeepFake_Detection.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 12,
+  "caption": "Fig. 6: Comparison of Grad-CAM visualizations between ViT backbone with GBA and LSA. (Best viewed in color)",
+  "kind": "raster",
+  "width": 497,
+  "height": 524,
+  "source_title": "DeepFake_Adapter_Dual_Level_Adapter_for_DeepFake_Detection.pdf"
+ }
+]

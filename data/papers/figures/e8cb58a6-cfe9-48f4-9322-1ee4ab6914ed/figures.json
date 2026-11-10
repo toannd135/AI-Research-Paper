@@ -1,0 +1,83 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 5,
+  "caption": "Fig. 3. ASVspoof 2021 results for LA, PA, DF tracks. Results shown in terms of pooled normalised minimum t-DCF and pooled EER (%). Blue line marks ASV floor. Only teams that submitted system description are marked with ID.",
+  "kind": "vector",
+  "width": 975,
+  "height": 215,
+  "source_title": "ASVspoof_2021_Towards_Spoofed_and_Deepfake_Speech_Detection_in_the_Wild.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 7,
+  "caption": "Fig. 4. Boxplots of evaluation set min t-DCF or EERs of top-10 submissions decomposed over different factors. Markers are top-1 submission (⋄), B01 (o), B02 (◁), B03 (⭐), and B04 (×).",
+  "kind": "vector",
+  "width": 973,
+  "height": 372,
+  "source_title": "ASVspoof_2021_Towards_Spoofed_and_Deepfake_Speech_Detection_in_the_Wild.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 7,
+  "caption": "Fig. 6. Break-down of the EER in the VCC 2018/2020 subset of the DF track, according to the codecs and the type of vocoder used by the VC system.",
+  "kind": "vector",
+  "width": 453,
+  "height": 238,
+  "source_title": "ASVspoof_2021_Towards_Spoofed_and_Deepfake_Speech_Detection_in_the_Wild.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 9,
+  "caption": "Fig. 7. Comparison of top-10 CMs performance on evaluation subset (with non-speech) and hidden subset (w/o non-speech). For LA and DF, min t-DCFs over VC- and TTS-based spoofing attacks are plotted separately. Markers are top-1 system (⋄), B01 (o), B02 (◁), B03 (⭐), and B04 (×).",
+  "kind": "vector",
+  "width": 971,
+  "height": 392,
+  "source_title": "ASVspoof_2021_Towards_Spoofed_and_Deepfake_Speech_Detection_in_the_Wild.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 11,
+  "caption": "Fig. 8. Score distributions of bonafide (top) and spoof (bottom) for top-5 DF subsystem and baseline B04, broken down according to three data sources used.",
+  "kind": "vector",
+  "width": 1044,
+  "height": 319,
+  "source_title": "ASVspoof_2021_Towards_Spoofed_and_Deepfake_Speech_Detection_in_the_Wild.pdf"
+ },
+ {
+  "file": "fig_6.png",
+  "page": 16,
+  "caption": "Fig. 9. Illustration of top-5 systems for the LA scenario. The descending order is based on performance via minimum t-DCF values on evaluation set. Numbers in brackets are the values. Dash lines indicate steps/modules which are only applied for training, while solid lines indicate ones applied for both training and testing.",
+  "kind": "vector",
+  "width": 987,
+  "height": 558,
+  "source_title": "ASVspoof_2021_Towards_Spoofed_and_Deepfake_Speech_Detection_in_the_Wild.pdf"
+ },
+ {
+  "file": "fig_7.png",
+  "page": 17,
+  "caption": "Fig. 10. Illustration of top-5 systems for the PA scenario. The descending order is based on performance via minimum t-DCF values on evaluation set. Numbers in brackets are the values. Dash lines indicate steps/modules which are only applied for training, while solid lines indicate ones applied for both training and testing.",
+  "kind": "vector",
+  "width": 895,
+  "height": 553,
+  "source_title": "ASVspoof_2021_Towards_Spoofed_and_Deepfake_Speech_Detection_in_the_Wild.pdf"
+ },
+ {
+  "file": "fig_8.png",
+  "page": 18,
+  "caption": "Fig. 11. Illustration of top-5 systems for the DF scenario. The descending order is based on performance via equal error rates on evaluation set. Numbers in brackets are the error rates. Dash lines indicate steps/modules which are only applied for training, while solid lines indicate ones applied for both training and testing.",
+  "kind": "vector",
+  "width": 1052,
+  "height": 565,
+  "source_title": "ASVspoof_2021_Towards_Spoofed_and_Deepfake_Speech_Detection_in_the_Wild.pdf"
+ },
+ {
+  "file": "fig_9.png",
+  "page": 19,
+  "caption": "Fig. 12. Comparison of CMs EERs on evaluation set and hidden tracks. Blue dots correspond to top 1-10 submissions. Red dots are other submissions. Best viewed in color.",
+  "kind": "vector",
+  "width": 1017,
+  "height": 277,
+  "source_title": "ASVspoof_2021_Towards_Spoofed_and_Deepfake_Speech_Detection_in_the_Wild.pdf"
+ }
+]

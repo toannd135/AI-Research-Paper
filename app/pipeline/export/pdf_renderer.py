@@ -460,8 +460,28 @@ def _split_reference_lines(md: str) -> str:
     return head + sep + re.sub(r"\n(?=\[\d+\])", "\n\n", refs)
 
 
+_IMAGE_WITH_CAPTION_RE = re.compile(r"(?:^\*\*Figure\s+\d+\s*[:.][^\n]*\n+)?```image[ \t]*\n(.*?)```", re.M | re.DOTALL)
+
+
+def _drop_dead_images(md: str) -> str:
+    """Bỏ khối image không có file hợp lệ cùng dòng '**Figure N:' ngay trên nó, để số hình + tham chiếu không lệch khi xuất."""
+    from app.pipeline.figures import resolve_figure_path
+
+    def keep_or_drop(m: re.Match) -> str:
+        try:
+            spec = json.loads(m.group(1))
+        except ValueError:
+            return ""
+        return m.group(0) if isinstance(spec, dict) and resolve_figure_path(spec.get("path")) is not None else ""
+
+    return _IMAGE_WITH_CAPTION_RE.sub(keep_or_drop, md)
+
+
 def report_to_html(report_md: str, *, columns: int = 2) -> str:
+    from app.agent.evidence.report_structure import renumber_captions_report
     from app.agent.format_sanitizer import sanitize_padded_inline_math
+
+    report_md = renumber_captions_report(_drop_dead_images(report_md.replace("\r\n", "\n")), kinds=("Figure",))[0]
 
     # chỉ engine HTML bị lỗi ghép '$ a $) | ($ b $' xuyên ô; Typst có bộ ghép $ riêng nên không đụng vào
     md, blocks = _extract_blocks(sanitize_padded_inline_math(report_md.replace("\r\n", "\n")))

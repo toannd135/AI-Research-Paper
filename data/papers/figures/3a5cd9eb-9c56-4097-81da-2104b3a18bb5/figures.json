@@ -1,0 +1,65 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 2,
+  "caption": "Figure 1: Performance vs. efficiency trade-off. Baselines comparison of average precision perfor- mance on real-world data as a function of floating- point operations per second (FLOPs) at inference time.",
+  "kind": "raster",
+  "width": 413,
+  "height": 248,
+  "source_title": "Real_Time_Deepfake_Detection_in_the_Real_World.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 3,
+  "caption": "Figure 2: LaDeDa Training. By limiting its receptive field to q × q pixels, LaDeDa yields a deepfake score for each q × q patch. The image-level deepfake score is the global pooling of the patches scores. We use binary cross entropy loss between the image label and its deepfake score.",
+  "kind": "vector",
+  "width": 605,
+  "height": 341,
+  "source_title": "Real_Time_Deepfake_Detection_in_the_Real_World.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 5,
+  "caption": "Figure 4: WildRF Overview. A realistic benchmark consisting of images sourced from popular social platforms: Reddit, X (Twitter) and Facebook. WildRF contains high variability in a range of attributes including image resolutions, formats, semantic content, and transformations encountered in-the-wild.",
+  "kind": "vector",
+  "width": 822,
+  "height": 302,
+  "source_title": "Real_Time_Deepfake_Detection_in_the_Real_World.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 8,
+  "caption": "Figure 5: (a) Local and global deepfake scores. We show average precision (AP) performance on WildRF, when ensemble LaDeDa deepfake scores with CLIP (32) deepfake scores. (b) JPEG robustness. We show LaDeDa average precision (AP) performance on facebook test set, as a function of JPEG compression quality from 100 (no compression) to 30.",
+  "kind": "raster",
+  "width": 826,
+  "height": 257,
+  "source_title": "Real_Time_Deepfake_Detection_in_the_Real_World.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 9,
+  "caption": "Figure 6: (a) Image preprocessing and (b) patch-Size ablation.",
+  "kind": "raster",
+  "width": 825,
+  "height": 236,
+  "source_title": "Real_Time_Deepfake_Detection_in_the_Real_World.pdf"
+ },
+ {
+  "file": "fig_6.png",
+  "page": 10,
+  "caption": "Figure 7: (a) Deepfake score visualization. High deepfake score in red, low deepfake score in blue. (b) Maximal deepfake scores. We show the most fake patches (i.e., patches with highest deepfake score) in fake and real images. It appears that the most fake patches are smoother in fake images, compared to the most fake patches in real images.",
+  "kind": "raster",
+  "width": 823,
+  "height": 389,
+  "source_title": "Real_Time_Deepfake_Detection_in_the_Real_World.pdf"
+ },
+ {
+  "file": "fig_7.png",
+  "page": 16,
+  "caption": "Figure 8: Another WildRF image examples.",
+  "kind": "vector",
+  "width": 835,
+  "height": 623,
+  "source_title": "Real_Time_Deepfake_Detection_in_the_Real_World.pdf"
+ }
+]

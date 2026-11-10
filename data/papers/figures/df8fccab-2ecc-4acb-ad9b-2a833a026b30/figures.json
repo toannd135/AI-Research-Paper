@@ -1,0 +1,38 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 5,
+  "caption": "Figure 1. An overview of the proposed end-to-end transformer-based deepfake detection framework. DFDT is developed leveraging the unique characteristics of transformer models on learning hidden traces of perturbations from local image features and the global relationship of pixels at different forgery scales. Patch extraction & embedding, a multi-stream transformer block, attention-based patch sel",
+  "kind": "vector",
+  "width": 1172,
+  "height": 602,
+  "source_title": "DFDT_An_End_to_End_DeepFake_Detection_Framework_Using_Vision_Transformer.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 7,
+  "caption": "Figure 3. Each transformer block comprises several residual transformer blocks with three consecutive re-attention transformer encoders. Top key patches are selected using APS before being fed into the multi-scale deepfake detector (RC: Residual connection, and APS: Attention-based patch selection).",
+  "kind": "vector",
+  "width": 651,
+  "height": 409,
+  "source_title": "DFDT_An_End_to_End_DeepFake_Detection_Framework_Using_Vision_Transformer.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 8,
+  "caption": "Figure 4. Transformer layer with re-attention mechanism vs. self-attention approach [54]. While traditional transformer layers with self-attention mechanisms suffer from the attention collapse problem, the transformer layer with the re-attention mechanism has better scalability. (a) Transformer layer with re-attention mechanism; (b) Transformer layer with self-attention mechanism.",
+  "kind": "vector",
+  "width": 582,
+  "height": 486,
+  "source_title": "DFDT_An_End_to_End_DeepFake_Detection_Framework_Using_Vision_Transformer.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 14,
+  "caption": "Figure 7. Investigating the impact of transformer layer’s attention mechanism on the overall per- formance of the DFDT. The re-attention mechanism has improved the performance of the deepfake detection model compared to self-attention mechanism in transformer layer.",
+  "kind": "vector",
+  "width": 520,
+  "height": 400,
+  "source_title": "DFDT_An_End_to_End_DeepFake_Detection_Framework_Using_Vision_Transformer.pdf"
+ }
+]

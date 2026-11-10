@@ -268,3 +268,128 @@ def check_paper_counts(text: str, max_papers: int) -> list[str]:
     body = _FENCE_RE.sub("", text.split("\n## References", 1)[0])
     bad = sorted({int(m.group(1)) for m in _PAPER_COUNT_RE.finditer(body) if int(m.group(1)) > max_papers})
     return [f"bài nói {n} paper/nghiên cứu nhưng kho chỉ có {max_papers} paper" for n in bad]
+
+
+_NUM_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8}
+_AXIS_COUNT_RE = re.compile(r"\b(one|two|three|four|five|six|seven|eight|\d)\b[\s-]+(?:[\w-]+\s+){0,3}?axes\b|\b(one|two|three|four|five|six|seven|eight|\d)[\s-]+axis\b", re.I)
+
+
+def check_axis_count(text: str) -> list[str]:
+    """Số trục taxonomy được nêu ở các chỗ khác nhau (Abstract/Contributions/mục taxonomy) phải trùng nhau."""
+    body = _FENCE_RE.sub("", text.split("\n## References", 1)[0])
+    found: dict[int, str] = {}
+    for m in _AXIS_COUNT_RE.finditer(body):
+        raw = (m.group(1) or m.group(2)).lower()
+        n = _NUM_WORDS.get(raw) or int(raw)
+        found.setdefault(n, m.group(0))
+    if len(found) < 2:
+        return []
+    detail = "; ".join(f"{n} trục ('{ex}')" for n, ex in sorted(found.items()))
+    return [f"số trục taxonomy không nhất quán giữa các phần: {detail}"]
+
+
+_LEDGER_WORD_RE = re.compile(r"\b(?:records?|ledger|verified (?:Dice|HD95|values?)|benchmark matri(?:x|ces))\b", re.I)
+_MISSING_CFG_RE = re.compile(r"missing[- ]modalit(?:y|ies)[\w\s-]{0,12}(?:configurations?|settings?|scenarios?|results?|records?)", re.I)
+
+
+def check_ledger_claims(text: str, missing_groups: int) -> list[str]:
+    """Bài khẳng định bản ghi/ledger có cấu hình missing-modality trong khi sổ cái không có nhóm missing-modality nào."""
+    if missing_groups > 0:
+        return []
+    body = _FENCE_RE.sub("", text.split("\n## References", 1)[0])
+    problems = []
+    for sentence in re.split(r"(?<=[.!?])\s+|\n+", body):
+        if _LEDGER_WORD_RE.search(sentence) and _MISSING_CFG_RE.search(sentence) and not _NEGATION_RE.search(sentence):
+            problems.append(f"'{sentence.strip()[:140]}'")
+    return problems[:5]
+
+
+_FIRST_CLAIM_RE = re.compile(r"\b(?:the )?first (?:comprehensive|systematic|large-scale|complete|unified|mapping|survey|review)\b|\bto the best of our knowledge\b[^.]{0,60}\bfirst\b", re.I)
+
+
+def check_novelty_claims(text: str, n_prior_surveys: int | None = None) -> list[str]:
+    """Tuyên bố 'first comprehensive …' không thể chứng minh từ một kho PDF cố định; chỉ cảnh báo."""
+    body = _FENCE_RE.sub("", text.split("\n## References", 1)[0])
+    hits = [m.group(0) for sentence in re.split(r"(?<=[.!?])\s+|\n+", body) if (m := _FIRST_CLAIM_RE.search(sentence)) and not _NEGATION_RE.search(sentence)]
+    if not hits:
+        return []
+    extra = f"; kho chỉ có {n_prior_surveys} survey trước để đối chiếu" if n_prior_surveys is not None else ""
+    return [f"tuyên bố tính mới '{hits[0]}' không chứng minh được từ kho PDF hiện có{extra} — hạ xuống đóng góp có phạm vi rõ ràng"]
+
+
+_DENIAL_RE = re.compile(r"\bno missing[- ]modalit(?:y|ies)\b[\w\s,-]{0,30}(?:results?|records?|evidence|data)\b[^.]{0,80}\b(?:extracted|structured|ledger|records?)\b", re.I)
+
+
+def check_limitation_denial(text: str, missing_groups: int) -> list[str]:
+    """Ngược với check_ledger_claims: sổ cái CÓ nhóm missing-modality nhưng bài lại nói 'chưa trích xuất kết quả missing-modality nào'."""
+    if missing_groups <= 0:
+        return []
+    body = _FENCE_RE.sub("", text.split("\n## References", 1)[0])
+    return [f"'{sentence.strip()[:140]}'" for sentence in re.split(r"(?<=[.!?])\s+|\n+", body) if _DENIAL_RE.search(sentence)][:5]
+
+
+_PRIOR_SURVEY_RE = re.compile(r"\b(?:prior|previous|existing|earlier|recent|related)\s+(?:literature\s+)?(?:surveys?|reviews?)\b", re.I)
+_SURVEYLIKE_TITLE_RE = re.compile(r"\b(?:survey|review|overview|state[- ]of[- ]the[- ]art|tutorial|comprehensive|systematic|meta-analysis|taxonomy|literature)\b", re.I)
+
+
+def check_prior_survey_claims(text: str, titles_by_number: dict[int, str]) -> list[str]:
+    """Câu gọi [n] là 'prior survey/review' nhưng tiêu đề nguồn [n] không phải survey (vd. báo cáo challenge BraTS)."""
+    body = _FENCE_RE.sub("", text.split("\n## References", 1)[0])
+    problems: dict[int, str] = {}
+    for sentence in re.split(r"(?<=[.!?])\s+|\n+", body):
+        if not _PRIOR_SURVEY_RE.search(sentence) or _NEGATION_RE.search(sentence):
+            continue
+        for group in re.findall(r"\[([\d,\s–-]+)\]", sentence):
+            for part in re.split(r",\s*", group.strip()):
+                nums = part.replace("–", "-").split("-")
+                if len(nums) == 2 and nums[0].strip().isdigit() and nums[1].strip().isdigit() and int(nums[1]) - int(nums[0]) < 10:
+                    rng = range(int(nums[0]), int(nums[1]) + 1)
+                elif part.strip().isdigit():
+                    rng = [int(part)]
+                else:
+                    continue
+                for n in rng:
+                    title = titles_by_number.get(n)
+                    if title and not _SURVEYLIKE_TITLE_RE.search(title):
+                        problems.setdefault(n, title)
+    return [f"[{n}] được gọi là survey/review trước đó nhưng tiêu đề nguồn là '{t[:80]}'" for n, t in sorted(problems.items())]
+
+
+_OVERGEN_RE = re.compile(
+    r"\b(?:most effective|best[- ]performing|state[- ]of[- ]the[- ]art|dominant|superior|outperform\w*)\b[^.]{0,80}"
+    r"\b(?:paradigm|approach(?:es)?|strateg(?:y|ies)|family|fusion|methods?|models?)\b[^.]{0,80}"
+    r"\b(?:in the field|overall|currently|across (?:all|the)|all (?:15 )?subsets|universally|generally)\b",
+    re.I,
+)
+_SCOPE_RE = re.compile(r"\b(?:within|only (?:for|in|under)|under the|in the setting|protocol of|limited to|restricted to|in this study|of \[\d+\])\b", re.I)
+
+
+def check_overgeneralization(text: str) -> list[str]:
+    """Câu xếp hạng 'paradigm tốt nhất của lĩnh vực' không nêu phạm vi (nghiên cứu/protocol); chỉ cảnh báo."""
+    body = _FENCE_RE.sub("", text.split("\n## References", 1)[0])
+    out = []
+    for sentence in re.split(r"(?<=[.!?])\s+|\n+", body):
+        if _OVERGEN_RE.search(sentence) and not _SCOPE_RE.search(sentence) and not _NEGATION_RE.search(sentence):
+            out.append(f"'{sentence.strip()[:140]}'")
+    return out[:5]
+
+
+_URL_ID_RE = re.compile(r"(?:https?://\S+|doi:\S+|arxiv:\s*\S+|\b10\.\d{4,}/\S+)", re.I)
+_YEAR_RE = re.compile(r"\b((?:19|20)\d{2})\b")
+_REF_LINE_RE = re.compile(r"^\s*\[(\d+)\]")
+
+
+def check_reference_years(text: str) -> list[str]:
+    """Mục References ghi hai năm khác nhau trong cùng một dòng (vd. '2024' ... '2022'); chỉ cảnh báo, không tự chọn năm."""
+    if "\n## References" not in text:
+        return []
+    refs = text.split("\n## References", 1)[1]
+    out = []
+    for line in refs.split("\n"):
+        m = _REF_LINE_RE.match(line)
+        if not m:
+            continue
+        years = set(_YEAR_RE.findall(_URL_ID_RE.sub("", line)))
+        if len(years) > 1:
+            out.append(f"[{m.group(1)}] ghi nhiều năm: {', '.join(sorted(years))}")
+    return out[:8]

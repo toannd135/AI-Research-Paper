@@ -1,0 +1,38 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 11,
+  "caption": "Figure 4. Evaluation of the considered detectors on monomodal datasets.",
+  "kind": "vector",
+  "width": 419,
+  "height": 403,
+  "source_title": "A_Robust_Approach_to_Multimodal_Deepfake_Detection.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 12,
+  "caption": "Figure 5. Evaluation of the considered detectors on multimodal datasets considering different fusion strategies.",
+  "kind": "vector",
+  "width": 798,
+  "height": 246,
+  "source_title": "A_Robust_Approach_to_Multimodal_Deepfake_Detection.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 13,
+  "caption": "Figure 6. Confusion matrices obtained by considering the DLF detector (Late Fusion) on the FakeAVceleb (left), TIMIT (center) and DFDC (right) datasets. The corresponding BA0.5 values are 0.75, 0.87, and 0.69, respectively.",
+  "kind": "raster",
+  "width": 694,
+  "height": 456,
+  "source_title": "A_Robust_Approach_to_Multimodal_Deepfake_Detection.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 15,
+  "caption": "Figure 10. Evaluation of the DEF detector (Early Fusion) on mixed classes (real audio and fake video and viceversa). The case where both video and audio are fake is excluded.",
+  "kind": "vector",
+  "width": 798,
+  "height": 245,
+  "source_title": "A_Robust_Approach_to_Multimodal_Deepfake_Detection.pdf"
+ }
+]

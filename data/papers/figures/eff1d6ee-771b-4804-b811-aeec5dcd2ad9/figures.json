@@ -1,0 +1,74 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 2,
+  "caption": "Figure 1: Overview of our DF40 dataset. DF40 shows advantages in data diversity, synthesis quality, and deepfake realism. Note all the above figures are deepfake, which does not exist in the real world.",
+  "kind": "raster",
+  "width": 664,
+  "height": 259,
+  "source_title": "DF40_Toward_Next_Generation_Deepfake_Detection.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 5,
+  "caption": "Figure 2: The general fake data generation pipeline of the proposed DF40 dataset.",
+  "kind": "vector",
+  "width": 825,
+  "height": 217,
+  "source_title": "DF40_Toward_Next_Generation_Deepfake_Detection.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 6,
+  "caption": "Figure 3: One-Verse-All (OvA) evaluation (Protocol-4): Training the baseline (i.e., Xception) on one fake and testing it on other remaining fakes. We show the cross-forgery evaluations on both the FF++ domain and CDF domain. We also show the performance \"drop\" from the FF++ to the CDF. Blue donates all FS methods, Green for FR, and Yellow for EFS. In each heatmap, more \"red\" indicates higher value",
+  "kind": "raster",
+  "width": 796,
+  "height": 251,
+  "source_title": "DF40_Toward_Next_Generation_Deepfake_Detection.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 9,
+  "caption": "Figure 8: Evaluation of existing detectors on previous datasets and our DF40.",
+  "kind": "raster",
+  "width": 822,
+  "height": 211,
+  "source_title": "DF40_Toward_Next_Generation_Deepfake_Detection.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 30,
+  "caption": "Figure 14: The general fake data generation pipeline of the proposed DF40 dataset.",
+  "kind": "vector",
+  "width": 813,
+  "height": 239,
+  "source_title": "DF40_Toward_Next_Generation_Deepfake_Detection.pdf"
+ },
+ {
+  "file": "fig_6.png",
+  "page": 44,
+  "caption": "Figure 17: t-SNE visualization and logits analysis for analyzing the model, which is trained on FR (FF) and tested on StyleCLIP, achieving only about 0.2 AUC. See the text for our analysis and more details.",
+  "kind": "raster",
+  "width": 822,
+  "height": 316,
+  "source_title": "DF40_Toward_Next_Generation_Deepfake_Detection.pdf"
+ },
+ {
+  "file": "fig_7.png",
+  "page": 45,
+  "caption": "Figure 20: t-SNE visualization for illustrating the detection results of CLIP-large on the MidJourney dataset. We show that (fake) people of different races and genders can group into different clusters, highlighting that CLIP-large has already learned rich information about the real people’s attributions.",
+  "kind": "raster",
+  "width": 496,
+  "height": 397,
+  "source_title": "DF40_Toward_Next_Generation_Deepfake_Detection.pdf"
+ },
+ {
+  "file": "fig_8.png",
+  "page": 47,
+  "caption": "Figure 21: Std of the frequency analysis for visualizing different deepfake methods from the frequency domain.",
+  "kind": "vector",
+  "width": 893,
+  "height": 1183,
+  "source_title": "DF40_Toward_Next_Generation_Deepfake_Detection.pdf"
+ }
+]

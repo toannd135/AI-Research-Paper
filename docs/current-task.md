@@ -9,6 +9,12 @@ Chi tiết + kiểm chứng: `docs/implementation-plan.md` mục "Hệ thống h
 - [x] `pytest app/agent app/pipeline` pass; ruff không thêm lỗi mới
 - [ ] Chạy lại survey thật (cần chạy migration 0009 trước — DB thật chưa có cột `workspace_id`)
 
+## Task hiện tại (2026-11-10): kiểm tra nhất quán sau đánh giá `fd149553` — ADR 0009
+- [x] Gate chặn: độ phủ kho, số trục, ledger, prior-survey; cảnh báo novelty · [x] prompt synthesize · [x] PDF bỏ ảnh hỏng
+- [ ] Thêm 3–4 survey thật vào `papers_brain` (đã đề xuất, chờ người dùng duyệt) → nhập DB vào workspace "MRI brain"
+- [ ] Restart celery worker, chạy lại research với `/tmp/req2.json`
+- [ ] Đối chiếu "Table N"; metadata reference; số liệu ma trận suy giảm
+
 ---
 
 ## Task trước: Workspace (phiên/đề tài) — cách ly paper giữa các đề tài của CÙNG một người dùng
