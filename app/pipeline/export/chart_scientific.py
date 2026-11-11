@@ -9,7 +9,11 @@ Chỉ vẽ số liệu có trong spec — không sinh dữ liệu; giá trị th
 
 import io
 import math
+import textwrap
 
+# Font hình thống nhất cho mọi biểu đồ và sơ đồ Mermaid (Chromium: Arial → Liberation Sans), cỡ 8 pt như chú thích IEEE
+FIGURE_FONT = ["Liberation Sans", "DejaVu Sans"]  # Liberation Sans = metric Arial; máy không có thì DejaVu Sans
+FIGURE_FONT_PT = 8
 SCIENTIFIC_TYPES = {"xyline", "scatter", "cdf", "histogram", "boxplot", "heatmap", "dot", "dumbbell", "evidence_map", "panels", "timeline"}
 PANEL_TYPES = {"dot", "xyline", "line"}
 MAX_PANELS = 8
@@ -157,12 +161,13 @@ def _draw_evidence_map(ax, spec: dict) -> int:
     ax.set_xlim(-0.5, len(xl) - 0.5)
     ax.set_ylim(len(yl) - 0.5, -0.5)
     dense = len(xl) > 20
-    ax.set_xticks(range(len(xl)), xl, rotation=90 if dense else 35, ha="center" if dense else "right", fontsize=6 if dense else None)
+    ax.set_xticks(range(len(xl)), xl, rotation=90 if dense else 35, ha="center" if dense else "right",
+                  fontsize=FIGURE_FONT_PT - 1 if dense else None)  # nhãn [n] dày vẫn ≥7 pt để đọc được khi in
     ax.set_yticks(range(len(yl)), yl)
     ax.tick_params(length=0)
     ax.legend(handles=[Patch(color=c, label="NR" if k == "nr" else k.capitalize()) for k, c in _EVIDENCE_COLORS.items()
                        if k != "partial" or any(_evidence_key(v) == "partial" for r in rows for v in r)],
-              loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=4, frameon=False, fontsize=7)
+              loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=4, frameon=False, fontsize=FIGURE_FONT_PT - 1)
     return 1
 
 
@@ -194,6 +199,30 @@ def _timeline_events(spec: dict) -> list[tuple[int, str, str]]:
     return sorted(out)
 
 
+_YEAR_LABEL_IN = 0.42  # bề rộng tối thiểu dành cho một nhãn năm cỡ 7pt kèm khoảng hở
+
+
+def _axis_width_in(ax, groups: list[str]) -> float:
+    """Ước lượng bề rộng trục ngang (inch) sau khi trừ cột tên nhóm bên trái."""
+    fig_w = ax.figure.get_figwidth()
+    longest = max((len(line) for g in groups for line in textwrap.wrap(g, 16)), default=0)
+    return max(1.0, fig_w - (0.06 * longest + 0.45))
+
+
+def _spaced_years(years: list[int], lo: float, hi: float, axis_in: float) -> list[int]:
+    """Chỉ giữ các năm cách nhau đủ xa để nhãn không chồng; luôn giữ năm đầu và năm cuối."""
+    per_year = axis_in / max(hi - lo, 1e-6)
+    gap = max(1, math.ceil(_YEAR_LABEL_IN / per_year))
+    kept = [years[0]]
+    for year in years[1:]:
+        if year - kept[-1] >= gap:
+            kept.append(year)
+    # năm cuối bị bỏ vì quá sát năm giữ trước đó → đổi năm đó thành năm cuối (nếu vẫn đủ xa năm trước nữa)
+    if kept[-1] != years[-1] and len(kept) > 1 and years[-1] - kept[-2] >= gap:
+        kept[-1] = years[-1]
+    return kept
+
+
 def _draw_timeline(ax, spec: dict) -> int:
     """Dòng thời gian: trục ngang = năm, mỗi làn = một nhóm phương pháp; nhãn so le trên/dưới để không chồng nhau."""
     events = _timeline_events(spec)
@@ -210,14 +239,15 @@ def _draw_timeline(ax, spec: dict) -> int:
         color = _PALETTE[lane[group] % len(_PALETTE)]
         ax.scatter([year], [y], s=22, color=color, marker=_MARKERS[lane[group] % len(_MARKERS)], zorder=3)
         dy = (0.28 + 0.14 * ((k // 2) % 2)) * (1 if k % 2 == 0 else -1)
-        ax.annotate(label, (year, y), xytext=(year, y + dy), fontsize=6.3, ha="center", va="center", color="#222",
+        ax.annotate(label, (year, y), xytext=(year, y + dy), fontsize=FIGURE_FONT_PT - 1, ha="center", va="center", color="#222",
                     arrowprops={"arrowstyle": "-", "color": "#bbb", "linewidth": 0.5})
     years = [y for y, _, _ in events]
-    ax.set_xlim(min(years) - 0.7, max(years) + 0.7)
-    # chỉ ghi năm có mốc (ghi mọi năm trên khung hẹp làm các số 2018 2019... dính vào nhau)
-    ax.set_xticks(sorted(set(years)))
+    lo, hi = min(years) - 0.7, max(years) + 0.7
+    ax.set_xlim(lo, hi)
+    # tên nhóm dài xuống dòng → trục ngang còn đủ rộng
+    ax.set_yticks(range(len(groups)), [textwrap.fill(g, 16) for g in groups])
     ax.tick_params(axis="x", labelsize=7)
-    ax.set_yticks(range(len(groups)), groups)
+    ax.set_xticks(_spaced_years(sorted(set(years)), lo, hi, _axis_width_in(ax, groups)))
     ax.set_ylim(len(groups) - 0.4, -0.6)
     for i in range(len(groups)):
         ax.axhline(i, color="#eee", linewidth=0.8, zorder=1)
@@ -277,7 +307,7 @@ def render_panels_svg(spec: dict, fmt: str = "svg") -> str | bytes:
     nrows = math.ceil(len(panels) / ncols)
     dot_rows = max((len(p.get("labels") or []) for p in panels if p.get("type") == "dot"), default=0)
     cell_h = max(1.9, 0.22 * dot_rows + 0.9)
-    plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 7.5, "svg.fonttype": "path"})
+    plt.rcParams.update({"font.family": FIGURE_FONT, "font.size": FIGURE_FONT_PT - 0.5, "svg.fonttype": "path"})
     fig, axes = plt.subplots(nrows, ncols, figsize=(WIDE_WIDTH_IN, cell_h * nrows + 0.5), squeeze=False,
                              sharey=bool(spec.get("sharey")))
     drawn = 0
@@ -334,10 +364,10 @@ def render_scientific_svg(spec: dict, fmt: str = "svg") -> str | bytes:
     if kind in ("heatmap", "evidence_map", "dot", "dumbbell"):  # một hàng mỗi nhãn: cao theo số hàng
         height = max(2.0, 0.24 * n_rows + 1.1)
     elif kind == "timeline":  # một làn mỗi nhóm, chừa chỗ cho nhãn so le
-        height = max(2.2, 0.75 * len({g for _, _, g in _timeline_events(spec)}) + 0.9)
+        height = max(1.8, 0.5 * len({g for _, _, g in _timeline_events(spec)}) + 0.8)  # ít nhóm → hình thấp, không thừa khoảng trắng
     else:
         height = 2.7 if narrow else 3.6
-    plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 8 if narrow else 9, "svg.fonttype": "path"})
+    plt.rcParams.update({"font.family": FIGURE_FONT, "font.size": FIGURE_FONT_PT, "svg.fonttype": "path"})
     fig, ax = plt.subplots(figsize=(width, height))
     drawn = 0
 

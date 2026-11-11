@@ -79,7 +79,7 @@ def prepare_report_page(page, page_html: str) -> list[str]:
         const warnings = [];
         const {normalizeMermaidMath} = await import(assetOrigin + '/mermaid-math.js');
         mermaid.initialize({startOnLoad: false, theme: 'neutral', securityLevel: 'strict', htmlLabels: true,
-            fontFamily: 'Arial, sans-serif', flowchart: {htmlLabels: true, useMaxWidth: false, rankSpacing: 65, wrappingWidth: 320}});
+            fontFamily: 'Liberation Sans, Arial, sans-serif', flowchart: {htmlLabels: true, useMaxWidth: false, rankSpacing: 65, wrappingWidth: 320}});
         let index = 0;
         for (const pre of document.querySelectorAll('pre.mermaid')) {
             const id = `pdf-mermaid-${++index}`;
@@ -187,6 +187,41 @@ def mermaid_to_svg(code: str) -> str:
             return (
                 f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">'
                 f'<image width="{width}" height="{height}" href="data:image/png;base64,{encoded}"/></svg>'
+            )
+        finally:
+            browser.close()
+
+
+def mermaid_to_pdf(code: str) -> bytes:
+    """Sơ đồ Mermaid → PDF vector một trang đúng khổ sơ đồ, để LaTeX chèn bằng \\includegraphics."""
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as p:
+        browser = launch_browser(p)
+        try:
+            page = browser.new_page()
+            install_asset_routes(page)
+            page.set_content(
+                f'<link rel="stylesheet" href="{ASSET_ORIGIN}/katex/katex.min.css">'
+                f'<script src="{ASSET_ORIGIN}/mermaid.min.js"></script>'
+                "<style>@page{margin:0}html,body{margin:0;padding:0;background:#fff}</style><div id=\"d\"></div>",
+                wait_until="load",
+            )
+            size = page.evaluate("""async ({code, assetOrigin}) => {
+                const {normalizeMermaidMath} = await import(assetOrigin + '/mermaid-math.js');
+                mermaid.initialize({startOnLoad: false, theme: 'neutral', securityLevel: 'strict', htmlLabels: true,
+                    fontFamily: 'Liberation Sans, Arial, sans-serif', flowchart: {htmlLabels: true, useMaxWidth: false, rankSpacing: 65, wrappingWidth: 320}});
+                const host = document.getElementById('d');
+                host.innerHTML = (await mermaid.render('latex-diagram', normalizeMermaidMath(code))).svg;
+                await document.fonts.ready;
+                const svg = host.querySelector('svg');
+                const box = svg.getBoundingClientRect();
+                svg.style.display = 'block';
+                return {width: Math.ceil(box.width) + 2, height: Math.ceil(box.height) + 2};
+            }""", {"code": code, "assetOrigin": ASSET_ORIGIN})
+            return page.pdf(
+                width=f"{size['width']}px", height=f"{size['height']}px", print_background=True,
+                margin={"top": "0", "bottom": "0", "left": "0", "right": "0"}, page_ranges="1",
             )
         finally:
             browser.close()

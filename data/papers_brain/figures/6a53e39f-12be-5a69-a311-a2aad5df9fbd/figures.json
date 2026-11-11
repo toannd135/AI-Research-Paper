@@ -1,0 +1,38 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 14,
+  "caption": "Figure 1. Examples of annotated pre-treatment (Sample cases 1 and 2) and post-treatment (Sample cases 3 and 4) MRI images of patients with brain metastatic disease.",
+  "kind": "raster",
+  "width": 666,
+  "height": 955,
+  "source_title": "6a53e39f-12be-5a69-a311-a2aad5df9fbd.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 16,
+  "caption": "Figure 2. Graphical representation of the five-step annotation pipeline utilized for the challenge.",
+  "kind": "raster",
+  "width": 597,
+  "height": 1064,
+  "source_title": "6a53e39f-12be-5a69-a311-a2aad5df9fbd.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 18,
+  "caption": "Figure 3. Graphical representation of the institutions that contributed the datasets for the BraTS- METS 2025 Lighthouse Challenge",
+  "kind": "raster",
+  "width": 705,
+  "height": 630,
+  "source_title": "6a53e39f-12be-5a69-a311-a2aad5df9fbd.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 22,
+  "caption": "Figure 4. Graphical representation of BraTS-METS long-term vision for building an inter- institutional consortium for research developments based on brain MRI images of brain metastases.",
+  "kind": "raster",
+  "width": 975,
+  "height": 1147,
+  "source_title": "6a53e39f-12be-5a69-a311-a2aad5df9fbd.pdf"
+ }
+]

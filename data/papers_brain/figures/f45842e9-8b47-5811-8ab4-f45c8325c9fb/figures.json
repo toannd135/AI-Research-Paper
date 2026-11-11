@@ -1,0 +1,101 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 4,
+  "caption": "Figure 2: This figure showcases different generative models and provides an overview of their underlying principles. (a) General Adversarial Network (GAN) [8] is an end-to-end pipeline that trains the generator in an adversarial manner to generate samples that the discriminator is capable of distinguishing from the real data sample. (b) Energy-based Model (EBM) [23], also known as non-normalized p",
+  "kind": "vector",
+  "width": 1022,
+  "height": 560,
+  "source_title": "f45842e9-8b47-5811-8ab4-f45c8325c9fb.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 5,
+  "caption": "Figure 3: Generative learning trilemma [26]. De- spite the ability of GANs to quickly generate high- fidelity samples, their mode coverage is limited. In addition, VAEs and normalizing flows have been revealed to have a great deal of diversity; however, they generally have poor sampling quality. Diffu- sion models have emerged to compensate for the deficiency of VAEs and GANs by showing adequate m",
+  "kind": "vector",
+  "width": 415,
+  "height": 320,
+  "source_title": "f45842e9-8b47-5811-8ab4-f45c8325c9fb.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 9,
+  "caption": "Figure 5: The proposed taxonomy for diffusion-based medical imaging research is built on nine sub-fields: I) Image-to-Image Translation, II) Image Reconstruction, III) Image Registration, IV) Image Classification, V) Image Segmentation, VI) Image Denoising, VII) Image Generation, VIII) Anomaly Detection, and IX) Multi-disciplinary applications, named Other Applications. For the sake of brevity, we",
+  "kind": "vector",
+  "width": 1009,
+  "height": 1086,
+  "source_title": "f45842e9-8b47-5811-8ab4-f45c8325c9fb.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 11,
+  "caption": "Figure 7: An overview of Score-MRI [48]. xT is derived from the pre-trained prior distribution, and x0 is retrieved by sequentially applying the predictor, data consistency, corrector, and data consistency steps, given the measurement through the reverse SDE procedure.",
+  "kind": "raster",
+  "width": 1013,
+  "height": 368,
+  "source_title": "f45842e9-8b47-5811-8ab4-f45c8325c9fb.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 13,
+  "caption": "Figure 8: The image depicts the two stages of DiffMIC [60] - the training (a) and inference (b) stages - as well as the Dual-granularity Conditional Guidance (DCG) model shown in (c). The DCG model generates global and local priors from the raw image and Regions of Interest (ROIs), which serve to guide the diffusion process.",
+  "kind": "vector",
+  "width": 1021,
+  "height": 555,
+  "source_title": "f45842e9-8b47-5811-8ab4-f45c8325c9fb.pdf"
+ },
+ {
+  "file": "fig_6.png",
+  "page": 14,
+  "caption": "Figure 9: An overview of DARL [62]. Path (A) involves feeding a real noisy angiography image through the model to generate a segmentation map. Path (B) incorporates passing a noisy background image alongside a vessel-like fractal mask through the model to synthesize a synthetic angiography image.",
+  "kind": "raster",
+  "width": 1013,
+  "height": 332,
+  "source_title": "f45842e9-8b47-5811-8ab4-f45c8325c9fb.pdf"
+ },
+ {
+  "file": "fig_7.png",
+  "page": 15,
+  "caption": "Figure 11: Comparison by different methods of surface error mapping of the left hemisphere from 20 18F-MK-6240 test dataset [64]. The results confirm that DDPM-MR-PETCon has the lowest error, followed by the DDPM-PETMR method. DDPM-MR-PETCon is short for using the MR image as network input while using the PET image as a data consistency item, and DDPM-PETMR denotes that PET and MR images are used ",
+  "kind": "raster",
+  "width": 894,
+  "height": 434,
+  "source_title": "f45842e9-8b47-5811-8ab4-f45c8325c9fb.pdf"
+ },
+ {
+  "file": "fig_8.png",
+  "page": 16,
+  "caption": "Figure 13: Visual comparison of DDM [69], VM [143], and VM-Diff [144] for generating temporal cardiac images. The deformed intermediate frames S(˜ϕ) (right) are constructed using the source and target, and produce the deformation fields ˜ϕ (left).",
+  "kind": "raster",
+  "width": 861,
+  "height": 466,
+  "source_title": "f45842e9-8b47-5811-8ab4-f45c8325c9fb.pdf"
+ },
+ {
+  "file": "fig_9.png",
+  "page": 18,
+  "caption": "Figure 15: An overview of BAnoDDPM [73]. An autoencoder compresses the input image into a latent code, further enhanced by applying diffusion and reverse processes, and decodes into the pixel space.",
+  "kind": "vector",
+  "width": 871,
+  "height": 459,
+  "source_title": "f45842e9-8b47-5811-8ab4-f45c8325c9fb.pdf"
+ },
+ {
+  "file": "fig_10.png",
+  "page": 19,
+  "caption": "Figure 16: The final result of the HierarchicalDet [174] model displays bounding boxes around unhealthy teeth, along with the predicted quadrant (Q), enumeration (N), and diagnosis (D) labels.",
+  "kind": "raster",
+  "width": 913,
+  "height": 422,
+  "source_title": "f45842e9-8b47-5811-8ab4-f45c8325c9fb.pdf"
+ },
+ {
+  "file": "fig_11.png",
+  "page": 22,
+  "caption": "Figure 17: Diffusion models timeline from 2021 to April 2023 through the first paper in the medical field. The superscripts in ascending order represent 1.[47], 2.[48], 3.[52], 4.[177], 5.[63], 6.[59], 7.[65], 8.[56], 9.[16], 10.[54], 11.[53], 12.[76], 13.[68], 14.[72], 15.[179], 16.[69], 17.[73], 18.[70], 19.[75], 20.[58], 21.[55], 22.[51], 23.[50], 24.[71], 25.[178], 26.[67], 27.[74], 28.[176], ",
+  "kind": "vector",
+  "width": 1017,
+  "height": 538,
+  "source_title": "f45842e9-8b47-5811-8ab4-f45c8325c9fb.pdf"
+ }
+]

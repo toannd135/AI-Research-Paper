@@ -2,6 +2,7 @@ from app.agent.evidence.report_structure import (
     check_cross_references,
     finalize_structure,
     finalize_structure_report,
+    rematch_refs_by_caption,
     renumber_captions,
     renumber_captions_report,
     renumber_sections,
@@ -218,3 +219,177 @@ def test_image_caption_with_source_tag_is_used_as_figcaption(tmp_path, monkeypat
     body = '<figure class="fig photo" data-kind="figure" data-caption="Arch overview <i>Source: [3]</i>"><img>__CAPTION__</figure>'
     out = _number_figures_and_tables("<h3>5.3 Qualitative</h3>" + body)
     assert "<b>Figure 1.</b> Arch overview <i>Source: [3]</i>" in out
+
+
+def test_strip_dangling_located_citation():
+    from app.agent.evidence.report_structure import strip_dangling_citations
+
+    out, removed = strip_dangling_citations("As in [52, Table 1]. Also [3, 52, p. 4] and [2].", 45)
+    assert out == "As in. Also [3, p. 4] and [2]."
+    assert removed == [52, 52]
+
+
+def test_rematch_table_and_figure_refs_by_caption_keyword():
+    import json
+
+    from app.agent.evidence.report_structure import finalize_structure_report
+
+    chart = "```chart\n" + json.dumps({"caption": "Dice trend over years", "labels": ["a"], "series": [{"name": "s", "values": [1]}]}) + "\n```"
+    mermaid = "```mermaid\ngraph TD\nA-->B\n```"
+    text = (
+        "We organise methods with a six-axis taxonomy (Table 1). Table 2 lists datasets. Figure 1 presents a taxonomy-tree of methods.\n\n"
+        "**Table 1: Benchmark Dice on BraTS.**\n\n| a |\n\n**Table 2: Public datasets.**\n\n| b |\n\n"
+        "**Table 3: Six-axis taxonomy of segmentation methods.**\n\n| c |\n\n"
+        f"{chart}\n\n**Figure 2: Taxonomy tree of methods.**\n{mermaid}\n"
+    )
+    fixed, dangling, _ = finalize_structure_report(text)
+    assert "six-axis taxonomy (Table 3)" in fixed
+    assert "Table 2 lists datasets" in fixed
+    assert "Figure 2 presents a taxonomy-tree" in fixed
+    assert dangling == []
+
+
+def _fig_chart(caption):
+    import json
+
+    return "```chart\n" + json.dumps({"caption": caption, "labels": ["a"], "series": [{"name": "s", "values": [1]}]}) + "\n```"
+
+
+def test_located_cite_regex_ignores_math_intervals():
+    text = "Coordinates clipped to [0, L] and windows [0, T] as in [3, 5], [3–5] and [3, p. 4]."
+    out, removed = strip_dangling_citations(text, 5)
+    assert removed == []
+    assert "clipped to [0, L] and windows [0, T]" in out and "[3], [5]" in out and out.endswith("and [3, p. 4].")
+    out, removed = strip_dangling_citations("Values in [0, L] from [9, Table 2].", 5)
+    assert out == "Values in [0, L] from." and removed == [9]
+
+
+def test_strip_dangling_citations_inside_chart_caption_json():
+    import json
+
+    block = "```chart\n" + json.dumps({"caption": "Dice [52, Table 1] and [2]", "labels": ["a [1]"], "series": []}) + "\n```"
+    out, removed = strip_dangling_citations("Text [1].\n\n" + block + "\n", 5)
+    spec = json.loads(out.split("```chart\n")[1].split("\n```")[0])
+    assert removed == [52]
+    assert spec["caption"] == "Dice and [2]" and spec["labels"] == ["a [1]"]
+    code = "```python\nx = a[52]\n```"
+    assert strip_dangling_citations(code, 5) == (code, [])
+
+
+def _two_tables(body):
+    return (
+        "**Table 1: Segmentation networks architectures**\n\n| a |\n\n**Table 2: Public datasets**\n\n| b |\n\n" + body
+    )
+
+
+def test_rematch_skips_multi_ref_sentences_source_tables_and_brackets():
+    for body in (
+        "Table 1 lists segmentation networks while Table 2 lists datasets.",
+        "Public datasets appear in the original study [3, Table 1] for benchmark.",
+        "Table 1 of the Draft Basis reports public datasets.",
+        "Table 1 of [3] reports public datasets.",
+    ):
+        text = _two_tables(body)
+        assert rematch_refs_by_caption(text) == (text, []), body
+
+
+def test_rematch_fixes_inline_bold_figure_reference():
+    text = (
+        "**Figure 1** presents a taxonomy-tree of approaches.\n\n**Figure 1: Dice comparison of networks**\n"
+        + _fig_chart("Dice comparison")
+        + "\n\n**Figure 2: Taxonomy tree of approaches**\n"
+        + _fig_chart("Taxonomy tree")
+        + "\n"
+    )
+    out, changes = rematch_refs_by_caption(text)
+    assert changes == ["Figure 1 -> Figure 2"]
+    assert out.startswith("**Figure 2** presents a taxonomy-tree")
+
+
+def test_renumber_sections_updates_section_references():
+    text = (
+        "## 1. Intro\n\nSection 7 concludes and Section 6.2 details it; see §4 and Section 9.\n\n"
+        "## 2. A\n\n## 3. B\n\n## 4. C\n\n## 6. D\n\n### 6.1 First\n\n### 6.2 Sub\n\n## 7. Conclusion\n\nx\n\n"
+        "```python\n# Section 7\n```\n\n## References\n\n[1] Section 7 of a book."
+    )
+    out = renumber_sections(text)
+    assert "Section 6 concludes and Section 5.2 details it; see §4 and Section 9." in out
+    assert "## 5. D" in out and "### 5.2 Sub" in out and "## 6. Conclusion" in out
+    assert "```python\n# Section 7\n```" in out and out.endswith("[1] Section 7 of a book.")
+
+
+def test_strip_dangling_citations_cleans_mermaid_labels():
+    text = '```mermaid\ngraph LR\n  Y1[2019]\n  A["Late<br/>[5, 53]"]\n  B["Synthesis<br/>[47]"]\n```\n'
+    out, removed = strip_dangling_citations(text, 45)
+    assert '"Late<br/>[5]"' in out
+    assert '"Synthesis"' in out
+    assert "Y1[2019]" in out
+    assert sorted(removed) == [47, 53]
+
+
+def test_rebuild_paper_organization_from_real_headings():
+    from app.agent.evidence.report_structure import rebuild_paper_organization
+
+    text = (
+        "## 1. Introduction\n\n### 1.2 Paper Organization\n\nSection 2 formalizes the taxonomy. Section 6 summarizes the ledger.\n\n"
+        "## 2. Review Methodology\n\nx\n\n## 3. Taxonomy\n\ny\n\n## 4. Conclusion\n\nz\n\n## References\n\n[1] a\n"
+    )
+    out, changed = rebuild_paper_organization(text)
+    assert changed
+    assert "Section 6" not in out
+    assert "Section 2 presents Review Methodology; Section 3 presents Taxonomy; and Section 4 concludes the paper." in out
+    assert "## 2. Review Methodology" in out
+
+
+def test_fix_internal_draft_refs():
+    from app.agent.evidence.report_structure import fix_internal_draft_refs
+
+    text = (
+        "## 1. Introduction\n\nGaps structure the Discussion (Section 5 of the full manuscript) and D1-D6.\n"
+        "The table (Section 5 of the full manuscript) lists them. Synthesis (§1.3, §5.4 of the Draft Basis) shows gaps.\n\n"
+        "## 2. Discussion & Open Challenges\n\nw\n"
+    )
+    out, changes = fix_internal_draft_refs(text)
+    assert "the Discussion (Section 2) and" in out
+    assert "The table lists them." in out
+    assert "Draft Basis" not in out and "full manuscript" not in out
+    assert len(changes) == 3
+
+
+def test_fix_internal_draft_refs_source_tables_and_render_meta():
+    from app.agent.evidence.report_structure import fix_internal_draft_refs
+
+    text = (
+        "## 3. Taxonomy\n\n**Efficiency.** Table 1 of the Draft Basis reports parameters [45]. As shown in Table 1 of the full manuscript, x.\n"
+        "Figure 2 presents the tree. The tree is rendered left-to-right (graph LR) to keep labels readable.\n"
+    )
+    out, _ = fix_internal_draft_refs(text)
+    assert "**Efficiency.** The corresponding source table reports parameters [45]." in out
+    assert "As shown in the corresponding source table, x." in out
+    assert out.rstrip().endswith("Figure 2 presents the tree.")
+
+
+def test_timeline_year_ticks_do_not_crowd_narrow_axis():
+    from app.pipeline.export.chart_scientific import _spaced_years
+
+    years = [2018, 2021, 2022, 2023, 2024]
+    assert _spaced_years(years, 2017.3, 2024.7, 2.0) == [2018, 2021, 2024]  # khung một cột: bỏ năm quá sát
+    assert _spaced_years(years, 2017.3, 2024.7, 6.0) == years  # khung cả trang: đủ chỗ cho mọi năm
+
+
+def test_corpus_flow_is_horizontal_with_short_labels():
+    from app.agent.evidence.corpus_flow import corpus_flow_block, inject_corpus_flow
+
+    block = corpus_flow_block(52, 52, 45, 12)
+    assert "flowchart LR" in block and "Cited in this review (n = 45)" in block
+    legacy = "## 2. M\n**Figure 1: x**\n\n```mermaid\nflowchart TD\n  C[\"Papers cited in this review (n = 45)\"]\n```\n### 2.3 B\n"
+    assert inject_corpus_flow(legacy, block) == legacy  # bài cũ đã có sơ đồ: không chèn lần hai
+
+
+def test_render_meta_sentence_after_bold_figure_lead_is_removed():
+    from app.agent.evidence.report_structure import fix_internal_draft_refs
+
+    text = "## 3. T\n**Figure 2** presents the tree. It is rendered left-to-right (`graph LR`) for readability.\n**Figure 2: Tree (graph LR).**\n"
+    out, changes = fix_internal_draft_refs(text)
+    assert "**Figure 2** presents the tree." in out and "rendered left-to-right" not in out
+    assert "**Figure 2: Tree (graph LR).**" in out and changes

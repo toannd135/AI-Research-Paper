@@ -43,10 +43,25 @@ def test_pdf_export_parses_column_query(client, params, columns):
     db.get.return_value = SimpleNamespace(report="# Paper\n\n## 1. Method\nEvidence.", citations=None, user_id=None)
     app.dependency_overrides[get_db] = lambda: db
     with patch("app.pipeline.export.pdf_renderer.report_to_pdf", return_value=b"%PDF-test") as render:
-        response = client.get("/research/test-task/pdf", params=params)
+        response = client.get("/research/test-task/pdf", params={**params, "engine": "html"})
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/pdf"
     render.assert_called_once_with(ANY, columns=columns)
+
+
+def test_pdf_export_defaults_to_latex_and_falls_back_to_html(client):
+    db = MagicMock()
+    db.get.return_value = SimpleNamespace(report="# Paper\n\n## 1. Method\nEvidence.", citations=None, user_id=None)
+    app.dependency_overrides[get_db] = lambda: db
+    with (
+        patch("app.pipeline.export.latex_renderer.compile_latex_pdf", return_value=b"%PDF-latex") as latex,
+        patch("app.pipeline.export.pdf_renderer.report_to_pdf", return_value=b"%PDF-html") as html,
+    ):
+        assert client.get("/research/test-task/pdf").content == b"%PDF-latex"
+        latex.assert_called_once_with(ANY, template="ieee")
+        html.assert_not_called()
+        latex.side_effect = RuntimeError("Biên dịch LaTeX thất bại")
+        assert client.get("/research/test-task/pdf").content == b"%PDF-html"
 
 
 @pytest.mark.parametrize("columns", ["0", "3", "invalid"])

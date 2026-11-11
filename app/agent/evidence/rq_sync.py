@@ -3,6 +3,8 @@
 Các chặng sinh độc lập nên Introduction và Review Methodology hay tự đặt RQ khác nhau. Module này không gọi LLM:
 `canonical_rqs` đọc RQ chuẩn, `enforce_rqs` ghi đè nội dung các dòng RQ trong mục "Research Questions" khi số dòng khớp,
 `check_rq_definitions` báo lỗi khi hai mục định nghĩa RQ lệch nhau (lỗi chặn trong Quality Gate).
+RQ chỉ được liệt kê MỘT lần (mục đầu tiên, thường là Introduction): `dedupe_rq_definitions` thay danh sách lặp ở mục sau
+bằng câu tham chiếu, `check_rq_repetition` chặn ở Quality Gate nếu còn lặp.
 """
 
 from __future__ import annotations
@@ -72,9 +74,9 @@ def rq_block(canonical: list[str]) -> str:
     return (
         "CANONICAL RESEARCH QUESTIONS (single source of truth):\n"
         f"{lines}\n"
-        "Use exactly these questions, with the same numbers and wording, wherever research questions are listed "
-        "(Introduction, Review Methodology). Never add, drop, reorder or rephrase them. In Discussion and Conclusion refer to "
-        f"them only as RQ1...RQ{len(canonical)}, and the Conclusion must answer every one of them."
+        "List these questions exactly once, in the Introduction, with the same numbers and wording. Never add, drop, "
+        "reorder or rephrase them, and never list them again in any later section (Review Methodology, Discussion, "
+        f"Conclusion): there refer to them only as RQ1...RQ{len(canonical)}, and the Conclusion must answer every one of them."
     )
 
 
@@ -130,3 +132,87 @@ def check_rq_definitions(text: str) -> list[str]:
             if not _similar(base_map[n], other[n]):
                 problems.append(f"RQ{n} được định nghĩa khác nhau giữa mục '{base_title}' và '{title}'")
     return problems
+
+
+_NUM_HEAD_RE = re.compile(r"^(\d+(?:\.\d+)*)\.?\s")
+_NON_BODY_TITLE_RE = re.compile(r"^(?:\d+(?:\.\d+)*\.?\s+)?(?:references|bibliography)\b")
+_FENCE_SPAN_RE = re.compile(r"```.*?```", re.DOTALL)
+
+
+def _rq_homes(text: str) -> tuple[int, dict[int, str], list[tuple[str, int, int]]]:
+    """(chỉ số mục 'gốc' định nghĩa RQ đầu tiên, RQ của mục gốc, danh sách mục thân bài). Gốc = -1 khi không có."""
+    fences = [(m.start(), m.end()) for m in _FENCE_SPAN_RE.finditer(text)]
+    secs = []
+    for title, start, end in _sections(text):
+        if _NON_BODY_TITLE_RE.match(title):
+            break
+        if any(a <= start < b for a, b in fences):
+            continue
+        secs.append((title, start, end))
+    for i, (_title, start, end) in enumerate(secs):
+        rqs = parse_rq_lines(_FENCE_SPAN_RE.sub("", text[start:end]))
+        if len({n for n, _ in rqs}) >= MIN_RQS:
+            return i, dict(rqs), secs
+    return -1, {}, secs
+
+
+def _is_repeat(n: int, body: str, home: dict[int, str]) -> bool:
+    """Dòng RQ ở mục khác là định nghĩa lặp khi giống RQ gốc cùng số, hoặc chỉ là câu hỏi (kết thúc '?').
+
+    Dòng trả lời ('RQ1: Transformers outperform ...') không bị coi là lặp.
+    """
+    return n in home and (_similar(body, home[n]) or body.rstrip(" *").endswith("?"))
+
+
+def _repeat_lines(chunk: str, home: dict[int, str]) -> list[int]:
+    out = []
+    for i, line in enumerate(chunk.splitlines()):
+        m = _RQ_LINE_RE.match(line)
+        if m and len(m.group("body").split()) >= MIN_BODY_WORDS and _is_repeat(int(m.group("n")), m.group("body"), home):
+            out.append(i)
+    return out
+
+
+def check_rq_repetition(text: str) -> list[str]:
+    """Lỗi khi danh sách RQ được nêu lại nguyên văn ở mục khác ngoài mục định nghĩa đầu tiên (thường là Introduction)."""
+    home_idx, home, secs = _rq_homes(text)
+    if home_idx < 0:
+        return []
+    home_title = secs[home_idx][0]
+    return [
+        f"RQ được định nghĩa lặp ở mục '{title}' (đã nêu ở '{home_title}'); chỉ nêu một lần, các mục sau gọi RQ1..RQn"
+        for title, start, end in secs[home_idx + 1 :]
+        if _repeat_lines(_FENCE_SPAN_RE.sub("", text[start:end]), home)
+    ]
+
+
+def dedupe_rq_definitions(text: str) -> tuple[str, list[str]]:
+    """Giữ định nghĩa RQ ở mục đầu tiên; ở mục sau thay các dòng RQ lặp bằng một câu tham chiếu. Trả về (văn bản, mục đã sửa)."""
+    home_idx, home, secs = _rq_homes(text)
+    if home_idx < 0:
+        return text, []
+    home_title = secs[home_idx][0]
+    num = _NUM_HEAD_RE.match(home_title)
+    where = f"Section {num.group(1)}" if num else "the Introduction"
+    last = max(home)
+    ref_line = f"This review addresses research questions RQ1–RQ{last} as stated in {where}."
+    pieces: list[str] = []
+    pos = 0
+    changed: list[str] = []
+    for title, start, end in secs[home_idx + 1 :]:
+        chunk = text[start:end]
+        if _FENCE_SPAN_RE.search(chunk):
+            continue  # mục có khối code/biểu đồ: không đụng để tránh lệch dòng
+        idx = _repeat_lines(chunk, home)
+        if not idx:
+            continue
+        lines = chunk.splitlines(keepends=True)
+        ending = lines[idx[0]][len(lines[idx[0]].rstrip("\r\n")):] or "\n"
+        lines[idx[0]] = ref_line + ending
+        for i in reversed(idx[1:]):
+            del lines[i]
+        pieces += [text[pos:start], "".join(lines)]
+        pos = end
+        changed.append(title)
+    pieces.append(text[pos:])
+    return "".join(pieces), changed

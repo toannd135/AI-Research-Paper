@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from app.agent.evidence.citation_validator import expand_citation_clusters
+from app.agent.evidence.report_structure import _LOCATED_CITE_RE, _MERMAID_CITE_RE, _clean_data_fence
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -129,6 +130,10 @@ def _collapse_cluster(m: re.Match) -> str:
     return ", ".join(f"[{n}]" for n in numbers)
 
 
+def _merge_cluster(m: re.Match) -> str:
+    return "[" + ", ".join(dict.fromkeys(re.findall(r"\d+", m.group(0)))) + "]"
+
+
 def _collapse_text(text: str) -> str:
     return _CITE_CLUSTER_RE.sub(_collapse_cluster, _SELF_RANGE_RE.sub(r"[\1]", text))
 
@@ -146,8 +151,7 @@ def _collapse_in_json(value: Any) -> Any:
 def collapse_duplicate_citations(text: str) -> str:
     """Gộp trích dẫn liền kề trùng nhau sau khi đánh số lại ('[1], [1]' -> '[1]', '[1]–[1]' -> '[1]'); giữ thứ tự xuất hiện đầu tiên.
 
-    Chỉ sửa văn bản thường và chuỗi trong khối ```table (JSON); khối code/chart/mermaid giữ nguyên
-    vì '[1], [2]' ở đó có thể là mảng dữ liệu.
+    Sửa văn bản thường, chuỗi JSON trong ```table/```chart và nhãn ```mermaid; mảng số và khối code khác giữ nguyên.
     """
 
     def _table(m: re.Match) -> str:
@@ -162,23 +166,53 @@ def collapse_duplicate_citations(text: str) -> str:
     for fence in _FENCE_RE.finditer(text):
         out.append(_collapse_text(text[pos : fence.start()]))
         block = fence.group(0)
-        out.append(_BLOCK_RE.sub(_table, block) if block.startswith("```table") else block)
+        if block.startswith("```table"):
+            out.append(_BLOCK_RE.sub(_table, block))
+        elif block.startswith("```mermaid"):
+            # nhãn mermaid: '[2], [38], [2]' -> '[2, 38]' cho gọn trong nút
+            out.append(re.sub(r"(?<![\w\]])\[\d+\](?:,\s*\[\d+\])*", _merge_cluster, block))
+        else:
+            out.append(_map_fence_citations(block, _collapse_text))
         pos = fence.end()
     out.append(_collapse_text(text[pos:]))
     return "".join(out)
 
 
-def _expand_outside_code(text: str) -> str:
-    """Tách cụm trích dẫn trong văn bản thường và khối ```table; khối code/chart/mermaid giữ nguyên (có thể là mảng dữ liệu)."""
+def _map_json_strings(value: Any, fn) -> Any:
+    if isinstance(value, str):
+        return fn(value) if "[" in value else value
+    if isinstance(value, list):
+        return [_map_json_strings(v, fn) for v in value]
+    if isinstance(value, dict):
+        return {k: _map_json_strings(v, fn) for k, v in value.items()}
+    return value
+
+
+def _map_fence_citations(block: str, fn) -> str:
+    """Áp `fn` lên trích dẫn trong khối hình: ```table/```chart chỉ sửa chuỗi JSON (mảng số giữ nguyên), ```mermaid chỉ sửa cụm [n,...]
+    trong nhãn. Khối code khác giữ nguyên."""
+    if block.startswith(("```table", "```chart")):
+        return _clean_data_fence(block, lambda spec: _map_json_strings(spec, fn))
+    if block.startswith("```mermaid"):
+        return _MERMAID_CITE_RE.sub(lambda m: fn(m.group(0)), block)
+    return block
+
+
+def _apply_to_citation_text(text: str, fn) -> str:
+    """Áp `fn` lên mọi chỗ có thể chứa trích dẫn: văn bản thường, chuỗi JSON của ```table/```chart, nhãn ```mermaid."""
     out: list[str] = []
     pos = 0
     for fence in _FENCE_RE.finditer(text):
-        out.append(expand_citation_clusters(text[pos : fence.start()]))
-        block = fence.group(0)
-        out.append(expand_citation_clusters(block) if block.startswith("```table") else block)
+        out.append(fn(text[pos : fence.start()]))
+        out.append(_map_fence_citations(fence.group(0), fn))
         pos = fence.end()
-    out.append(expand_citation_clusters(text[pos:]))
+    out.append(fn(text[pos:]))
     return "".join(out)
+
+
+def _expand_outside_code(text: str) -> str:
+    """Tách cụm trích dẫn trong văn bản thường, chuỗi JSON của ```table/```chart và nhãn ```mermaid; khối code khác giữ nguyên."""
+    return _apply_to_citation_text(text, expand_citation_clusters)
 
 
 def clean_and_deduplicate_citations(
@@ -230,7 +264,12 @@ def clean_and_deduplicate_citations_ex(
         orig_idx_to_canon_idx[orig_idx] = canon_idx
 
     # 2. Tìm tất cả các chỉ số citation được thực sự sử dụng trong văn bản
-    used_orig_indices = [int(m) for m in re.findall(r"\[(\d+)\]", text)]
+    # chỉ đếm chỗ có thể là trích dẫn (không đếm mảng số trong JSON chart/table)
+    cite_view: list[str] = []
+    _apply_to_citation_text(text, lambda s: cite_view.append(s) or s)
+    cite_text = "\n".join(cite_view)
+    used_orig_indices = [int(m) for m in re.findall(r"\[(\d+)\]", cite_text)]
+    used_orig_indices += [int(n) for m in _LOCATED_CITE_RE.finditer(cite_text) for n in re.findall(r"\d+", m.group(1))]
     used_canon_indices = sorted({orig_idx_to_canon_idx[i] for i in used_orig_indices if i in orig_idx_to_canon_idx})
 
     # Nếu văn bản chưa cite gì (hoặc draft offline), giữ lại tất cả canonical
@@ -250,7 +289,14 @@ def clean_and_deduplicate_citations_ex(
         new_idx = orig_to_new.get(idx)
         return f"[{new_idx}]" if new_idx is not None else match.group(0)
 
-    updated_text = re.sub(r"\[(\d+)\]", _repl_citation, text)
+    def _repl_located(match: re.Match) -> str:
+        # '[5, Table 2]' dùng cùng ánh xạ với '[5]'; số không có trong ánh xạ giữ nguyên (strip_dangling_citations xử lý sau)
+        nums = [str(orig_to_new.get(int(n), n)) for n in re.findall(r"\d+", match.group(1))]
+        return "[" + ", ".join(dict.fromkeys(nums)) + ", " + match.group(2) + "]"
+
+    updated_text = _apply_to_citation_text(
+        text, lambda s: _LOCATED_CITE_RE.sub(_repl_located, re.sub(r"\[(\d+)\]", _repl_citation, s))
+    )
     updated_text = collapse_duplicate_citations(updated_text)
 
     # 5. Sinh danh sách tham khảo theo định dạng chuẩn IEEE

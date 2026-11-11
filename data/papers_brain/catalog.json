@@ -99,7 +99,7 @@
     "title": "M3AE: Multimodal Representation Learning for Brain Tumor Segmentation with Missing Modalities",
     "authors": "Hong Liu, Dong Wei, Donghuan Lu, Jinghan Sun, Liansheng Wang, Yefeng Zheng",
     "year": "2023",
-    "venue": "AAAI 2023",
+    "venue": "Proc. AAAI Conference on Artificial Intelligence",
     "doi": "",
     "url": "https://arxiv.org/abs/2303.05302"
   },
@@ -147,7 +147,7 @@
     "title": "Multi-modal Learning with Missing Modality via Shared-Specific Feature Modelling",
     "authors": "Hu Wang, Yuanhong Chen, Congbo Ma, Jodie Avery, Louise Hull, Gustavo Carneiro",
     "year": "2023",
-    "venue": "CVPR2023",
+    "venue": "Proc. IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)",
     "doi": "",
     "url": "https://arxiv.org/abs/2307.14126"
   },
@@ -330,8 +330,8 @@
   "0b3bf03d-ea46-5408-b1d6-6154a9b34fcc": {
     "title": "Metrics reloaded: Recommendations for image analysis validation",
     "authors": "Lena Maier-Hein, Annika Reinke, Patrick Godau, Minu D. Tizabi, Florian Buettner, Evangelia Christodoulou, Ben Glocker, Fabian Isensee, Jens Kleesiek, Michal Kozubek, Mauricio Reyes, Michael A. Riegler, Manuel Wiesenfarth, A. Emre Kavur, Carole H. Sudre, Michael Baumgartner, Matthias Eisenmann, Doreen Heckmann-Nötzel, Tim Rädsch, Laura Acion, Michela Antonelli, Tal Arbel, Spyridon Bakas, Arriel Benis, Matthew Blaschko, M. Jorge Cardoso, Veronika Cheplygina, Beth A. Cimini, Gary S. Collins, Keyvan Farahani, Luciana Ferrer, Adrian Galdran, Bram van Ginneken, Robert Haase, Daniel A. Hashimoto, Michael M. Hoffman, Merel Huisman, Pierre Jannin, Charles E. Kahn, Dagmar Kainmueller, Bernhard Kainz, Alexandros Karargyris, Alan Karthikesalingam, Hannes Kenngott, Florian Kofler, Annette Kopp-Schneider, Anna Kreshuk, Tahsin Kurc, Bennett A. Landman, Geert Litjens, Amin Madani, Klaus Maier-Hein, Anne L. Martel, Peter Mattson, Erik Meijering, Bjoern Menze, Karel G. M. Moons, Henning Müller, Brennan Nichyporuk, Felix Nickel, Jens Petersen, Nasir Rajpoot, Nicola Rieke, Julio Saez-Rodriguez, Clara I. Sánchez, Shravya Shetty, Maarten van Smeden, Ronald M. Summers, Abdel A. Taha, Aleksei Tiulpin, Sotirios A. Tsaftaris, Ben Van Calster, Gaël Varoquaux, Paul F. Jäger",
-    "year": "2022",
-    "venue": "Nature methods, 1-18 (2024)",
+    "year": "2024",
+    "venue": "Nature Methods 21(2):195-212",
     "doi": "10.1038/s41592-023-02151-z",
     "url": "https://arxiv.org/abs/2206.01653"
   },
@@ -398,5 +398,21 @@
     "venue": "arXiv:2209.15076",
     "doi": "",
     "url": "https://arxiv.org/abs/2209.15076"
+  },
+  "cf53af46-dbb5-4c12-a780-0cc1357b4673": {
+    "title": "Deep Learning Based Brain Tumor Segmentation: A Survey",
+    "authors": "Zhihua Liu, Lei Tong, Zheheng Jiang, Long Chen, Feixiang Zhou, Qianni Zhang, Xiangrong Zhang, Yaochu Jin, Huiyu Zhou",
+    "year": "2021",
+    "venue": "arXiv:2007.09479",
+    "doi": "",
+    "url": "https://arxiv.org/abs/2007.09479"
+  },
+  "c6a0b451-d9af-4fa9-909e-f98e304898dd": {
+    "title": "Recent deep learning-based brain tumor segmentation models using multi-modality magnetic resonance imaging: a prospective survey",
+    "authors": "Zain Ul Abidin, Rizwan Ali Naqvi, Amir Haider, Hyung Seok Kim, Daesik Jeong, Seung Won Lee",
+    "year": "2024",
+    "venue": "Frontiers in Bioengineering and Biotechnology 12:1392807",
+    "doi": "10.3389/fbioe.2024.1392807",
+    "url": "https://doi.org/10.3389/fbioe.2024.1392807"
   }
 }

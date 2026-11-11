@@ -51,11 +51,18 @@ def extract_numeric_claims(text: str) -> list[dict[str, Any]]:
                         col = str(columns[col_idx]) if col_idx < len(columns) else f"col{col_idx + 1}"
                         claims.append({"block": f"table#{block_idx}", "location": f"row {row_idx}, {col}", "value": m.group(1), "cites": cites})
         else:
+            labels = spec.get("labels") if isinstance(spec.get("labels"), list) else spec.get("x_labels")
+            labels = labels if isinstance(labels, list) else []
             for s_idx, series in enumerate(spec.get("series") or [], start=1):
                 values = series.get("values") if isinstance(series, dict) else None
+                name_cites = [int(n) for n in _CITE_RE.findall(str(series.get("name", "")))] if isinstance(series, dict) else []
                 for v_idx, value in enumerate(values or [], start=1):
                     if isinstance(value, (int, float)) and not isinstance(value, bool):
-                        claims.append({"block": f"chart#{block_idx}", "location": f"series {s_idx}, point {v_idx}", "value": repr(value), "cites": caption_cites})
+                        # Nguồn của một điểm = [n] ở nhãn của điểm đó, rồi tới tên series, cuối cùng mới tới caption:
+                        # caption gộp nhiều [n] không được che một điểm gán nhầm nguồn.
+                        label = str(labels[v_idx - 1]) if v_idx <= len(labels) else ""
+                        cites = [int(n) for n in _CITE_RE.findall(label)] or name_cites or caption_cites
+                        claims.append({"block": f"chart#{block_idx}", "location": f"series {s_idx}, point {v_idx}", "value": repr(value), "cites": cites})
     return claims
 
 
@@ -88,3 +95,55 @@ def trace_claims(claims: list[dict[str, Any]], sources: dict[int, dict[str, Any]
                 break
         records.append(record)
     return records
+
+
+def _same_value(a: float, b: float) -> bool:
+    return abs(a - b) < 1e-9
+
+
+def _misattribution(claim: dict[str, Any], cited_paper_ids: dict[int, str], owners: dict[str, set[float]]) -> list[str]:
+    """Paper thật sự sở hữu giá trị của `claim` khi nó bị cite nhầm; rỗng = không có căn cứ kết luận cite nhầm.
+
+    Cite nhầm khi: giá trị khớp record của paper khác, mọi paper được cite ĐÃ có record trong sổ cái nhưng không record nào khớp.
+    Paper được cite chưa có record (extractor chưa trích) thì bỏ qua — không đủ căn cứ để chặn.
+    """
+    if not claim["cites"]:
+        return []
+    value = float(claim["value"])
+    cited = {cited_paper_ids[n] for n in claim["cites"] if n in cited_paper_ids}
+    if not cited or not all(pid in owners for pid in cited):
+        return []
+    if any(_same_value(value, v) for pid in cited for v in owners[pid]):
+        return []
+    return sorted(pid for pid, vals in owners.items() if any(_same_value(value, v) for v in vals))
+
+
+def _owners(records: list[Any]) -> dict[str, set[float]]:
+    owners: dict[str, set[float]] = {}
+    for rec in records:
+        owners.setdefault(rec.paper_id, set()).add(float(rec.value))
+    return owners
+
+
+def mark_misattributed(trace_records: list[dict[str, Any]], cited_paper_ids: dict[int, str], records: list[Any]) -> list[dict[str, Any]]:
+    """Bản ghi TRACED nhưng sổ cái cho thấy giá trị thuộc paper khác → UNTRACED (kèm `misattributed_to`) để bước gỡ ô/điểm xử lý."""
+    owners = _owners(records)
+    for rec in trace_records:
+        true_owners = _misattribution(rec, cited_paper_ids, owners) if rec["status"] == TRACED else []
+        if true_owners:
+            rec.update(status=UNTRACED, paper_id=None, pages=[], pdf_sha256=None, misattributed_to=true_owners)
+    return trace_records
+
+
+def check_record_attribution(claims: list[dict[str, Any]], cited_paper_ids: dict[int, str], records: list[Any]) -> list[str]:
+    """Mô tả từng giá trị trong bảng/biểu đồ bị cite nhầm paper (đối chiếu sổ cái record)."""
+    owners = _owners(records)
+    problems: list[str] = []
+    for claim in claims:
+        true_owners = _misattribution(claim, cited_paper_ids, owners)
+        if true_owners:
+            problems.append(
+                f"{claim['block']} {claim['location']}: giá trị {claim['value']} gắn {', '.join(f'[{n}]' for n in claim['cites'])} "
+                f"nhưng sổ cái ghi giá trị này thuộc {', '.join(true_owners)}"
+            )
+    return problems

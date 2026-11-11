@@ -256,7 +256,7 @@ def test_survey_structure_has_review_methodology_and_comparability_rules():
     _, stage2 = sn._stage_structure({}, "survey", "stage2")
     _, stage4 = sn._stage_structure({}, "survey", "stage4")
     _, stage5 = sn._stage_structure({}, "survey", "stage5")
-    assert "## 2. Review Methodology" in stage2 and "Research Questions" in stage2 and "Never invent" in stage2
+    assert "## 2. Review Methodology" in stage2 and "Do NOT list the research questions again" in stage2 and "Never invent" in stage2
     assert "## 3. Taxonomy" in stage2 and "## 5. Comparative Evidence Synthesis" in stage4
     assert "COMPARABILITY RULE" in stage4 and "## 7. Conclusion" in stage5
 

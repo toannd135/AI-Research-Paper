@@ -102,3 +102,31 @@ def test_numbered_citations_follow_the_new_numbering():
     # Alpha (canon 1) đứng trước Gamma (canon 3) theo thứ tự trong danh sách gốc
     assert "Alpha" in numbered[0].paper_id and "Gamma" in numbered[1].paper_id
     assert updated == "Gamma is cited first [2], then Alpha [1] and again [1]."
+
+
+def test_located_citation_remapped_with_same_mapping():
+    citations = [Citation(paper_id=f"Title: Paper number {w} Authors: A et al. (2024)", chunk_id=f"c{i}", text_snippet="s") for i, w in enumerate(["one", "two", "three", "four", "five"], 1)]
+    text, refs, _ = clean_and_deduplicate_citations_ex(citations, "Uses [5] and [4]; see [5, Table 2].")
+    assert len(refs) == 2
+    assert text == "Uses [2] and [1]; see [2, Table 2]."
+
+
+def test_citations_inside_mermaid_and_chart_are_remapped():
+    # [3] trùng paper với [1]; [2] không được cite ngoài hình → nhãn cây/caption chart phải theo số MỚI, không giữ chỉ số thô
+    citations = [
+        Citation(paper_id="Title: Alpha Net Authors: A et al. (2020)", chunk_id="c1", text_snippet="s"),
+        Citation(paper_id="Title: Beta Net Authors: B et al. (2021)", chunk_id="c2", text_snippet="s"),
+        Citation(paper_id="Title: Alpha Net Authors: A et al. (2020)", chunk_id="c3", text_snippet="s"),
+        Citation(paper_id="Title: Gamma Net Authors: C et al. (2022)", chunk_id="c4", text_snippet="s"),
+    ]
+    text = (
+        "Gamma is strong [4].\n\n```mermaid\ngraph LR\n  Y1[2019]\n  A1[\"Early<br/>[4,3]\"]\n```\n\n"
+        '```chart\n{"type": "bar", "labels": ["a"], "series": [{"name": "s", "values": [4]}], "caption": "Sources: [3, 4]."}\n```\n'
+    )
+    out, refs, _ = clean_and_deduplicate_citations_ex(citations, text)
+    assert len(refs) == 2  # Alpha = [1], Gamma = [2]; Beta không được cite
+    assert "strong [2]." in out
+    assert '"Early<br/>[2, 1]"' in out
+    assert "Y1[2019]" in out  # cú pháp nút mermaid giữ nguyên
+    assert "Sources: [1], [2]." in out
+    assert '"values": [4]' in out  # mảng số trong chart giữ nguyên

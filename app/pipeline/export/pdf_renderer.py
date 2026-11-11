@@ -20,7 +20,7 @@ from app.pipeline.export.browser_renderer import (
     launch_browser,
     prepare_report_page,
 )
-from app.pipeline.export.figure_layout import WIDE, chart_span, mermaid_span
+from app.pipeline.export.figure_layout import WIDE, chart_span, compact_tree, mermaid_span
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,13 @@ def _render_chart_svg(spec: dict, fmt: str = "svg") -> str | bytes:
     """
     import textwrap
 
-    from app.pipeline.export.chart_scientific import SCIENTIFIC_TYPES, finish_figure, render_scientific_svg
+    from app.pipeline.export.chart_scientific import (
+        FIGURE_FONT,
+        FIGURE_FONT_PT,
+        SCIENTIFIC_TYPES,
+        finish_figure,
+        render_scientific_svg,
+    )
 
     if spec.get("type") in SCIENTIFIC_TYPES:
         return render_scientific_svg(spec, fmt)
@@ -94,7 +100,7 @@ def _render_chart_svg(spec: dict, fmt: str = "svg") -> str | bytes:
             s["errors"] = [s["errors"][i] or 0.0 for i in keep_idx]
     n, m = len(series), len(labels)
 
-    plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 8 if narrow else 9, "svg.fonttype": "path"})
+    plt.rcParams.update({"font.family": FIGURE_FONT, "font.size": FIGURE_FONT_PT, "svg.fonttype": "path"})
     if horizontal:
         per_bar = 0.55 if stacked else 0.32 * n + 0.2
         fig, ax = plt.subplots(figsize=(width, max(2.2, per_bar * m + 1.0)))
@@ -294,6 +300,7 @@ def _extract_blocks(md: str) -> tuple[str, list[str]]:
     def fence(match: re.Match) -> str:
         kind, body = match.group(1), match.group(2).strip()
         if kind == "mermaid":
+            body = compact_tree(body)
             span = " wide" if mermaid_span(body) == WIDE else ""
             return keep(f'<figure class="fig{span}" data-kind="figure"><pre class="mermaid">{html.escape(body)}</pre>__CAPTION__</figure>')
         if kind == "image":
@@ -323,7 +330,7 @@ def _extract_blocks(md: str) -> tuple[str, list[str]]:
 
     # mermaid không có caption trong thân khối → tiêu đề lấy từ nhãn '**Figure N: tiêu đề**' ngay phía trên
     def mermaid_with_title(m: re.Match) -> str:
-        title, rest, body = (m.group(1) or "").strip(), (m.group(2) or "").strip(), m.group(3).strip()
+        title, rest, body = (m.group(1) or "").strip(), (m.group(2) or "").strip(), compact_tree(m.group(3).strip())
         span = " wide" if mermaid_span(body) == WIDE else ""
         cap = html.escape(title.rstrip("."))
         fig = keep(f'<figure class="fig{span}" data-kind="figure" data-caption="{cap}"><pre class="mermaid">{html.escape(body)}</pre>__CAPTION__</figure>')

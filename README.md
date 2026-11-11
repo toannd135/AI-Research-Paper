@@ -13,33 +13,72 @@ Paper research assistant: upload paper -> parse/chunk -> hybrid RAG -> research 
 | `app/agent` | Dev 3 | LangGraph research agent, evidence check, evaluation |
 | `app/workers` | Dev 2 | Celery app/queue config |
 
-## Setup
+## Setup (máy mới vừa pull về)
+
+Yêu cầu: Git, Docker + Docker Compose v2 (Docker Desktop trên Windows/Mac). Máy cần có Internet
+cho lần build đầu (tải pip, Chromium, Tectonic + gói LaTeX IEEEtran — khoảng 10–20 phút).
 
 ```bash
-cp .env.example .env
-./scripts/run_local.sh          # docker compose + alembic upgrade head
+git pull
+cp .env.example .env            # chỉ lần đầu; điền API key LLM (GEMINI/OPENROUTER/GROQ...) + JWT_SECRET
 ```
 
-Chạy trực tiếp (không docker):
+### Cách A — chạy toàn bộ bằng Docker (khuyên dùng, không phải cài gì thêm)
+
+Image `paperai-app:local` đã có sẵn Python deps, Chromium, Mermaid/KaTeX và **Tectonic** (xuất PDF LaTeX),
+build được trên Linux/Windows (x86_64) và Mac Apple Silicon (arm64).
 
 ```bash
+./scripts/run_local.sh          # hạ tầng + build api/worker + alembic upgrade head + chạy api/worker
+# Windows không có bash: chạy tay 4 lệnh trong scripts/run_local.sh
+```
+
+- API: http://localhost:8000/docs
+- Log: `docker compose --profile app logs -f api worker`
+- Dừng: `docker compose --profile app stop` (giữ nguyên dữ liệu)
+- Sau mỗi lần pull có đổi `Dockerfile`/`requirements*.txt`: `docker compose --profile app up -d --build api worker`
+- Đổi code Python: không cần build lại (mã nguồn được mount vào container, api tự reload; worker thì
+  `docker compose --profile app restart worker`).
+- Kiểm tra Tectonic trong container: `docker compose --profile app exec api tectonic --version`
+
+### Cách B — hạ tầng trong Docker, api/worker chạy trên host (cách dev hay dùng)
+
+`docker compose up -d` (không có `--profile app`) chỉ chạy postgres/qdrant/redis.
+Trong `.env` đổi URL sang cổng host: `DATABASE_URL=postgresql+psycopg://paperai:paperai@localhost:5433/paperai`,
+`QDRANT_URL=http://localhost:6333`, `REDIS_URL`/`CELERY_BROKER_URL=redis://localhost:6380/0`,
+`CELERY_RESULT_BACKEND=redis://localhost:6380/1`.
+
+```bash
+docker compose up -d
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt -c requirements-constraints.txt
+python -m playwright install chromium
+npm ci --prefix app/pipeline/export/assets          # Windows: npm.cmd
+alembic upgrade head
 uvicorn app.main:app --reload
 celery -A app.workers.celery_app worker -Q upload_queue,research_queue -l info
 ```
 
-Xuất PDF mặc định dùng Chromium hai cột; bảng và hình trải ngang trang.
-Nút **PDF 1 cột** tạo bản một cột. API vẫn hỗ trợ `engine=typst` khi cần.
-Docker đóng gói sẵn Chromium, Mermaid và KaTeX nên xuất PDF không cần CDN.
-Nếu chạy Python trực tiếp, cài thêm tài nguyên render:
+Xuất PDF LaTeX cần **Tectonic** trên host (Docker cách A đã có sẵn). Cài một lần:
 
-```powershell
-python -m playwright install chromium
-npm.cmd ci --prefix app/pipeline/export/assets
+```bash
+# Linux x86_64 (Mac Apple Silicon: đổi x86_64 -> aarch64; hoặc `brew install tectonic`)
+mkdir -p ~/.local/bin
+curl -fsSL https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.15.0/tectonic-0.15.0-x86_64-unknown-linux-musl.tar.gz \
+  | tar -xz -C ~/.local/bin tectonic
+tectonic --version
 ```
 
-Sau khi cập nhật Dockerfile hoặc requirements, chạy `docker compose up -d --build api worker`.
+App tự tìm Tectonic theo thứ tự: biến `PAPERAI_TECTONIC` → `PATH` → `~/.local/bin/tectonic`.
+Windows: tải bản `x86_64-pc-windows-msvc` rồi thêm vào PATH (hoặc đặt `PAPERAI_TECTONIC`).
+Lần biên dịch đầu Tectonic tải gói LaTeX từ Internet.
+
+**Đừng chạy cả hai cách cùng lúc** (trùng cổng 8000, hai worker cùng lấy task trong Redis).
+
+### Xuất PDF
+
+Mặc định dùng Chromium hai cột; bảng và hình trải ngang trang. Nút **PDF 1 cột** tạo bản một cột.
+Xuất LaTeX (IEEEtran) dùng Tectonic; API vẫn hỗ trợ `engine=typst` khi cần.
 
 ## Test
 

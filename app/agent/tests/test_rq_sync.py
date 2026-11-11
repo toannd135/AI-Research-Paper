@@ -1,6 +1,8 @@
 from app.agent.evidence.rq_sync import (
     canonical_rqs,
     check_rq_definitions,
+    check_rq_repetition,
+    dedupe_rq_definitions,
     enforce_rqs,
     rq_block,
     section_rqs,
@@ -83,4 +85,40 @@ def test_different_number_sets_reported():
 def test_rq_block_lists_all_and_forbids_changes():
     block = rq_block(canonical_rqs(BLUEPRINT))
     assert "RQ3. How is robustness" in block and "Never add, drop, reorder" in block
+    assert "exactly once, in the Introduction" in block
     assert rq_block([]) == ""
+
+
+def test_repeated_rq_list_is_blocked_then_deduped():
+    canon = canonical_rqs(BLUEPRINT)
+    text = enforce_rqs(REPORT, canon)
+    assert any("2.1 research questions" in p for p in check_rq_repetition(text))
+    fixed, changed = dedupe_rq_definitions(text)
+    assert changed == ["2.1 research questions"]
+    assert check_rq_repetition(fixed) == []
+    assert list(section_rqs(fixed)) == ["1.3 research gaps and research questions"]
+    assert "RQ1–RQ3 as stated in Section 1.3" in fixed
+    assert fixed.count("**RQ1.**") == 1
+    assert "We answer RQ1, RQ2 and RQ3." in fixed
+
+
+def test_rq_answers_in_conclusion_are_kept():
+    text = enforce_rqs(REPORT, canonical_rqs(BLUEPRINT)).replace(
+        "We answer RQ1, RQ2 and RQ3.",
+        "**RQ1.** U-Net variants with attention remain the dominant backbone family in the corpus.\n"
+        "**RQ2.** Which backbone architectures dominate brain tumor segmentation?",
+    )
+    fixed, changed = dedupe_rq_definitions(text)
+    assert "7. conclusion" in changed
+    assert "U-Net variants with attention remain the dominant backbone" in fixed  # câu trả lời không bị gỡ
+
+
+def test_no_rq_definitions_means_no_change():
+    text = "## 1. Introduction\nNo questions here.\n## 2. Methods\nWe answer RQ1.\n"
+    assert dedupe_rq_definitions(text) == (text, [])
+    assert check_rq_repetition(text) == []
+
+
+def test_rq_lines_after_references_are_ignored():
+    text = REPORT.split("## 2.")[0] + "## References\n**RQ1.** What are the dominant architecture backbones for segmentation of glioma?\n"
+    assert check_rq_repetition(text) == []

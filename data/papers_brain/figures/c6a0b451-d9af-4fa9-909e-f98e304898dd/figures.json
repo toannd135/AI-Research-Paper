@@ -1,0 +1,38 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "FIGURE 1 Illustration of several brain MRI modalities (A) T1, (B) T2, (C) T1ce, (D) FLAIR, and (E) ground truth. The yellow, blue, and purple colors in the ground truth represent edema, enhancing, and necrosis, respectively.",
+  "kind": "raster",
+  "width": 950,
+  "height": 214,
+  "source_title": "c6a0b451-d9af-4fa9-909e-f98e304898dd.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 5,
+  "caption": "FIGURE 2 Organization of the DL-based brain tumor segmentation using multi-modality MRI survey.",
+  "kind": "vector",
+  "width": 1042,
+  "height": 703,
+  "source_title": "c6a0b451-d9af-4fa9-909e-f98e304898dd.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 18,
+  "caption": "FIGURE 4 DL-based multi-modal MRI brain tumor segmentation model publication statistics from 2021 to 2023.",
+  "kind": "vector",
+  "width": 930,
+  "height": 328,
+  "source_title": "c6a0b451-d9af-4fa9-909e-f98e304898dd.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 19,
+  "caption": "FIGURE 5 Statistical analysis of multi-modal brain tumor segmentation datasets used in the DL = based models from 2021 to 2023.",
+  "kind": "vector",
+  "width": 956,
+  "height": 340,
+  "source_title": "c6a0b451-d9af-4fa9-909e-f98e304898dd.pdf"
+ }
+]

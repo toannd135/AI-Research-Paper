@@ -461,10 +461,15 @@ def _missing_protocol(pid: str, groups: dict, attrs: dict[str, dict[str, Any]]) 
 
 
 def study_profile_table(
-    records: list[ResultRecord], paper_to_n: dict[str, int], attrs_by_paper: dict[str, dict[str, dict[str, Any]]] | None = None
+    records: list[ResultRecord],
+    paper_to_n: dict[str, int],
+    attrs_by_paper: dict[str, dict[str, dict[str, Any]]] | None = None,
+    tiers: dict[str, str] | None = None,
 ) -> str | None:
     """Hồ sơ bằng chứng từng nguồn: dataset/version, thẩm định ngoài, CV, chia theo bệnh nhân, giao thức thiếu modality, sai số,
-    uncertainty, code. Ô = 'Yes/No (p. X)' từ câu nguyên văn hoặc record; NR = không tìm thấy trong đoạn/kết quả đã trích."""
+    uncertainty, code. Ô = 'Yes/No (p. X)' từ câu nguyên văn hoặc record; NR = không tìm thấy trong đoạn/kết quả đã trích.
+    `tiers` (evidence_tiers.classify_evidence) → đánh dấu nguồn chỉ có số liệu trên dataset khác dataset đích."""
+    tiers = tiers or {}
     attrs_by_paper = attrs_by_paper or {}
     by_paper: dict[str, list[ResultRecord]] = {pid: [] for pid in attrs_by_paper if pid in paper_to_n}
     for r in records:
@@ -483,7 +488,7 @@ def study_profile_table(
         variance = "Yes (± in results)" if _has(recs, lambda r: r.spread is not None) else sp.NR
         rows.append([
             f"[{paper_to_n[pid]}]",
-            "; ".join(datasets[:3]) or sp.NR,
+            ("; ".join(datasets[:3]) or sp.NR) + (" (other dataset)" if tiers.get(pid) == "other_dataset" else ""),
             sp.cell(attrs, "external_validation"),
             cv,
             sp.cell(attrs, "patient_wise_split"),
@@ -497,6 +502,7 @@ def study_profile_table(
         "NR = not found in the passages or results extracted from that source (it does not mean the study did not do it). "
         "Independent reproduction by third parties is not assessed because it cannot be determined from the source itself. "
         "This is descriptive support for quality appraisal, not a risk-of-bias score"
+        + ("; '(other dataset)' = the source reports no result on the target benchmark (indirect evidence)" if "other_dataset" in tiers.values() else "")
     )
     columns = ["Ref", "Dataset (version)", "External validation", "Cross-validation", "Patient-wise split",
                "Missing-modality protocol", "Variance reported", "Uncertainty / calibration", "Code available"]
@@ -576,7 +582,10 @@ def protocol_panels(records: list[ResultRecord], paper_to_n: dict[str, int]) -> 
 
 
 def build_quant_blocks(
-    records: list[ResultRecord], paper_to_n: dict[str, int], attrs_by_paper: dict[str, dict[str, dict[str, Any]]] | None = None
+    records: list[ResultRecord],
+    paper_to_n: dict[str, int],
+    attrs_by_paper: dict[str, dict[str, dict[str, Any]]] | None = None,
+    tiers: dict[str, str] | None = None,
 ) -> list[str]:
     return [
         b
@@ -588,7 +597,7 @@ def build_quant_blocks(
             ablation_table(records, paper_to_n),
             tradeoff_scatter(records, paper_to_n),
             efficiency_table(records, paper_to_n),
-            study_profile_table(records, paper_to_n, attrs_by_paper),
+            study_profile_table(records, paper_to_n, attrs_by_paper, tiers),
         )
         if b
     ]

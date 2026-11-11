@@ -24,7 +24,7 @@ from typing import Any
 
 import typst
 
-from app.pipeline.export.figure_layout import WIDE, chart_span, mermaid_span
+from app.pipeline.export.figure_layout import WIDE, chart_span, compact_tree, mermaid_span
 from app.pipeline.figures import resolve_figure_path
 
 logger = logging.getLogger(__name__)
@@ -606,7 +606,7 @@ def markdown_to_typst(
     # 2b. Mermaid blocks — chú thích lấy từ dòng '**Figure N: ...**' ngay phía trên (nếu có)
     def repl_mermaid(m):
         fig_counter[0] += 1
-        code = m.group(2).strip()
+        code = compact_tree(m.group(2).strip())
         svg_name = f"flow_{fig_counter[0]}.svg"
         svg_path = work_dir / svg_name
         render_mermaid_to_svg(code, svg_path)

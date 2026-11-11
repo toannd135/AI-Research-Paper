@@ -233,5 +233,5 @@ def test_synthesize_uses_single_canonical_rq_set():
     assert all("CANONICAL RESEARCH QUESTIONS" in p for p in llm.prompts[1:]), "mọi chặng sau blueprint phải nhận RQ chuẩn"
     assert any("7. RESEARCH QUESTIONS" in p for p in llm.prompts[:1])
     secs = section_rqs(out["report"])
-    assert len(secs) == 2 and all([b for _, b in v] == canon for v in secs.values())
+    assert len(secs) == 1 and all([b for _, b in v] == canon for v in secs.values()), "RQ chỉ được liệt kê một lần"
     assert check_rq_definitions(out["report"]) == []

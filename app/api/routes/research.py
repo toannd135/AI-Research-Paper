@@ -212,8 +212,9 @@ def export_research_latex(
 @router.get("/{task_id}/pdf")
 def export_research_pdf(
     task_id: str,
-    engine: str = "html",
+    engine: str = Query(default="latex", pattern="^(latex|typst|html)$"),
     columns: int = Query(default=2, ge=1, le=2),
+    template: str = Query(default="ieee", pattern="^(ieee|cvpr)$"),
     draft: bool = False,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user_or_query_token),
@@ -230,7 +231,22 @@ def export_research_pdf(
     clean_report = sanitize_academic_markdown(task.report)
     citations_data = json.loads(task.citations) if task.citations else []
 
-    if engine == "typst":
+    if engine == "latex":
+        # LaTeX thật (IEEEtran qua Tectonic): float hình/bảng chuẩn tạp chí; lỗi biên dịch → bản HTML dự phòng
+        try:
+            from app.pipeline.export.latex_renderer import compile_latex_pdf
+
+            pdf = compile_latex_pdf(clean_report, template=template)
+        except Exception as e:
+            logger.exception("LaTeX compile failed for task %s, fallback HTML", task_id)
+            try:
+                from app.pipeline.export.pdf_renderer import report_to_pdf
+
+                pdf = report_to_pdf(clean_report, columns=columns)
+            except Exception as fallback_err:
+                logger.exception("Fallback PDF rendering also failed")
+                raise HTTPException(status_code=500, detail=f"Lỗi khi biên dịch PDF LaTeX: {e}") from fallback_err
+    elif engine == "typst":
         try:
             from app.pipeline.export.typst_renderer import render_report_to_pdf
 

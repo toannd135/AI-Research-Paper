@@ -1,0 +1,119 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 2,
+  "caption": "Figure 1: Growth of scientiﬁc attention on deep learning based brain tumor segmentation. (a) Keyword frequency map in MICCAI from 2018 to 2020. The size of the keyword is proportional to the frequency of the word. We observe that ’brain’, ’tumor’, ’segmentation’, and ’deep learning’ have drawn large research interests in the community. (b) Blue line represents the number of deep learning based sol",
+  "kind": "raster",
+  "width": 868,
+  "height": 323,
+  "source_title": "cf53af46-dbb5-4c12-a780-0cc1357b4673.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 2,
+  "caption": "Figure 2: Exemplar input dataset with diﬀerent MRI modalities and corresponding ground truth segmentation map. Each frame repre- sents a unique MRI modality. The last frame on the right is the ground truth with corresponding manual segmentation annotation. Diﬀerent colors represent diﬀerent tumor sub-regions, i.e., gadolin- ium (GD) enhancing tumor (green), pertumoral edema (yellow) and necrotic a",
+  "kind": "raster",
+  "width": 521,
+  "height": 325,
+  "source_title": "cf53af46-dbb5-4c12-a780-0cc1357b4673.pdf"
+ },
+ {
+  "file": "fig_3.png",
+  "page": 4,
+  "caption": "Figure 3: Challenges in segmentation of brain glioma tumors. (a) shows glioma tumor exemplars with various sizes and locations in- side the brain. (b) and (c) show the statistical information of the training set in the multimodal brain tumor segmentation challenge 2017 (BraTS2017). The left hand side of (b) shows the FLAIR and T2 intensity projection, and the right hand side shows the T1ce and T1 ",
+  "kind": "raster",
+  "width": 543,
+  "height": 903,
+  "source_title": "cf53af46-dbb5-4c12-a780-0cc1357b4673.pdf"
+ },
+ {
+  "file": "fig_4.png",
+  "page": 5,
+  "caption": "Figure 4: The evolution of brain tumor segmentation with selective milestones over the past decade. Best viewed in colors.",
+  "kind": "raster",
+  "width": 1084,
+  "height": 391,
+  "source_title": "cf53af46-dbb5-4c12-a780-0cc1357b4673.pdf"
+ },
+ {
+  "file": "fig_5.png",
+  "page": 6,
+  "caption": "Figure 5: Our proposed taxonomy of deep learning based brain tumor segmentation methods. Best viewed in colors.",
+  "kind": "raster",
+  "width": 1084,
+  "height": 596,
+  "source_title": "cf53af46-dbb5-4c12-a780-0cc1357b4673.pdf"
+ },
+ {
+  "file": "fig_6.png",
+  "page": 8,
+  "caption": "Figure 6: Structural comparison between representative methods based on designing eﬀective network modules and architectures. From top-left to bottom-right: (a1) CNN in [37], (b1) CNN with (b2) residual convolution module [76], (c1) CNN with (c2) full resolution residual unit [77], (d1) CNN with (d2) dense connection module [78], (e1) CNN with (e2) residual dilation block [63], (f1) CNN with (f2) ",
+  "kind": "raster",
+  "width": 900,
+  "height": 1300,
+  "source_title": "cf53af46-dbb5-4c12-a780-0cc1357b4673.pdf"
+ },
+ {
+  "file": "fig_7.png",
+  "page": 9,
+  "caption": "Figure 7: A high level comparison between single-path and two-path CNN. Best viewed in colors.",
+  "kind": "raster",
+  "width": 543,
+  "height": 913,
+  "source_title": "cf53af46-dbb5-4c12-a780-0cc1357b4673.pdf"
+ },
+ {
+  "file": "fig_8.png",
+  "page": 11,
+  "caption": "Figure 8: A high level comparison between diﬀerent fully convolutional networks (FCNs). Best viewed in colors.",
+  "kind": "raster",
+  "width": 1084,
+  "height": 501,
+  "source_title": "cf53af46-dbb5-4c12-a780-0cc1357b4673.pdf"
+ },
+ {
+  "file": "fig_9.png",
+  "page": 13,
+  "caption": "Figure 9: The structure of cascaded convolutional networks for brain tumor segmentation, modiﬁed from the original structure reported in [46]. WNet, TNet and ENet are used for segmenting the whole tumor, tumor core and enhancing tumor core, respectively.",
+  "kind": "raster",
+  "width": 543,
+  "height": 414,
+  "source_title": "cf53af46-dbb5-4c12-a780-0cc1357b4673.pdf"
+ },
+ {
+  "file": "fig_10.png",
+  "page": 15,
+  "caption": "Figure 10: The structure of multi-task networks for brain tumor segmentation. Image courtesy of [47]. The shared encoder learns generalised feature representation and the reconstruction decoder performs multi-task as regularisation.",
+  "kind": "raster",
+  "width": 868,
+  "height": 446,
+  "source_title": "cf53af46-dbb5-4c12-a780-0cc1357b4673.pdf"
+ },
+ {
+  "file": "fig_11.png",
+  "page": 17,
+  "caption": "Figure 11: The illustration of cross-modality feature learning framework. Image courtesy from [154].",
+  "kind": "raster",
+  "width": 868,
+  "height": 363,
+  "source_title": "cf53af46-dbb5-4c12-a780-0cc1357b4673.pdf"
+ },
+ {
+  "file": "fig_12.png",
+  "page": 17,
+  "caption": "Figure 12: The structure of the modality-aware feature embedding module. Image courtesy of [50].",
+  "kind": "raster",
+  "width": 543,
+  "height": 326,
+  "source_title": "cf53af46-dbb5-4c12-a780-0cc1357b4673.pdf"
+ },
+ {
+  "file": "fig_13.png",
+  "page": 18,
+  "caption": "Figure 13: The structure of the modality correlation module. Image courtesy of [80].",
+  "kind": "raster",
+  "width": 543,
+  "height": 267,
+  "source_title": "cf53af46-dbb5-4c12-a780-0cc1357b4673.pdf"
+ }
+]

@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     app_name: str = "paperai"
+    # Tác giả trang đầu khi bài không có tác giả thật (người dùng chốt 2026-11-11: tự điền theo hệ thống PaperAI)
+    paper_author_name: str = "PaperAI"
+    paper_author_affiliation: str = "PaperAI Automated Research Assistant"
+    paper_author_email: str = ""  # để trống: không tự bịa địa chỉ email
     env: str = "local"
     log_level: str = "INFO"
 

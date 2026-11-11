@@ -33,12 +33,14 @@ from app.agent.evidence.reference_check import (
     UNVERIFIED,
     verify_references,
 )
-from app.agent.evidence.rq_sync import check_rq_definitions
+from app.agent.evidence.rq_sync import check_rq_definitions, check_rq_repetition
 from app.agent.evidence.traceability import (
     NO_CITATION,
     TRACED,
     UNTRACED,
+    check_record_attribution,
     extract_numeric_claims,
+    mark_misattributed,
     pdf_sha256,
     trace_claims,
 )
@@ -70,7 +72,13 @@ def _build_sources(citations: list[Any], evidence: list[Any]) -> dict[int, dict[
 def trace_text_records(state: dict[str, Any], text: str, numbered_citations: list[Any] | None = None) -> list[dict[str, Any]]:
     """Truy vết mọi giá trị số trong bảng/biểu đồ của `text` về chunk của paper được cite (đầy đủ, không cắt)."""
     citations = state.get("citations", []) if numbered_citations is None else numbered_citations
-    return trace_claims(extract_numeric_claims(text), _build_sources(citations, state.get("evidence", [])))
+    traced = trace_claims(extract_numeric_claims(text), _build_sources(citations, state.get("evidence", [])))
+    if state.get("results"):
+        from app.agent.evidence.extractor import records_from_dicts
+
+        cited_paper_ids = {n: c.paper_id for n, c in enumerate(citations, start=1)}
+        traced = mark_misattributed(traced, cited_paper_ids, records_from_dicts(state["results"]))
+    return traced
 
 
 def _missing_modality_groups(state: dict[str, Any]) -> int:
@@ -126,8 +134,15 @@ def run_quality_gate(
             "trong bảng/biểu đồ — không được dùng làm bảng kết quả"
         )
     blocking += [f"so sánh không tương đương: {p}" for p in chart_problems]
+    if state.get("results"):
+        from app.agent.evidence.extractor import records_from_dicts
+
+        cited_paper_ids = {n: c.paper_id for n, c in enumerate(citations, start=1)}
+        attribution = check_record_attribution(extract_numeric_claims(text), cited_paper_ids, records_from_dicts(state["results"]))
+        blocking += [f"trích dẫn sai nguồn số liệu: {p}" for p in attribution[:_MAX_LISTED]]
     rq_problems = check_rq_definitions(text)
     blocking += [f"RQ không nhất quán: {p}" for p in rq_problems]
+    blocking += check_rq_repetition(text)
     incomplete = [r for r in references["references"] if r["status"] == PARTIALLY_VERIFIED]
     if incomplete:
         warnings.append(f"{len(incomplete)}/{len(references['references'])} reference thiếu metadata ({', '.join(sorted({m for r in incomplete for m in r['missing']}))}) — cần bổ sung/đối chiếu nguồn")
@@ -159,7 +174,7 @@ def run_quality_gate(
             "thêm các survey liên quan vào kho rồi chạy lại"
         )
     n_surveys = sum(1 for pid in cited_ids if _SURVEY_TITLE_RE.search(str((catalog.get(pid) or {}).get("title", ""))))
-    warnings += check_novelty_claims(text, n_surveys)
+    blocking += check_novelty_claims(text, n_surveys)
     warnings += [f"kết luận khái quát vượt phạm vi bằng chứng (nêu rõ nghiên cứu/protocol): {p}" for p in check_overgeneralization(text)]
     warnings += [f"metadata reference không nhất quán: {p}" for p in check_reference_years(text)]
     if len(cited_numbers) < 2:

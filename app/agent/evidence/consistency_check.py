@@ -304,17 +304,28 @@ def check_ledger_claims(text: str, missing_groups: int) -> list[str]:
     return problems[:5]
 
 
-_FIRST_CLAIM_RE = re.compile(r"\b(?:the )?first (?:comprehensive|systematic|large-scale|complete|unified|mapping|survey|review)\b|\bto the best of our knowledge\b[^.]{0,60}\bfirst\b", re.I)
+_FIRST_NOUNS = r"(?:comprehensive|systematic|large-scale|complete|unified|mapping|survey|review|framework|taxonomy|benchmark|study|work|attempt)"
+_FIRST_CLAIM_RE = re.compile(rf"\b(?:the )?first {_FIRST_NOUNS}\b|\bthe first to\b|\bto the best of our knowledge\b[^.]{{0,60}}\bfirst\b", re.I)
+# Chỉ tự nhận của bài này mới là tuyên bố tính mới; 'Menze et al. introduced the first BraTS benchmark [3]' là dữ kiện có cite
+_SELF_REF_RE = re.compile(r"\b(?:this|our|we|present(?:ed)?\s+(?:work|survey|review|paper|study))\b", re.I)
+
+
+def novelty_sentences(text: str) -> list[str]:
+    """Câu bài TỰ nhận 'first survey/framework/…' (bỏ khối fence, References, câu phủ định)."""
+    body = _FENCE_RE.sub("", text.split("\n## References", 1)[0])
+    return [
+        s.strip() for s in re.split(r"(?<=[.!?])\s+|\n+", body)
+        if _FIRST_CLAIM_RE.search(s) and _SELF_REF_RE.search(s) and not _NEGATION_RE.search(s)
+    ]
 
 
 def check_novelty_claims(text: str, n_prior_surveys: int | None = None) -> list[str]:
-    """Tuyên bố 'first comprehensive …' không thể chứng minh từ một kho PDF cố định; chỉ cảnh báo."""
-    body = _FENCE_RE.sub("", text.split("\n## References", 1)[0])
-    hits = [m.group(0) for sentence in re.split(r"(?<=[.!?])\s+|\n+", body) if (m := _FIRST_CLAIM_RE.search(sentence)) and not _NEGATION_RE.search(sentence)]
+    """Tuyên bố 'first survey/framework …' không thể chứng minh từ một kho PDF cố định → lỗi CHẶN (repair `soften_novelty_claims` chạy trước)."""
+    hits = novelty_sentences(text)
     if not hits:
         return []
     extra = f"; kho chỉ có {n_prior_surveys} survey trước để đối chiếu" if n_prior_surveys is not None else ""
-    return [f"tuyên bố tính mới '{hits[0]}' không chứng minh được từ kho PDF hiện có{extra} — hạ xuống đóng góp có phạm vi rõ ràng"]
+    return [f"tuyên bố tính mới chưa kiểm chứng '{h[:140]}'{extra} — hạ xuống đóng góp có phạm vi rõ ràng" for h in hits[:5]]
 
 
 _DENIAL_RE = re.compile(r"\bno missing[- ]modalit(?:y|ies)\b[\w\s,-]{0,30}(?:results?|records?|evidence|data)\b[^.]{0,80}\b(?:extracted|structured|ledger|records?)\b", re.I)

@@ -1,0 +1,290 @@
+17:05:45 INFO    [app.agent.graph] Node plan chạy 30.0s
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+17:05:46 WARNING [huggingface_hub.utils._http] Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/393 [00:00<?, ?it/s]Loading weights:  52%|█████▏    | 204/393 [00:00<00:00, 1980.24it/s]Loading weights: 100%|██████████| 393/393 [00:00<00:00, 2021.62it/s]
+17:05:52 INFO    [app.ai.retrieval.reranker] Đã nạp reranker BAAI/bge-reranker-v2-m3 trên cpu
+17:06:50 INFO    [app.agent.nodes.search_node] Search local 'BraTS glioma segmentation multimodal fusion strategies early' chạy 64.9s
+Loading weights:   0%|          | 0/391 [00:00<?, ?it/s]Loading weights: 100%|██████████| 391/391 [00:00<00:00, 40473.17it/s]
+17:06:58 INFO    [app.ai.embedding.service] Đã nạp embedding model BAAI/bge-m3 trên cpu
+17:07:57 INFO    [app.agent.nodes.search_node] Search local 'BraTS missing modality learning glioma segmentation modality' chạy 66.9s
+17:08:56 INFO    [app.agent.nodes.search_node] Search local 'BraTS glioma segmentation benchmark datasets evaluation metr' chạy 58.7s
+17:09:56 INFO    [app.agent.nodes.search_node] Search local 'limitations failure modes multimodal fusion missing modality' chạy 60.5s
+17:10:56 INFO    [app.agent.nodes.search_node] Search local 'taxonomy classification multimodal fusion encoder design fus' chạy 59.5s
+17:10:56 INFO    [app.agent.tools.ensure_coverage] Phủ kho: bổ sung 19 chunk cho 19/52 paper bị bỏ sót
+17:10:56 INFO    [app.agent.graph] Node search chạy 310.9s
+17:10:56 INFO    [app.agent.nodes.analyze_node] Analyze: gọi LLM phân tích (context 70275 ký tự)...
+17:15:40 INFO    [app.agent.nodes.analyze_node] Analyze: LLM phân tích xong sau 284s, bắt đầu trích xuất bản ghi
+17:15:40 INFO    [app.agent.evidence.extractor] Trích xuất lô 1/12 (3 paper, 10863 ký tự)...
+17:16:20 INFO    [app.agent.evidence.extractor] Trích xuất lô 1/12 xong sau 41s: giữ 8 bản ghi
+17:16:20 INFO    [app.agent.evidence.extractor] Trích xuất lô 2/12 (3 paper, 11155 ký tự)...
+17:16:38 INFO    [app.agent.evidence.extractor] Trích xuất lô 2/12 xong sau 18s: giữ 0 bản ghi
+17:16:38 INFO    [app.agent.evidence.extractor] Trích xuất lô 3/12 (3 paper, 8198 ký tự)...
+17:17:11 INFO    [app.agent.evidence.extractor] Trích xuất lô 3/12 xong sau 33s: giữ 3 bản ghi
+17:17:11 INFO    [app.agent.evidence.extractor] Trích xuất lô 4/12 (3 paper, 9294 ký tự)...
+17:20:08 INFO    [app.agent.evidence.extractor] Trích xuất lô 4/12 xong sau 177s: giữ 16 bản ghi
+17:20:08 INFO    [app.agent.evidence.extractor] Trích xuất lô 5/12 (3 paper, 7435 ký tự)...
+17:31:43 INFO    [app.agent.evidence.extractor] Trích xuất lô 5/12 xong sau 694s: giữ 0 bản ghi
+17:31:43 INFO    [app.agent.evidence.extractor] Trích xuất lô 6/12 (3 paper, 5576 ký tự)...
+17:32:00 ERROR   [app.agent.evidence.extractor] Trích xuất lô 6/12 lỗi (lần 1/3)
+Traceback (most recent call last):
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/agent/evidence/extractor.py", line 167, in _call_llm
+    resp = gateway.generate(
+           ^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in generate
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 44, in call_with_retry
+    raise last_error
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 32, in call_with_retry
+    return call_once()
+           ^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in <lambda>
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 96, in _call_once
+    raise LLMGatewayError(f"OpenRouter upstream error: {err_msg}")
+app.ai.llm_gateway.base.LLMGatewayError: OpenRouter upstream error: Provider timed out after 11689ms
+17:32:06 ERROR   [app.agent.evidence.extractor] Trích xuất lô 6/12 lỗi (lần 2/3)
+Traceback (most recent call last):
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/agent/evidence/extractor.py", line 167, in _call_llm
+    resp = gateway.generate(
+           ^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in generate
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 44, in call_with_retry
+    raise last_error
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 32, in call_with_retry
+    return call_once()
+           ^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in <lambda>
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 89, in _call_once
+    raise LLMGatewayError(f"OpenRouter API returned HTTP {res.status_code}: {res.text}")
+app.ai.llm_gateway.base.LLMGatewayError: OpenRouter API returned HTTP 503: {"error":{"message":"Provider returned error","code":503,"metadata":{"raw":"{\"message\":\"Service temporarily overloaded\",\"type\":\"Service Unavailable\",\"code\":503}","provider_name":"Nvidia","is_byok":false,"previous_errors":[{"code":429,"message":"Provider returned error","provider_name":"Google AI Studio","raw":"google/gemma-4-31b-it:free is temporarily rate-limited upstream. Please retry shortly, or add your own provider key to use your own limits: https://openrouter.ai/workspaces/default/byok"}]}},"user_id":"user_3LqkiBt3lcPZk3W0aw1CEpwJAfq"}
+17:32:12 ERROR   [app.agent.evidence.extractor] Trích xuất lô 6/12 lỗi (lần 3/3)
+Traceback (most recent call last):
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/agent/evidence/extractor.py", line 167, in _call_llm
+    resp = gateway.generate(
+           ^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in generate
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 44, in call_with_retry
+    raise last_error
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 32, in call_with_retry
+    return call_once()
+           ^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in <lambda>
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 89, in _call_once
+    raise LLMGatewayError(f"OpenRouter API returned HTTP {res.status_code}: {res.text}")
+app.ai.llm_gateway.base.LLMGatewayError: OpenRouter API returned HTTP 503: {"error":{"message":"Provider returned error","code":503,"metadata":{"raw":"{\"message\":\"Service temporarily overloaded\",\"type\":\"Service Unavailable\",\"code\":503}","provider_name":"Nvidia","is_byok":false,"previous_errors":[{"code":429,"message":"Provider returned error","provider_name":"Google AI Studio","raw":"google/gemma-4-31b-it:free is temporarily rate-limited upstream. Please retry shortly, or add your own provider key to use your own limits: https://openrouter.ai/workspaces/default/byok"}]}},"user_id":"user_3LqkiBt3lcPZk3W0aw1CEpwJAfq"}
+17:32:12 WARNING [app.agent.evidence.extractor] Trích xuất lô 6/12: lỗi sau 3 lần thử, bỏ lô này
+17:32:12 INFO    [app.agent.evidence.extractor] Trích xuất lô 7/12 (3 paper, 5576 ký tự)...
+17:32:18 ERROR   [app.agent.evidence.extractor] Trích xuất lô 7/12 lỗi (lần 1/3)
+Traceback (most recent call last):
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/agent/evidence/extractor.py", line 167, in _call_llm
+    resp = gateway.generate(
+           ^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in generate
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 44, in call_with_retry
+    raise last_error
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 32, in call_with_retry
+    return call_once()
+           ^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in <lambda>
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 89, in _call_once
+    raise LLMGatewayError(f"OpenRouter API returned HTTP {res.status_code}: {res.text}")
+app.ai.llm_gateway.base.LLMGatewayError: OpenRouter API returned HTTP 503: {"error":{"message":"Provider returned error","code":503,"metadata":{"raw":"{\"message\":\"Service temporarily overloaded\",\"type\":\"Service Unavailable\",\"code\":503}","provider_name":"Nvidia","is_byok":false,"previous_errors":[{"code":429,"message":"Provider returned error","provider_name":"Google AI Studio","raw":"google/gemma-4-31b-it:free is temporarily rate-limited upstream. Please retry shortly, or add your own provider key to use your own limits: https://openrouter.ai/workspaces/default/byok"}]}},"user_id":"user_3LqkiBt3lcPZk3W0aw1CEpwJAfq"}
+17:32:35 ERROR   [app.agent.evidence.extractor] Trích xuất lô 7/12 lỗi (lần 2/3)
+Traceback (most recent call last):
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/agent/evidence/extractor.py", line 167, in _call_llm
+    resp = gateway.generate(
+           ^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in generate
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 44, in call_with_retry
+    raise last_error
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 32, in call_with_retry
+    return call_once()
+           ^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in <lambda>
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 89, in _call_once
+    raise LLMGatewayError(f"OpenRouter API returned HTTP {res.status_code}: {res.text}")
+app.ai.llm_gateway.base.LLMGatewayError: OpenRouter API returned HTTP 503: {"error":{"message":"Provider returned error","code":503,"metadata":{"raw":"{\"message\":\"Service temporarily overloaded\",\"type\":\"Service Unavailable\",\"code\":503}","provider_name":"Nvidia","is_byok":false,"previous_errors":[{"code":429,"message":"Provider returned error","provider_name":"Google AI Studio","raw":"google/gemma-4-31b-it:free is temporarily rate-limited upstream. Please retry shortly, or add your own provider key to use your own limits: https://openrouter.ai/workspaces/default/byok"}]}},"user_id":"user_3LqkiBt3lcPZk3W0aw1CEpwJAfq"}
+17:32:41 ERROR   [app.agent.evidence.extractor] Trích xuất lô 7/12 lỗi (lần 3/3)
+Traceback (most recent call last):
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/agent/evidence/extractor.py", line 167, in _call_llm
+    resp = gateway.generate(
+           ^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in generate
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 44, in call_with_retry
+    raise last_error
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 32, in call_with_retry
+    return call_once()
+           ^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in <lambda>
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 89, in _call_once
+    raise LLMGatewayError(f"OpenRouter API returned HTTP {res.status_code}: {res.text}")
+app.ai.llm_gateway.base.LLMGatewayError: OpenRouter API returned HTTP 503: {"error":{"message":"Provider returned error","code":503,"metadata":{"raw":"{\"message\":\"Service temporarily overloaded\",\"type\":\"Service Unavailable\",\"code\":503}","provider_name":"Nvidia","is_byok":false,"previous_errors":[{"code":429,"message":"Provider returned error","provider_name":"Google AI Studio","raw":"google/gemma-4-31b-it:free is temporarily rate-limited upstream. Please retry shortly, or add your own provider key to use your own limits: https://openrouter.ai/workspaces/default/byok"}]}},"user_id":"user_3LqkiBt3lcPZk3W0aw1CEpwJAfq"}
+17:32:41 WARNING [app.agent.evidence.extractor] Trích xuất lô 7/12: lỗi sau 3 lần thử, bỏ lô này
+17:32:41 INFO    [app.agent.evidence.extractor] Trích xuất lô 8/12 (3 paper, 7435 ký tự)...
+17:32:41 INFO    [app.agent.evidence.extractor] Trích xuất lô 8/12: dùng cache
+17:32:41 INFO    [app.agent.evidence.extractor] Trích xuất lô 8/12 xong sau 0s: giữ 32 bản ghi
+17:32:41 INFO    [app.agent.evidence.extractor] Trích xuất lô 9/12 (3 paper, 7435 ký tự)...
+17:32:47 ERROR   [app.agent.evidence.extractor] Trích xuất lô 9/12 lỗi (lần 1/3)
+Traceback (most recent call last):
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/agent/evidence/extractor.py", line 167, in _call_llm
+    resp = gateway.generate(
+           ^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in generate
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 44, in call_with_retry
+    raise last_error
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 32, in call_with_retry
+    return call_once()
+           ^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in <lambda>
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 89, in _call_once
+    raise LLMGatewayError(f"OpenRouter API returned HTTP {res.status_code}: {res.text}")
+app.ai.llm_gateway.base.LLMGatewayError: OpenRouter API returned HTTP 503: {"error":{"message":"Provider returned error","code":503,"metadata":{"raw":"{\"message\":\"Service temporarily overloaded\",\"type\":\"Service Unavailable\",\"code\":503}","provider_name":"Nvidia","is_byok":false,"previous_errors":[{"code":429,"message":"Provider returned error","provider_name":"Google AI Studio","raw":"google/gemma-4-31b-it:free is temporarily rate-limited upstream. Please retry shortly, or add your own provider key to use your own limits: https://openrouter.ai/workspaces/default/byok"}]}},"user_id":"user_3LqkiBt3lcPZk3W0aw1CEpwJAfq"}
+17:32:52 ERROR   [app.agent.evidence.extractor] Trích xuất lô 9/12 lỗi (lần 2/3)
+Traceback (most recent call last):
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/agent/evidence/extractor.py", line 167, in _call_llm
+    resp = gateway.generate(
+           ^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in generate
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 44, in call_with_retry
+    raise last_error
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 32, in call_with_retry
+    return call_once()
+           ^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in <lambda>
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 89, in _call_once
+    raise LLMGatewayError(f"OpenRouter API returned HTTP {res.status_code}: {res.text}")
+app.ai.llm_gateway.base.LLMGatewayError: OpenRouter API returned HTTP 503: {"error":{"message":"Provider returned error","code":503,"metadata":{"raw":"{\"message\":\"Service temporarily overloaded\",\"type\":\"Service Unavailable\",\"code\":503}","provider_name":"Nvidia","is_byok":false,"previous_errors":[{"code":429,"message":"Provider returned error","provider_name":"Google AI Studio","raw":"google/gemma-4-31b-it:free is temporarily rate-limited upstream. Please retry shortly, or add your own provider key to use your own limits: https://openrouter.ai/workspaces/default/byok"}]}},"user_id":"user_3LqkiBt3lcPZk3W0aw1CEpwJAfq"}
+17:32:59 ERROR   [app.agent.evidence.extractor] Trích xuất lô 9/12 lỗi (lần 3/3)
+Traceback (most recent call last):
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/agent/evidence/extractor.py", line 167, in _call_llm
+    resp = gateway.generate(
+           ^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in generate
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 44, in call_with_retry
+    raise last_error
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 32, in call_with_retry
+    return call_once()
+           ^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in <lambda>
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 89, in _call_once
+    raise LLMGatewayError(f"OpenRouter API returned HTTP {res.status_code}: {res.text}")
+app.ai.llm_gateway.base.LLMGatewayError: OpenRouter API returned HTTP 503: {"error":{"message":"Provider returned error","code":503,"metadata":{"raw":"{\"message\":\"Service temporarily overloaded\",\"type\":\"Service Unavailable\",\"code\":503}","provider_name":"Nvidia","is_byok":false,"previous_errors":[{"code":429,"message":"Provider returned error","provider_name":"Google AI Studio","raw":"google/gemma-4-31b-it:free is temporarily rate-limited upstream. Please retry shortly, or add your own provider key to use your own limits: https://openrouter.ai/workspaces/default/byok"}]}},"user_id":"user_3LqkiBt3lcPZk3W0aw1CEpwJAfq"}
+17:32:59 WARNING [app.agent.evidence.extractor] Trích xuất lô 9/12: lỗi sau 3 lần thử, bỏ lô này
+17:32:59 INFO    [app.agent.evidence.extractor] Trích xuất lô 10/12 (3 paper, 5575 ký tự)...
+17:33:01 INFO    [app.agent.evidence.extractor] Trích xuất lô 10/12 xong sau 2s: giữ 0 bản ghi
+17:33:01 INFO    [app.agent.evidence.extractor] Trích xuất lô 11/12 (3 paper, 5576 ký tự)...
+17:33:03 INFO    [app.agent.evidence.extractor] Trích xuất lô 11/12 xong sau 2s: giữ 0 bản ghi
+17:33:03 INFO    [app.agent.evidence.extractor] Trích xuất lô 12/12 (1 paper, 1857 ký tự)...
+17:33:19 ERROR   [app.agent.evidence.extractor] Trích xuất lô 12/12 lỗi (lần 1/3)
+Traceback (most recent call last):
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/agent/evidence/extractor.py", line 167, in _call_llm
+    resp = gateway.generate(
+           ^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in generate
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 44, in call_with_retry
+    raise last_error
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 32, in call_with_retry
+    return call_once()
+           ^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in <lambda>
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 89, in _call_once
+    raise LLMGatewayError(f"OpenRouter API returned HTTP {res.status_code}: {res.text}")
+app.ai.llm_gateway.base.LLMGatewayError: OpenRouter API returned HTTP 503: {"error":{"message":"Provider returned error","code":503,"metadata":{"raw":"{\"message\":\"Service temporarily overloaded\",\"type\":\"Service Unavailable\",\"code\":503}","provider_name":"Nvidia","is_byok":false,"previous_errors":[{"code":429,"message":"Provider returned error","provider_name":"Google AI Studio","raw":"google/gemma-4-31b-it:free is temporarily rate-limited upstream. Please retry shortly, or add your own provider key to use your own limits: https://openrouter.ai/workspaces/default/byok"}]}},"user_id":"user_3LqkiBt3lcPZk3W0aw1CEpwJAfq"}

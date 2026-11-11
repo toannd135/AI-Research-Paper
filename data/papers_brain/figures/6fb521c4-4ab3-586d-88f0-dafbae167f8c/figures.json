@@ -1,0 +1,11 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Fig. 1: The details of training, validation, and test sets. During the validation and test stages, for each subject, the segmentation mask corresponding to images is not available, and one of the four modalities will be randomly excluded (‘dropout’). The participants are required to synthesize any missing modal- ities in the test stage.",
+  "kind": "raster",
+  "width": 756,
+  "height": 389,
+  "source_title": "6fb521c4-4ab3-586d-88f0-dafbae167f8c.pdf"
+ }
+]

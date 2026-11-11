@@ -1,0 +1,20 @@
+[
+ {
+  "file": "fig_1.png",
+  "page": 3,
+  "caption": "Figure 1: Clinical standard brain MRI typically acquired in",
+  "kind": "raster",
+  "width": 704,
+  "height": 552,
+  "source_title": "962104b3-9b9d-5d27-a067-a22816f46bef.pdf"
+ },
+ {
+  "file": "fig_2.png",
+  "page": 5,
+  "caption": "Figure 2: Glioma sub-regions considered in the MICCAI-CAMERA-LACUNA Fund BraTS 2023 challenge. Image panels denoting the tumor sub-regions annotated in the different mpMRI scans of a representative case. The image panels A-C denote the regions considered for the performance evaluation of the participating algorithms (top) and three labels overlaid on MRI image highlighted (bottom, D in grayscale a",
+  "kind": "raster",
+  "width": 970,
+  "height": 429,
+  "source_title": "962104b3-9b9d-5d27-a067-a22816f46bef.pdf"
+ }
+]

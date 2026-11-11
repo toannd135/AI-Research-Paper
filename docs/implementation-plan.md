@@ -195,3 +195,39 @@ Không làm: hình định tính BraTS (hệ thống chỉ dùng hình có thậ
 Kiểm chứng: `pytest app/agent/tests/test_report_checks.py app/agent/tests/test_science_qa.py app/agent/tests/test_evidence_pipeline.py`.
 Chưa làm: tự sinh bảng viết tắt; kiểm caption bảng (đơn vị/protocol/nguồn); đối chiếu Journal fit; kiểm DPI/cỡ chữ hình.
 
+
+## Repair tất định sau Quality Gate (survey brain `5a736250`, 2026-11-11)
+Brief: `docs/handoff/sua-loi-chan-survey-5a736250.md`. Gate chỉ báo; thêm bước sửa tất định cho 4 nhóm lỗi chặn + 2 lỗi tham chiếu.
+| # | Việc | Tệp | Kiểm chứng |
+|---|---|---|---|
+| 1 | `repair_chart_regions`, `redact_untraced_chart_points`, `repair_ledger_claims`, `add_uncited_corpus` | `evidence/repair.py` (mới) | `pytest app/agent/tests/test_repair.py` |
+| 2 | Nối vào `synthesize_node`: (d) trước dedupe; (a)(c) trước `finalize_structure_report`; (b) trong `_verify_final_report` | `nodes/synthesize_node.py` | `pytest app/agent/tests/test_synthesize_node.py` |
+| 3 | `strip_dangling_citations` bắt `[n, Table k]`; ref Table/Figure khớp lại theo từ khoá caption | `evidence/report_structure.py` | `pytest app/agent/tests/test_report_structure.py` |
+| 4 | Doc kiến trúc | `docs/architecture.md` | đối chiếu |
+Kiểm chứng tổng: `venv/bin/python -m ruff check app` + `venv/bin/python -m pytest app/agent -q`. Bước chạy lại research (test5) để người dùng làm.
+
+## Sửa hệ thống theo đánh giá reviewer `paper_5a736250_test5_latex.pdf` (2026-11-11)
+Bàn giao: `docs/handoff/paper-review-improvements.md`. Sửa bộ sinh, không sửa tay bài test5. Ưu tiên lỗi học thuật.
+| # | Việc | Tệp chính | Kiểm chứng |
+|---|---|---|---|
+| 1 ✅ | Citation trong caption/ô chart-table phải khớp paper_id nguồn của record; lệch → lỗi BLOCKING ở gate (+ repair tất định nếu map được) | quant_analysis/quant_check/quality_gate, chart_scientific | test_quality_gate, test_quant_* |
+| 2 ✅ | Chặn claim "first survey/first framework…" chưa kiểm chứng; bảng so survey chỉ giữ survey cùng chủ đề | quality_gate, synthesize_node | test_quality_gate |
+| 3 ✅ | RQ chỉ nêu một lần (Intro), kiểm tra cấu trúc bắt lặp (đặt ở `rq_sync.py`: `dedupe_rq_definitions`, `check_rq_repetition`) | rq_sync, quality_gate, synthesize_node | test_rq_sync |
+| 4 ✅ | Phân loại bằng chứng: trực tiếp trên dataset đích / dataset khác / tham khảo kiến trúc | evidence_tiers (mới), quant_analysis.study_profile_table, synthesize_node._evidence_limits_text | test_evidence_tiers |
+| 5 ✅ | Methodology tự sinh: loại survey, số bài, số record/bài có số liệu, giới hạn (không screening độc lập, không RoB/GRADE) | repair.ensure_methodology_disclosure, synthesize_node (_review_facts + gọi sau soften_novelty_claims) | test_quality_gate |
+| 6 ✅ (xem mục a–g bên dưới) | Trình bày LaTeX: tác giả/affiliation/email TỰ ĐIỀN theo hệ thống PaperAI (người dùng chốt 2026-11-11, không lấy từ profile); bảng `\footnotesize` + tách bảng dài; taxonomy tách trục, bỏ cite ở nhãn lá; caption ngắn | latex_renderer, figure_layout | test_latex_renderer |
+| 7 ✅ (mục h; chuẩn hoá references chưa làm) | Back matter: Data/Code Availability + placeholder Funding/CoI/Contributions; chuẩn hoá references | latex_renderer, bibliography | test_latex_renderer |
+Kiểm chứng tổng: `venv/bin/python -m ruff check app` + `venv/bin/python -m pytest app/agent -q`.
+
+### Việc 6–7 + lỗi trình bày LaTeX phát hiện khi xem test6 (2026-11-11) — ✅ a–h xong
+| # | Việc | Tệp | Kiểm chứng |
+|---|---|---|---|
+| a | Taxonomy (cây mermaid gốc→trục→lá) xuất LaTeX thành hình bảng native: mỗi trục một cột, bỏ cite/`<br/>` ở nhãn lá | latex_renderer (`_taxonomy_figure`) | test_latex_renderer |
+| b | Caption hình: bỏ cụm ≥4 trích dẫn (caption ngắn) | latex_renderer `_clean_caption` | test_latex_renderer |
+| c | Font toán kiểu Times (newtxmath) thay Computer Modern | latex_renderer `_COMMON_PACKAGES` | biên dịch test6, `pdffonts` không còn CMR/CMMI |
+| d | Font hình thống nhất Liberation Sans (Arial) 8pt cho chart matplotlib + Mermaid | chart_scientific, pdf_renderer, browser_renderer | test chart + pdffonts |
+| e | Sơ đồ corpus flow vẽ ngang (LR), trải cả trang; timeline thấp hơn khi ít sự kiện | corpus_flow, figure_layout, chart_scientific | test_corpus_flow/figure_layout |
+| f | IEEE: "Table N" trong thân bài → số La Mã (trừ "Table N of [k]"/locator trong []) | latex_renderer | test_latex_renderer |
+| g | Evidence map: nhãn trục to hơn | chart_scientific | xem ảnh |
+| h | Back matter: Data/Code Availability (sự thật hệ thống) + placeholder Funding/CoI/Contributions nếu bài chưa có | latex_renderer | test_latex_renderer |
+Kiểm chứng tổng: pytest app/agent app/pipeline app/api; xuất lại `data/exports/paper_5a736250_test6_latex.pdf` và xem ảnh trang.

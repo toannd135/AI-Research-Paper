@@ -44,7 +44,7 @@ Cách ly: paper thuộc đúng 1 user và (tuỳ chọn) 1 workspace. Research/c
 | DELETE | /{task_id} | 204 |
 | GET | /{task_id}/bib | BibTeX |
 | GET | /{task_id}/latex | LaTeX; `?draft=true` bỏ qua chặn Quality Gate |
-| GET | /{task_id}/pdf | `?engine=html\|typst&columns=1\|2&draft=false`. 409 khi `validation/<task_id>.json` có `passed=false` (kèm lỗi BLOCKING), trừ `?draft=true` |
+| GET | /{task_id}/pdf | `?engine=latex\|typst\|html&template=ieee\|cvpr&columns=1\|2&draft=false`. Mặc định `latex`: biên dịch IEEEtran bằng Tectonic (float hình/bảng chuẩn LaTeX), lỗi biên dịch thì lùi về `html`; `columns` chỉ áp dụng cho `html`. 409 khi `validation/<task_id>.json` có `passed=false` (kèm lỗi BLOCKING), trừ `?draft=true` |
 
 ## Chat (cần đăng nhập)
 | Method | Path | Ghi chú |

@@ -19,19 +19,28 @@ import re
 from datetime import date
 from typing import Any
 
-from app.core.scope import external_search_allowed
 from app.agent.evidence.citation_cleaner import _local_catalog, clean_and_deduplicate_citations_ex
 from app.agent.evidence.claim_scan import find_leaked_claims, soften_leaked_claims
 from app.agent.evidence.coverage import coverage_target, full_coverage_applies
 from app.agent.evidence.dataset_catalog import get_dataset_grounding_context
 from app.agent.evidence.quality_gate import merge_structure_issues, trace_text_records
 from app.agent.evidence.redact import redact_untraced_cells
+from app.agent.evidence.repair import (
+    add_uncited_corpus,
+    drop_duplicate_charts,
+    ensure_methodology_disclosure,
+    redact_untraced_chart_points,
+    repair_chart_regions,
+    repair_ledger_claims,
+    soften_novelty_claims,
+    soften_promotional_claims,
+)
 from app.agent.evidence.report_structure import (
     finalize_structure_report,
     source_diversity_warning,
     strip_dangling_citations,
 )
-from app.agent.evidence.rq_sync import canonical_rqs, enforce_rqs, rq_block, section_rqs
+from app.agent.evidence.rq_sync import canonical_rqs, dedupe_rq_definitions, enforce_rqs, rq_block, section_rqs
 from app.agent.format_sanitizer import sanitize_academic_markdown
 from app.agent.language import language_name
 from app.agent.profiles import adaptation_rules, audience_profile, field_profile, missing_end_sections
@@ -41,6 +50,7 @@ from app.agent.state import ResearchState
 from app.ai.llm_gateway.base import LLMGateway, Message
 from app.ai.llm_gateway.default import get_default_agent_gateway
 from app.core.config import get_settings
+from app.core.scope import external_search_allowed
 from app.pipeline.figures import load_figures
 
 logger = logging.getLogger(__name__)
@@ -197,6 +207,9 @@ _FIG_STOP = frozenset(
 MIN_FIGURE_TOPIC_OVERLAP = 2  # caption phải chung ≥2 từ nội dung với câu hỏi (1 từ chung như 'segmentation' chưa đủ)
 
 
+_SURVEY_WORDS = frozenset({"survey", "surveys", "review", "reviews", "overview", "tutorial", "comprehensive", "systematic"})
+
+
 def _topic_words(text: str) -> set[str]:
     return {w for w in _FIG_WORD_RE.findall(text.lower()) if w not in _FIG_STOP}
 
@@ -264,8 +277,8 @@ _STAGE_STRUCTURES: dict[str, dict[str, str]] = {
             "Otherwise use the REVIEW FACTS as they are: the corpus is a curated repository of PDFs, retrieval is hybrid search over it with the listed queries, the papers cited are those "
             "the retrieval returned (retrieval coverage, not screening); never invent databases (IEEE Xplore, PubMed, Scopus...), search dates, hit counts, screening numbers or a PRISMA flow that did not happen; "
             "say plainly that this is a narrative review of a curated corpus, not a systematic review, and state this as a limitation.\n"
-            "### 2.1 Research Questions\n"
-            "- List the CANONICAL RESEARCH QUESTIONS from the design plan VERBATIM, one per line as '**RQ1.** ...', with the same numbers and wording as in Section 1.3 (never a different set). If the design plan lists none, write 3-4 numbered questions (RQ1...) that the later sections answer, e.g. architectural paradigms, handling of missing inputs/modalities, comparability of reported results.\n"
+            "### 2.1 Review Scope\n"
+            "- Do NOT list the research questions again (they are stated once, in Section 1.3). In running prose, say that the review addresses RQ1...RQn of Section 1.3 and which later section answers each one; never start a line with 'RQ'.\n"
             "### 2.2 Corpus, Search Strategy and Selection Criteria\n"
             "- The REVIEW FACTS (corpus size, queries, number of papers retrieved/cited, search date); the inclusion rule and quality assessment EXACTLY as given in the REVIEW FACTS (do not add criteria, screening stages or a reviewer count that are not listed there), plus the retrieval configuration.\n"
             "### 2.3 Data Extraction and Quality Assessment\n"
@@ -435,13 +448,23 @@ def _prior_surveys_fact(state: ResearchState, catalog: dict[str, dict[str, Any]]
     for n, c in enumerate(state.get("citations", []), start=1):
         numbers.setdefault(str(getattr(c, "paper_id", "")), n)
     found = [(pid, meta) for pid, meta in catalog.items() if _SURVEY_TITLE_RE.search(str((meta or {}).get("title", "")))]
+    # Bảng so sánh survey chỉ được gồm survey CÙNG chủ đề: tiêu đề chung ≥2 từ nội dung với câu hỏi (bỏ chính từ survey/review)
+    topic = _topic_words(str(state.get("question", ""))) - _SURVEY_WORDS
+    off_topic = 0
+    if topic:
+        on_topic = [(pid, meta) for pid, meta in found if len(_topic_words(str(meta.get("title", ""))) & topic) >= MIN_FIGURE_TOPIC_OVERLAP]
+        off_topic, found = len(found) - len(on_topic), on_topic
     if not found:
-        return "PRIOR SURVEYS IN THE CORPUS: none. Novelty relative to earlier surveys cannot be established; do not claim it.\n\n"
+        return "PRIOR SURVEYS IN THE CORPUS: none on this topic. Novelty relative to earlier surveys cannot be established; do not claim it.\n\n"
     lines = [
         f"- {'[' + str(numbers[pid]) + ']' if pid in numbers else '(not retrieved, cannot be cited)'} {meta.get('title')} ({meta.get('year', 'n.d.')})"
         for pid, meta in found[:12]
     ]
-    return "PRIOR SURVEYS IN THE CORPUS (title-based; compare against these only):\n" + "\n".join(lines) + "\n\n"
+    note = (
+        f"\n- {off_topic} other survey(s) in the corpus cover a different topic: do NOT list them in any survey-comparison table."
+        if off_topic else ""
+    )
+    return "PRIOR SURVEYS IN THE CORPUS ON THIS TOPIC (title-based; compare against these only):\n" + "\n".join(lines) + note + "\n\n"
 
 
 # Chỉ số [n] trong evidence đánh theo đoạn trích (nhiều đoạn/paper); LLM từng suy "73 papers" từ [73] trong khi kho có 40 paper.
@@ -506,7 +529,8 @@ def _review_facts(state: ResearchState, mode: str) -> str:
         "- Inclusion rule actually applied: a paper is included if it is in the repository and was returned by the retrieval for at least one query. "
         "No other inclusion or exclusion criterion, and no manual screening, was applied; do not state any other criterion.\n"
         "- Quality assessment actually applied: automatic checks only (each reported value must appear verbatim in the cited PDF passage; comparability of "
-        "dataset version, split, region and metric). No per-study risk-of-bias score and no independent second reviewer.\n"
+        "dataset version, split, region and metric). No per-study risk-of-bias score, no GRADE certainty-of-evidence rating and no independent second reviewer; "
+        "state all three plainly in Section 2.\n"
         "- No independent title/abstract screening or PRISMA flow was performed beyond retrieval relevance. "
         "Never call this a systematic review and never mention PRISMA except to say that it was not applied.\n"
     )
@@ -523,10 +547,13 @@ def _evidence_limits_text(state: ResearchState) -> str:
     paper_to_n: dict[str, int] = {}
     for n, cit in enumerate(citations, start=1):
         paper_to_n.setdefault(cit.paper_id, n)
+    from app.agent.evidence.evidence_tiers import classify_evidence, tiers_fact
     from app.agent.evidence.study_profile import study_attributes
 
     attrs = study_attributes(state.get("evidence", []))
-    return evidence_limits(records_from_dicts(state["results"]), paper_to_n, len(paper_to_n), attrs)
+    records = records_from_dicts(state["results"])
+    tiers = tiers_fact(classify_evidence(records, paper_to_n, state.get("question", "")), paper_to_n)
+    return evidence_limits(records, paper_to_n, len(paper_to_n), attrs) + ("\n" + tiers if tiers else "")
 
 
 def _research_context(state: ResearchState) -> str:
@@ -617,7 +644,7 @@ def _generate_stage_0_blueprint(
         + "6. CORE CONTRIBUTIONS: 3-4 distinct, verifiable contributions."
         + (
             "\n7. RESEARCH QUESTIONS: 3-4 numbered questions, each on its own line written exactly as 'RQ1. <question>?', 'RQ2. <question>?' ... "
-            "They are the ONLY research questions of the manuscript: the Introduction and the Review Methodology will copy them verbatim and the Conclusion will answer each one. "
+            "They are the ONLY research questions of the manuscript: the Introduction lists them verbatim (once, nowhere else) and the Conclusion will answer each one. "
             "Each question must be answerable from the evidence: if EVIDENCE LIMITS show that the numbers a question would need (e.g. latency/FLOPs, results for every subset of inputs, variance) were not extracted, "
             "phrase it as 'How do existing methods formulate and evaluate X, and what evidence gaps remain?' instead of asking for a quantity the corpus cannot provide."
             if mode != "novel_research"
@@ -846,6 +873,12 @@ def _verify_final_report(
     except (KeyError, ValueError, TypeError, AttributeError, OSError):
         logger.exception("Gỡ ô số không truy vết được lỗi, giữ nguyên báo cáo")
         redacted = []
+    try:
+        # đếm lại khối trên bản đã gỡ bảng (số khối không đổi) rồi gỡ điểm biểu đồ
+        report, redacted_points = redact_untraced_chart_points(report, trace_text_records(state, report, numbered_citations))
+        redacted = redacted + redacted_points
+    except (KeyError, ValueError, TypeError, AttributeError, OSError):
+        logger.exception("Gỡ điểm biểu đồ không truy vết được lỗi, giữ nguyên báo cáo")
     final_gate = _run_quality_gate(state, report, numbered_citations)
     if final_gate is None:
         return report, merge_structure_issues(draft_gate, structure_blocking, structure_warnings)
@@ -926,6 +959,9 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
         sec5_text,
     ]
     raw_stitched = enforce_rqs("\n\n".join(full_markdown_parts), canon_rqs)
+    raw_stitched, rq_dupes = dedupe_rq_definitions(raw_stitched)
+    if rq_dupes:
+        logger.warning("Gỡ danh sách RQ lặp ở mục %s (chỉ giữ định nghĩa đầu tiên)", rq_dupes)
 
     missing = missing_end_sections(state, raw_stitched)
     if missing:
@@ -941,6 +977,7 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
 
     # Sơ đồ luồng PRISMA từ đúng số người dùng khai báo (review_protocol.json hợp lệ); không có tệp → không có sơ đồ
     has_protocol = False
+    disclosure_counts: tuple[int, int, int] | None = None  # (số bài cite, số record, số bài có record) — chỉ khi không có protocol
     if mode != "novel_research":
         from app.agent.evidence.review_protocol import inject_prisma, load_protocol, prisma_block, validate_protocol
 
@@ -957,10 +994,19 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
         paper_to_n: dict[str, int] = {}
         for n, cit in enumerate(citations, start=1):
             paper_to_n.setdefault(cit.paper_id, n)
+        from app.agent.evidence.evidence_tiers import classify_evidence
         from app.agent.evidence.study_profile import study_attributes
 
         attrs = study_attributes(state.get("evidence", []))
-        raw_stitched = inject_quant_blocks(raw_stitched, build_quant_blocks(records_from_dicts(state["results"]), paper_to_n, attrs))
+        records = records_from_dicts(state["results"])
+        tiers = classify_evidence(records, paper_to_n, state.get("question", ""))["tiers"]
+        raw_stitched = inject_quant_blocks(raw_stitched, build_quant_blocks(records, paper_to_n, attrs, tiers))
+
+    # Kho nhỏ phải cite hết: liệt kê paper chưa cite bằng chỉ số [k] thô, TRƯỚC khi đánh số lại
+    try:
+        raw_stitched, _ = add_uncited_corpus(raw_stitched, citations, _local_catalog())
+    except (KeyError, ValueError, TypeError, AttributeError, OSError):
+        logger.exception("Bổ sung paper chưa cite lỗi, giữ nguyên bài")
 
     # Deduplicate citations, remap numbers, and generate clean IEEE references
     updated_text, clean_references, numbered_citations = clean_and_deduplicate_citations_ex(citations, raw_stitched)
@@ -975,6 +1021,7 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
         updated_text = inject_corpus_flow(
             updated_text, corpus_flow_block(len(allowed) if allowed else None, len(retrieved), len(clean_references), len(with_results))
         )
+        disclosure_counts = (len(clean_references), len(state.get("results") or []), len(with_results))
     updated_text = postprocess_report(
         updated_text, state.get("draft", ""), gateway, model_name, state.get("language", "en"), state["figures"],
         evidence_text=" ".join(str(getattr(c, "text_snippet", "") or "") for c in citations),
@@ -987,6 +1034,22 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
     warning = source_diversity_warning(updated_text, len(clean_references))
     if warning:
         logger.warning("Chất lượng nguồn: %s", warning)
+    # Repair tất định cho lỗi chặn mà gate chỉ báo: biểu đồ trộn vùng, câu ledger missing-modality khi sổ cái không có
+    try:
+        updated_text, _ = repair_chart_regions(updated_text)
+        updated_text, _ = drop_duplicate_charts(updated_text)
+    except (KeyError, ValueError, TypeError, AttributeError):
+        logger.exception("Sửa biểu đồ trộn vùng lỗi, giữ nguyên")
+    try:
+        from app.agent.evidence.quality_gate import _missing_modality_groups
+
+        updated_text, _ = repair_ledger_claims(updated_text, _missing_modality_groups(state))
+    except (KeyError, ValueError, TypeError, AttributeError):
+        logger.exception("Sửa câu ledger missing-modality lỗi, giữ nguyên")
+    updated_text, _ = soften_promotional_claims(updated_text)
+    updated_text, _ = soften_novelty_claims(updated_text)
+    if disclosure_counts:
+        updated_text, _ = ensure_methodology_disclosure(updated_text, *disclosure_counts)
     updated_text, dangling_refs, low_confidence_refs = finalize_structure_report(updated_text)
     if low_confidence_refs:
         logger.warning("Tham chiếu bảng/hình gán theo vị trí (không khớp nội dung): %s", low_confidence_refs)

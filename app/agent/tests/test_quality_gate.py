@@ -213,6 +213,21 @@ def test_prior_surveys_fact_lists_only_real_catalog_surveys():
     assert "none" in _prior_surveys_fact(state, {"p3": {"title": "UNet"}})
 
 
+def test_prior_surveys_fact_keeps_only_same_topic_surveys():
+    from app.agent.nodes.synthesize_node import _prior_surveys_fact
+
+    state = {"citations": [], "question": "Multimodal MRI brain tumor segmentation on BraTS"}
+    catalog = {
+        "s1": {"title": "Deep learning for brain tumor segmentation: a survey", "year": "2021"},
+        "s2": {"title": "A survey on deepfake detection", "year": "2022"},
+        "s3": {"title": "Medical image segmentation review", "year": "2020"},
+    }
+    fact = _prior_surveys_fact(state, catalog)
+    assert "brain tumor segmentation" in fact and "deepfake" not in fact and "Medical image segmentation" not in fact
+    assert "2 other survey(s)" in fact
+    assert "none on this topic" in _prior_surveys_fact(state, {"s2": catalog["s2"]})
+
+
 def test_paper_count_above_corpus_is_flagged():
     from app.agent.evidence.consistency_check import check_paper_counts
 
@@ -274,12 +289,31 @@ def test_ledger_claim_contradiction_only_when_no_missing_modality_groups():
     assert not check_ledger_claims("No missing-modality result was extracted into the records.", missing_groups=0)
 
 
-def test_novelty_first_claim_is_warning_not_blocking():
+def test_novelty_first_claim_is_blocking_only_for_self_claims():
     from app.agent.evidence.consistency_check import check_novelty_claims
 
     out = check_novelty_claims("This is the first comprehensive mapping of fusion.", n_prior_surveys=1)
     assert out and "kho chỉ có 1 survey" in out[0]
+    assert check_novelty_claims("We propose the first unified framework for glioma triage.")
     assert not check_novelty_claims("Prior work is not the first comprehensive survey.")
+    assert not check_novelty_claims("Menze et al. introduced the first BraTS benchmark [3].")
+    report = run_quality_gate(_GATE_STATE, "To the best of our knowledge, this is the first survey of fusion [1].", _GATE_CATALOG)
+    assert any("tuyên bố tính mới" in b for b in report["blocking"])
+
+
+def test_soften_novelty_claims_removes_first_but_keeps_other_sources():
+    from app.agent.evidence.repair import soften_novelty_claims
+
+    text = (
+        "## 1. Introduction\nTo the best of our knowledge, this is the first comprehensive survey of fusion [1]. "
+        "We are the first to propose a unified taxonomy. Menze et al. built the first BraTS benchmark [2].\n"
+        '```chart\n{"caption": "this is the first survey"}\n```\n## References\n[1] The first survey of X.\n'
+    )
+    out, changed = soften_novelty_claims(text)
+    assert "This is a comprehensive survey of fusion [1]." in out
+    assert "We propose a unified taxonomy." in out
+    assert "built the first BraTS benchmark [2]" in out and '"this is the first survey"' in out and "[1] The first survey of X." in out
+    assert len(changed) == 2
 
 
 def test_limitation_denial_only_when_ledger_has_missing_modality_groups():
@@ -315,3 +349,71 @@ def test_reference_years_flags_two_years_but_ignores_arxiv_ids():
     text = "Body.\n## References\n[37] A, \"T,\" *Venue*, 2024. Preprint 2022.\n[38] B, \"U,\" arXiv:2007.09479, 2020.\n"
     out = check_reference_years(text)
     assert len(out) == 1 and out[0].startswith("[37]")
+
+
+def test_chart_point_uses_its_own_label_citation_not_caption():
+    chart = '```chart\n{"type": "dot", "caption": "Dice [1], [2]", "labels": ["A [1]", "B [2]"], "series": [{"name": "ET", "values": [88.5, 77.7]}]}\n```'
+    assert [c["cites"] for c in extract_numeric_claims(chart)] == [[1], [2]]
+    scatter = '```chart\n{"type": "bar", "caption": "Dice [1], [2]", "series": [{"name": "B [2]", "values": [77.7]}]}\n```'
+    assert extract_numeric_claims(scatter)[0]["cites"] == [2]
+
+
+def _ledger(*pairs):
+    from dataclasses import asdict
+
+    return [asdict(replace(BASE, paper_id=pid, value=v)) | {"modality": list(BASE.modality)} for pid, v in pairs]
+
+
+def test_gate_blocks_value_cited_to_paper_that_does_not_own_the_record():
+    cites = [SimpleNamespace(paper_id="p1"), SimpleNamespace(paper_id="p2"), SimpleNamespace(paper_id="p3")]
+    # p2 tình cờ có chuỗi "88.5" trong văn bản nhưng sổ cái ghi 88.5 là của p1 → cite [2] là nhầm nguồn
+    evidence = [_chunk("p1", "Dice 88.5", 8), _chunk("p2", "Dice 77.7, epoch 88.5", 2), _chunk("p3", "Dice 88.5", 4)]
+    catalog = {f"p{i}": {"title": f"T{i}", "authors": "A", "year": "2021", "url": "u"} for i in (1, 2, 3)}
+    state = {"citations": cites, "evidence": evidence, "results": _ledger(("p1", 88.5), ("p2", 77.7))}
+    wrong = '```chart\n{"type": "dot", "caption": "Dice", "labels": ["A [2]"], "series": [{"name": "ET", "values": [88.5]}]}\n```'
+    report = run_quality_gate(state, wrong, catalog)
+    assert not report["passed"] and any("trích dẫn sai nguồn số liệu" in b and "p1" in b for b in report["blocking"])
+    right = wrong.replace("A [2]", "A [1]")
+    assert not any("sai nguồn" in b for b in run_quality_gate(state, right, catalog)["blocking"])
+    # p3 chưa có record trong sổ cái → không đủ căn cứ, không chặn
+    unknown = wrong.replace("A [2]", "A [3]")
+    assert not any("sai nguồn" in b for b in run_quality_gate(state, unknown, catalog)["blocking"])
+
+
+def test_misattributed_chart_point_is_redacted_by_repair():
+    from app.agent.evidence.quality_gate import trace_text_records
+    from app.agent.evidence.repair import redact_untraced_chart_points
+
+    cites = [SimpleNamespace(paper_id="p1"), SimpleNamespace(paper_id="p2")]
+    state = {"citations": cites, "evidence": [_chunk("p1", "Dice 88.5"), _chunk("p2", "Dice 77.7, epoch 88.5")],
+             "results": _ledger(("p1", 88.5), ("p2", 77.7))}
+    text = '```chart\n{"type": "dot", "caption": "Dice", "labels": ["A [2]", "B [2]"], "series": [{"name": "ET", "values": [88.5, 77.7]}]}\n```'
+    records = trace_text_records(state, text)
+    assert [r["status"] for r in records] == [UNTRACED, TRACED] and records[0]["misattributed_to"] == ["p1"]
+    fixed, removed = redact_untraced_chart_points(text, records)
+    assert [r["value"] for r in removed] == ["88.5"] and "null" in fixed
+
+
+def test_methodology_disclosure_inserts_only_missing_facts():
+    from app.agent.evidence.repair import ensure_methodology_disclosure
+
+    text = (
+        "## 1. Introduction\nIntro.\n## 2. Review Methodology\nThis narrative review covers the corpus.\n"
+        "### 2.1 Review Scope\nScope.\n## 3. Taxonomy\nNo screening here either.\n"
+    )
+    out, added = ensure_methodology_disclosure(text, 24, 117, 15)
+    assert added == ["papers", "records", "screening", "rob_grade"]  # 'narrative' đã có; 'screening' ở mục 3 không tính
+    sec2 = out.split("## 2. Review Methodology")[1].split("## 3.")[0]
+    assert sec2.index("**Review type and limitations.**") < sec2.index("### 2.1")
+    assert "synthesizes 24 cited papers" in sec2 and "117 quantitative result records were extracted from 15" in sec2
+    assert "GRADE" in sec2 and "This article is a narrative review" not in sec2
+    again, added2 = ensure_methodology_disclosure(out, 24, 117, 15)
+    assert added2 == [] and again == out  # chạy lại không chèn lần nữa
+
+
+def test_methodology_disclosure_without_section_or_records():
+    from app.agent.evidence.repair import ensure_methodology_disclosure
+
+    assert ensure_methodology_disclosure("## 1. Introduction\nx\n", 3, 0, 0) == ("## 1. Introduction\nx\n", [])
+    out, _ = ensure_methodology_disclosure("## 2. Methodology\nWe review papers.\n", 3, 0, 0)
+    assert "No quantitative result record could be extracted" in out and out.endswith("\n\n")

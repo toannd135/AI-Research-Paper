@@ -86,3 +86,40 @@ def test_mermaid_span():
 def test_metric_axis_label_moves_to_horizontal_axis():
     spec, _ = refine_chart_spec({**_bar(["Validation", "Testing"]), "y_label": "Dice (ratio)", "x_label": "Region"})
     assert spec["x_label"] == "Dice (ratio)" and "y_label" not in spec
+
+
+def test_compact_tree_stacks_leaves_under_each_branch():
+    from app.pipeline.export.figure_layout import compact_tree
+
+    nodes = "\n".join(f'    {b}{i}["{b} leaf {i}<br/>[{i}]"]' for b in "ABC" for i in range(1, 6))
+    edges = "\n".join(f"    {b} --> {b}{i}" for b in "ABC" for i in range(1, 6))
+    code = f'graph LR\n    Root["Root"]\n    %% Axis\n{nodes}\n    Root --> A\n    Root --> B\n    Root --> C\n{edges}'
+    out = compact_tree(code)
+    assert out.startswith("graph TD")
+    assert "A --> A1" in out and "A1 ~~~ A2" in out and "A --> A2" not in out
+    assert 'A1["A leaf 1<br/>[1]"]' in out and "%% Axis" in out
+
+
+def test_compact_tree_leaves_other_diagrams_alone():
+    from app.pipeline.export.figure_layout import compact_tree
+
+    small = "graph LR\n  R --> A\n  R --> B\n  A --> A1\n  B --> B1"
+    assert compact_tree(small) == small  # ít lá
+    labelled = "graph LR\n" + "\n".join(f"  R -->|x| A{i}" for i in range(20))
+    assert compact_tree(labelled) == labelled  # cạnh có nhãn
+
+
+def test_two_level_tree_reads_plain_and_compacted_taxonomy():
+    from app.pipeline.export.figure_layout import two_level_tree
+
+    plain = 'graph TD\n  R["Root"]\n  A["A. X"]\n  A1["Early<br/>[1, 2]"]\n  B["B. Y"]\n  B1["CNN"]\n  R --> A\n  R --> B\n  A --> A1\n  B --> B1'
+    assert two_level_tree(plain) == ("Root", [("A. X", ["Early"]), ("B. Y", ["CNN"])])
+    compact = 'graph LR\n  R["Root"]\n  R --> A["A. X"]\n  A --> L0["• Early [1]<br/>• Late [2, 3]"]\n  R --> B["B. Y"]\n  B --> L1["• CNN"]'
+    assert two_level_tree(compact) == ("Root", [("A. X", ["Early", "Late"]), ("B. Y", ["CNN"])])
+    assert two_level_tree('graph LR\n  A -->|yes| B\n  A --> C') is None
+    assert two_level_tree("sequenceDiagram\n  A->>B: hi") is None
+
+
+def test_horizontal_flow_with_four_nodes_is_wide():
+    assert mermaid_span('flowchart LR\n  A["a"] --> B["b"]\n  B --> C["c"]\n  C --> D["d"]') == WIDE
+    assert mermaid_span('flowchart LR\n  A["a"] --> B["b"]\n  B --> C["c"]') == COLUMN
