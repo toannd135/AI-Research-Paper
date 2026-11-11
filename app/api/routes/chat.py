@@ -2,7 +2,7 @@
 
 import json
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.agent.language import ENGLISH_ONLY_RULE
@@ -100,12 +100,33 @@ def list_chat_models():
 
 
 @router.get("/conversations")
-def list_conversations(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def list_conversations(
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    paper_id: str | None = None,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Danh sách phân trang (cùng dạng /papers, /research) kèm số tin nhắn và tin cuối."""
     query = db.query(Conversation)
     if user.role != ROLE_ADMIN:
         query = query.filter(Conversation.user_id == user.id)
-    conversations = query.order_by(Conversation.created_at.desc()).all()
-    return [{"id": c.id, "paper_id": c.paper_id, "created_at": c.created_at} for c in conversations]
+    if paper_id:
+        query = query.filter(Conversation.paper_id == paper_id)
+    total = query.count()
+    conversations = query.order_by(Conversation.created_at.desc()).offset(offset).limit(limit).all()
+    items = [
+        {
+            "id": c.id,
+            "paper_id": c.paper_id,
+            "research_task_id": c.research_task_id,
+            "created_at": c.created_at,
+            "message_count": len(c.messages),
+            "last_message": c.messages[-1].content if c.messages else None,
+        }
+        for c in conversations
+    ]
+    return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
 @router.get("/conversations/by-research/{task_id}")

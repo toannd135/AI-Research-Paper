@@ -174,3 +174,10 @@ def test_conversation_is_restorable_by_research_task(mock_hybrid, mock_rerank, m
         ("assistant", "Câu trả lời."),
     ]
     assert body["messages"][1]["citations"], "trích dẫn phải được lưu cùng câu trả lời"
+
+    listing = client.get("/conversations?limit=10").json()
+    assert listing["total"] == 1 and listing["limit"] == 10 and listing["offset"] == 0
+    item = listing["items"][0]
+    assert item["research_task_id"] == "task-1"
+    assert item["message_count"] == 2
+    assert item["last_message"] == "Câu trả lời."

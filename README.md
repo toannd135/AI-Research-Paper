@@ -75,6 +75,55 @@ Lần biên dịch đầu Tectonic tải gói LaTeX từ Internet.
 
 **Đừng chạy cả hai cách cùng lúc** (trùng cổng 8000, hai worker cùng lấy task trong Redis).
 
+### Chạy một phiên research từ terminal (Linux, cách B)
+
+Hướng dẫn đầy đủ từng bước: `docs/huong-dan-chay.md`. Tóm tắt (chạy trong thư mục `paperai`):
+
+```bash
+# 0. Hạ tầng (một lần)
+docker compose up -d
+source scripts/host_env.sh && alembic upgrade head
+
+# 1. Tab 1 — API (http://localhost:8000/docs)
+source scripts/host_env.sh && uvicorn app.main:app --reload
+
+# 2. Tab 2 — worker (sửa code backend thì Ctrl+C rồi chạy lại)
+source scripts/host_env.sh && celery -A app.workers.celery_app worker -Q upload_queue,research_queue -l info
+
+# 3. (Tuỳ chọn) Phiên/workspace mới chứa các paper trong một thư mục đã nạp; lấy id rồi sửa
+#    "workspace_id" trong data/requests/mri_brain_survey.json
+source scripts/host_env.sh
+python scripts/assign_papers.py --dir data/papers_brain --email admin@gmail.com --workspace "<tên phiên>" --apply
+docker exec paperai-postgres-1 psql -U paperai -d paperai -tAc "select id, name from workspaces"
+
+# 4. Gửi câu hỏi research (-sS: báo lỗi nếu API chưa chạy; có thể mất vài phút vì gọi LLM làm rõ câu hỏi)
+set -a; . ./.env; set +a
+TOKEN=$(curl -s localhost:8000/auth/login -H 'content-type: application/json' \
+  -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" | jq -r '.access_token // .token')
+curl -sS -m 300 localhost:8000/research/ -H "authorization: Bearer $TOKEN" \
+  -H 'content-type: application/json' -d @data/requests/mri_brain_survey.json
+TASK=<id vừa nhận>
+
+# 5. Theo dõi (~20 phút trở lên): processing -> done (report > 0) | failed (xem cột lỗi)
+docker exec paperai-postgres-1 psql -U paperai -d paperai -tAc \
+  "select status, length(coalesce(report,'')), left(coalesce(error,''),150) from research_tasks where id='$TASK'"
+# Task đang chạy / hàng đợi
+docker exec paperai-postgres-1 psql -U paperai -d paperai -tAc "select id, status from research_tasks where status in ('pending','processing')"
+docker exec paperai-redis-1 redis-cli llen research_queue
+
+# 6. Xuất PDF LaTeX (bảng "Table 1.", hình "Figure 1.") và BibTeX
+curl -s "localhost:8000/research/$TASK/pdf?engine=latex&template=ieee" -H "authorization: Bearer $TOKEN" \
+  -o data/exports/paper_${TASK:0:8}_latex.pdf
+curl -s "localhost:8000/research/$TASK/bib" -H "authorization: Bearer $TOKEN" -o data/exports/paper_${TASK:0:8}.bib
+
+# Dừng (giữ dữ liệu). KHÔNG dùng `docker compose down -v` (xoá volume chứa paper đã nạp)
+docker compose stop
+```
+
+- Lệnh gửi không in gì / token `null` → API chưa chạy (bước 1).
+- Worker log chỉ có `received` → đang chờ LLM trả lời (model free có thể xếp hàng tới 15 phút/lời gọi).
+- Dự phòng LLM khi 429/413: OpenRouter khóa 1 (`OPENROUTER_MODEL`) → Groq (`GROQ_MODEL`) → OpenRouter khóa 2 (`OPENROUTER_MODEL_2`, trống thì dùng `OPENROUTER_MODEL`).
+
 ### Xuất PDF
 
 Mặc định dùng Chromium hai cột; bảng và hình trải ngang trang. Nút **PDF 1 cột** tạo bản một cột.

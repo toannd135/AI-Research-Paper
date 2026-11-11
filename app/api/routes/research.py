@@ -171,8 +171,10 @@ def export_research_bibtex(
 ) -> Response:
     """references.bib với cite key ref{n} khớp [n] trong báo cáo."""
     from app.pipeline.export.bibliography import parse_references, references_to_bibtex
+    from app.pipeline.export.publication_prep import prepare_report_for_latex
 
-    refs = parse_references(_task_report(task_id, db, user))
+    # cùng bước dọn/đánh số lại như gói LaTeX -> ref{n} khớp \cite trong paper.tex
+    refs = parse_references(prepare_report_for_latex(_task_report(task_id, db, user)))
     if not refs:
         raise HTTPException(status_code=409, detail="Báo cáo không có mục References")
     return Response(
@@ -205,7 +207,7 @@ def export_research_latex(
     return Response(
         content=bundle,
         media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="paperai-{task_id[:8]}-ieee.zip"'},
+        headers={"Content-Disposition": f'attachment; filename="paperai-{task_id[:8]}-{template}.zip"'},
     )
 
 

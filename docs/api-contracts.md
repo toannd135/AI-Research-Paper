@@ -51,7 +51,7 @@ Cách ly: paper thuộc đúng 1 user và (tuỳ chọn) 1 workspace. Research/c
 |---|---|---|
 | POST | /chat | body `ChatRequest` (question, paper_id?, conversation_id?, research_task_id?, model?) -> `ChatResponse` kèm citations; 404 nếu không có ngữ cảnh |
 | GET | /chat/models | model khả dụng |
-| GET | /conversations | danh sách phiên của user |
+| GET | /conversations | `?limit=50&offset=0&paper_id=` -> `{items, total, limit, offset}`; item: id, paper_id, research_task_id, created_at, message_count, last_message. User thường chỉ thấy phiên của mình, admin thấy tất cả |
 | GET | /conversations/by-research/{task_id} | phiên gắn research |
 | GET | /conversations/{conversation_id} | chi tiết + messages |
 

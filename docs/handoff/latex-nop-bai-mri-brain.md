@@ -30,7 +30,10 @@ Xuất PDF nộp bài (52 paper, workspace "MRI brain survey v2" `24b391d6-7372-
 
 ## Đang chờ
 - Người dùng: nội dung Funding/CoI/Author Contributions; chọn phần cắt.
-- Task `4068be1b` failed do 429 cả chuỗi model free.
+- 52 paper nay ở workspace "MRI brain survey v3" `2e7beae0-65f5-4173-a638-c403f227f9d0` (v2 rỗng).
+- Task mới `7af6af38-b6c9-4b61-b61a-992706e150d2` đang `processing` (tạo 22:24, chưa lỗi lúc 22:35). Kiểm tra:
+  `docker exec paperai-postgres-1 psql -U paperai -d paperai -tAc "select status,length(coalesce(report,'')),left(coalesce(error,''),150) from research_tasks where id='7af6af38-b6c9-4b61-b61a-992706e150d2'"`
+  Xong → `curl -o data/exports/paper_7af6af38.pdf "localhost:8000/research/7af6af38-b6c9-4b61-b61a-992706e150d2/pdf?engine=latex&template=ieee&draft=true"` (cần token admin).
 
 ## Lệnh kiểm tra
 - `source venv/bin/activate; pytest app/agent/tests -q -k "latex or pdf or report_structure or chart or figure"; pytest app/ai -q`
