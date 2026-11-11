@@ -18,6 +18,7 @@ from app.agent.profiles import normalize_audience, normalize_field
 from app.agent.research_model import normalize_contribution
 from app.agent.state import ResearchState
 from app.ai.llm_gateway.base import LLMGateway
+from app.core.progress import log_progress
 from app.core.schemas import PaperRef
 
 MAX_ITERATIONS = 2
@@ -32,13 +33,26 @@ def _route_after_critique(state: ResearchState) -> str:
 logger = logging.getLogger(__name__)
 
 
+_STEP_LABELS = {
+    "plan": "Lập kế hoạch truy vấn",
+    "search": "Tìm kiếm tài liệu",
+    "analyze": "Phân tích bằng chứng",
+    "critique": "Tự phản biện trích dẫn",
+    "model": "Xây dựng mô hình nghiên cứu",
+    "synthesize": "Tổng hợp báo cáo",
+}
+
+
 def _timed(name: str, fn):
     """Bọc node để log thời gian chạy, phục vụ tìm bước chậm."""
 
     def wrapper(state):
         start = time.perf_counter()
+        log_progress(f"{_STEP_LABELS.get(name, name)}…", step=name)
         result = fn(state)
-        logger.info("Node %s chạy %.1fs", name, time.perf_counter() - start)
+        elapsed = time.perf_counter() - start
+        logger.info("Node %s chạy %.1fs", name, elapsed)
+        log_progress(f"Xong: {_STEP_LABELS.get(name, name)} ({elapsed:.1f}s)", step=name)
         return result
 
     return wrapper

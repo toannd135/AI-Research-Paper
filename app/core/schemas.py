@@ -275,6 +275,14 @@ class ResearchClarificationResponse(BaseModel):
     questions: list[ClarificationQuestion]
 
 
+class ResearchProgressEntry(BaseModel):
+    """Một dòng nhật ký tiến trình của research task (đọc từ Redis khi task còn chạy)."""
+
+    time: float
+    message: str
+    step: str | None = None
+
+
 class ResearchTaskResponse(BaseModel):
     id: str
     question: str = ""
@@ -285,6 +293,7 @@ class ResearchTaskResponse(BaseModel):
     research_model: dict | None = None
     error: str | None = None
     created_at: datetime
+    progress: list[ResearchProgressEntry] = Field(default_factory=list)
 
 
 class ResearchTaskSummary(BaseModel):

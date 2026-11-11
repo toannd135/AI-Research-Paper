@@ -17,8 +17,10 @@ from app.api.models.research_task import ResearchTask
 from app.api.models.user import ROLE_ADMIN, User
 from app.api.routes.workspaces import get_owned_workspace_id
 from app.core.database import get_db
+from app.core.progress import read_progress
 from app.core.schemas import (
     Citation,
+    ResearchProgressEntry,
     ResearchClarificationResponse,
     ResearchRequest,
     ResearchStatus,
@@ -122,6 +124,7 @@ def get_research(
         research_model=json.loads(task.research_model) if task.research_model else None,
         error=task.error,
         created_at=task.created_at,
+        progress=[ResearchProgressEntry(**e) for e in read_progress(task.id)],
     )
 
 

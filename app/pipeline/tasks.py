@@ -142,8 +142,17 @@ def run_research(task_id: str) -> dict:
             from app.core.scope import allowed_paper_ids_for, set_allowed_paper_ids, set_local_only
 
             owner = db.get(User, task.user_id) if task.user_id else None
-            set_allowed_paper_ids(_research_scope(db, allowed_paper_ids_for(db, owner, task.workspace_id)))
+            from app.core.progress import clear_progress, log_progress, set_current_task
+
+            clear_progress(task_id)
+            set_current_task(task_id)
+            allowed = _research_scope(db, allowed_paper_ids_for(db, owner, task.workspace_id))
+            set_allowed_paper_ids(allowed)
             set_local_only(bool(task.workspace_id))
+            if task.workspace_id:
+                log_progress(f"Bắt đầu: chỉ dùng {len(allowed or ())} tài liệu đã xử lý trong kho, không tìm nguồn ngoài")
+            else:
+                log_progress("Bắt đầu: dùng thư viện chung và nguồn ngoài (OpenAlex)")
             question = task.refined_question or task.question
             state = run_graph(
                 question,
@@ -169,6 +178,7 @@ def run_research(task_id: str) -> dict:
             _save_ledger_csv(db, task_id, state.get("results"))
             task.status = ResearchStatus.DONE.value
             db.commit()
+            log_progress("Hoàn tất báo cáo")
             logger.info("Research task %s hoàn tất: report %d ký tự", task_id, len(task.report or ""))
             return {"task_id": task_id, "status": task.status}
         except Exception as exc:
@@ -179,11 +189,16 @@ def run_research(task_id: str) -> dict:
                 return {"task_id": task_id, "status": "deleted"}
             task.status = ResearchStatus.FAILED.value
             task.error = str(exc)[:2000]
+            from app.core.progress import log_progress as _log
+
+            _log(f"Thất bại: {str(exc)[:200]}")
             db.commit()
             raise
     finally:
+        from app.core.progress import set_current_task as _set_task
         from app.core.scope import set_allowed_paper_ids, set_local_only
 
         set_allowed_paper_ids(None)
         set_local_only(False)
+        _set_task(None)
         db.close()
