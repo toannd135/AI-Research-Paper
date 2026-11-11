@@ -97,3 +97,43 @@ def test_openrouter_429_raises_rate_limit_error_with_retry_after(mock_httpx_cls)
     with pytest.raises(LLMRateLimitError) as exc_info:
         adapter.generate([Message(role="user", content="Hi")])
     assert exc_info.value.retry_after == 12.0
+
+
+def _res(payload):
+    res = MagicMock()
+    res.status_code = 200
+    res.json.return_value = payload
+    return res
+
+
+@patch("app.ai.llm_gateway.openrouter_adapter.httpx.Client")
+def test_openrouter_empty_content_falls_back_to_next_model(mock_httpx_cls):
+    mock_client = MagicMock()
+    mock_client.post.side_effect = [
+        _res({"model": "m-main", "choices": [{"message": {"content": None}, "finish_reason": "length"}]}),
+        _res({"model": "a", "choices": [{"message": {"content": "ok"}}]}),
+    ]
+    mock_httpx_cls.return_value.__enter__.return_value = mock_client
+
+    from app.ai.llm_gateway.openrouter_adapter import OpenRouterAdapter
+
+    adapter = OpenRouterAdapter(api_key="sk-or-fake-key", fallback_models=["a", "b", "c"])
+    result = adapter.generate([Message(role="user", content="Hi")], "m-main")
+
+    assert result.text == "ok"
+    second = mock_client.post.call_args_list[1].kwargs["json"]["models"]
+    assert second == ["a", "b", "c"]
+
+
+@patch("app.ai.llm_gateway.openrouter_adapter.httpx.Client")
+def test_openrouter_content_parts_list_is_joined(mock_httpx_cls):
+    mock_client = MagicMock()
+    mock_client.post.return_value = _res(
+        {"model": "m", "choices": [{"message": {"content": [{"type": "text", "text": "xin "}, {"type": "text", "text": "chào"}]}}]}
+    )
+    mock_httpx_cls.return_value.__enter__.return_value = mock_client
+
+    from app.ai.llm_gateway.openrouter_adapter import OpenRouterAdapter
+
+    result = OpenRouterAdapter(api_key="k").generate([Message(role="user", content="Hi")], "m")
+    assert result.text == "xin chào"

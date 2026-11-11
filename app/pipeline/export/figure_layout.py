@@ -122,6 +122,66 @@ _LABELED_EDGE_RE = re.compile(
 )
 
 
+_CHAIN_NODE_RE = re.compile(r'^\s*([A-Za-z][\w-]*)\s*(?:\["?(.+?)"?\]|\("?(.+?)"?\))?\s*$')
+_STAGE_PREFIX_RE = re.compile(r"^([A-Z][A-Za-z /&-]{1,30}):\s+(.+)$")
+CHAINS_MIN_ROWS = 3
+
+
+def parallel_chains(code: str) -> tuple[list[str], list[list[str]]] | None:
+    """Sơ đồ gồm nhiều chuỗi song song cùng độ dài (vd. roadmap Gap → Direction → Evaluation): ([tiêu đề cột], [hàng]).
+
+    Vẽ bằng Mermaid thì hộp chữ dài bị thu theo chiều cao trang, chữ còn ~5 pt; dạng bảng native đọc được.
+    Tiêu đề cột lấy từ tiền tố chung 'Gap: …' của mọi ô trong cột (rồi bỏ khỏi ô); không có thì 'Stage k'.
+    Không phải các chuỗi rời nhau, đều độ dài → None."""
+    if not re.match(r"\s*(?:graph|flowchart)\s+(?:LR|RL)\b", code):
+        return None
+    labels: dict[str, str] = {}
+    nxt: dict[str, str] = {}
+    has_prev: set[str] = set()
+    for line in code.split("\n")[1:]:
+        body = line.split("%%")[0].strip()
+        if not body:
+            continue
+        parts = body.rstrip(";").split("-->")
+        nodes = []
+        for part in parts:
+            m = _CHAIN_NODE_RE.match(part)
+            if not m:
+                return None  # cạnh có nhãn, kiểu khác, subgraph/style…
+            nodes.append(m.group(1))
+            if m.group(2) or m.group(3):
+                labels[m.group(1)] = m.group(2) or m.group(3)
+        for a, b in pairwise(nodes):
+            if a in nxt or b in has_prev:
+                return None  # rẽ nhánh/hợp nhánh: không phải chuỗi thẳng
+            nxt[a] = b
+            has_prev.add(b)
+    starts = [n for n in nxt if n not in has_prev]
+    chains = []
+    for s in starts:
+        chain, seen = [s], {s}
+        while chain[-1] in nxt and nxt[chain[-1]] not in seen:
+            chain.append(nxt[chain[-1]])
+            seen.add(chain[-1])
+        chains.append(chain)
+    if len(chains) < CHAINS_MIN_ROWS or sum(len(c) for c in chains) != len(has_prev) + len(starts):
+        return None
+    width = len(chains[0])
+    if not 2 <= width <= 4 or any(len(c) != width for c in chains):
+        return None
+    rows = [[_clean_label(labels.get(n, n)) for n in c] for c in chains]
+    headers = []
+    for k in range(width):
+        found = [_STAGE_PREFIX_RE.match(r[k]) for r in rows]
+        if all(found) and len({f.group(1).lower() for f in found}) == 1:
+            headers.append(found[0].group(1))
+            for r, f in zip(rows, found, strict=True):
+                r[k] = f.group(2)
+        else:
+            headers.append(f"Stage {k + 1}")
+    return headers, rows
+
+
 def _leaf_items(raw: str) -> list[str]:
     """Ô lá đã gộp '• a<br/>• b' (orient_mermaid) → [a, b]; ô thường → [nhãn]."""
     if "•" not in raw:

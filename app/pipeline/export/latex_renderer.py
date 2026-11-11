@@ -55,6 +55,8 @@ _COMMON_PACKAGES = r"""\usepackage{iftex}
 \usepackage{graphicx,booktabs,multirow,textcomp,xcolor,array,tabularx}
 \setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
 \setlength{\dbltextfloatsep}{8pt plus 2pt minus 2pt}
+% cột không buộc bằng đáy trang: tránh khoảng trắng lớn giữa đoạn khi cột chỉ còn vài đoạn ngắn dưới hình rộng
+\raggedbottom
 \renewcommand{\topfraction}{0.9}
 \renewcommand{\dbltopfraction}{0.9}
 \renewcommand{\textfraction}{0.07}
@@ -176,6 +178,23 @@ def taxonomy_figure(root: str, branches: list[tuple[str, list[str]]], caption: s
         f"\\begin{{tabularx}}{{{width}}}{{@{{}}*{{{n}}}{{>{{\\centering\\arraybackslash}}X}}@{{}}}}\n\\toprule\n{head}\n\\midrule\n"
         + "\n".join(rows)
         + f"\n\\bottomrule\n\\end{{tabularx}}\n\\caption{{{_clean_caption(caption)}}}\n\\end{{{env}}}"
+    )
+
+
+def chains_figure(headers: list[str], rows: list[list[str]], caption: str) -> str:
+    """Sơ đồ chuỗi song song (roadmap Gap → Direction → Evaluation) dạng bảng native trong môi trường figure*:
+    giữ số thứ tự 'Fig. N' như sơ đồ gốc, chữ cỡ chú thích, mũi tên giữa các cột thể hiện chiều chuỗi."""
+    n = len(headers)
+    arrow = r"$\rightarrow$"
+    spec = ("@{}" + (r">{\raggedright\arraybackslash}X" + "@{\\hspace{2pt}}c@{\\hspace{2pt}}") * (n - 1)
+            + r">{\raggedright\arraybackslash}X@{}")
+    head = f" & {arrow} & ".join(rf"\textbf{{{inline_to_tex(h)}}}" for h in headers) + r" \\"
+    body = [f" & {arrow} & ".join(inline_to_tex(c) for c in r) + r" \\[2pt]" for r in rows]
+    return (
+        "\\begin{figure*}[!t]\n\\centering\n\\footnotesize\n\\setlength{\\tabcolsep}{3pt}\n"
+        f"\\begin{{tabularx}}{{\\textwidth}}{{{spec}}}\n\\toprule\n{head}\n\\midrule\n"
+        + "\n".join(body)
+        + f"\n\\bottomrule\n\\end{{tabularx}}\n\\caption{{{_clean_caption(caption)}}}\n\\end{{figure*}}"
     )
 
 
@@ -318,7 +337,14 @@ def report_to_latex(
     """Trả về nội dung paper.tex (template: ieee | cvpr); ghi figures/ vào work_dir."""
     if template not in _PREAMBLES:
         raise ValueError(f"Template LaTeX không hỗ trợ: {template}")
-    from app.pipeline.export.figure_layout import WIDE, chart_span, compact_tree, mermaid_span, two_level_tree
+    from app.pipeline.export.figure_layout import (
+        WIDE,
+        chart_span,
+        compact_tree,
+        mermaid_span,
+        parallel_chains,
+        two_level_tree,
+    )
     from app.pipeline.export.pdf_renderer import _render_chart_svg
     from app.pipeline.figures import resolve_figure_path
 
@@ -397,6 +423,8 @@ def report_to_latex(
         tree = two_level_tree(m.group(3).strip())
         if tree and sum(len(leaves) for _, leaves in tree[1]) >= TAXONOMY_MIN_LEAVES:
             return keep(taxonomy_figure(tree[0], tree[1], cap))
+        if chains := parallel_chains(m.group(3).strip()):
+            return keep(chains_figure(chains[0], chains[1], cap))
         code = compact_tree(m.group(3).strip())
         (fig_dir / f"{name}.mmd").write_text(code + "\n", encoding="utf-8")
         if render_diagrams:

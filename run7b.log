@@ -1,0 +1,112 @@
+17:47:54 ERROR   [app.pipeline.tasks] Research task 865b8699-0509-4011-8039-066e8ed6ea50 thất bại
+Traceback (most recent call last):
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/pipeline/tasks.py", line 148, in run_research
+    state = run_graph(
+            ^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/agent/graph.py", line 100, in run_graph
+    return app.invoke(initial_state)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/venv/lib/python3.11/site-packages/langgraph/pregel/main.py", line 3913, in invoke
+    for chunk in self.stream(
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/venv/lib/python3.11/site-packages/langgraph/pregel/main.py", line 2967, in stream
+    for _ in runner.tick(
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/venv/lib/python3.11/site-packages/langgraph/pregel/_runner.py", line 207, in tick
+    run_with_retry(
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/venv/lib/python3.11/site-packages/langgraph/pregel/_retry.py", line 617, in run_with_retry
+    return task.proc.invoke(task.input, config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/venv/lib/python3.11/site-packages/langgraph/_internal/_runnable.py", line 707, in invoke
+    input = context.run(step.invoke, input, config, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/venv/lib/python3.11/site-packages/langgraph/_internal/_runnable.py", line 447, in invoke
+    ret = self.func(*args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/agent/graph.py", line 40, in wrapper
+    result = fn(state)
+             ^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/agent/graph.py", line 50, in <lambda>
+    graph.add_node("plan", _timed("plan", lambda state: plan_node(state, llm=llm)))
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/agent/nodes/plan_node.py", line 61, in plan_node
+    response = gateway.generate(
+               ^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in generate
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 44, in call_with_retry
+    raise last_error
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 32, in call_with_retry
+    return call_once()
+           ^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in <lambda>
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 96, in _call_once
+    raise LLMGatewayError(f"OpenRouter upstream error: {err_msg}")
+app.ai.llm_gateway.base.LLMGatewayError: OpenRouter upstream error: Provider timed out after 11167ms
+During task with name 'plan' and id 'da78ea5b-fef2-1621-d673-a3b74b34adbe'
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/venv/lib/python3.11/site-packages/celery/local.py", line 182, in __call__
+    return self._get_current_object()(*a, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/venv/lib/python3.11/site-packages/celery/app/task.py", line 430, in __call__
+    return self.run(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/pipeline/tasks.py", line 148, in run_research
+    state = run_graph(
+            ^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/agent/graph.py", line 100, in run_graph
+    return app.invoke(initial_state)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/venv/lib/python3.11/site-packages/langgraph/pregel/main.py", line 3913, in invoke
+    for chunk in self.stream(
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/venv/lib/python3.11/site-packages/langgraph/pregel/main.py", line 2967, in stream
+    for _ in runner.tick(
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/venv/lib/python3.11/site-packages/langgraph/pregel/_runner.py", line 207, in tick
+    run_with_retry(
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/venv/lib/python3.11/site-packages/langgraph/pregel/_retry.py", line 617, in run_with_retry
+    return task.proc.invoke(task.input, config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/venv/lib/python3.11/site-packages/langgraph/_internal/_runnable.py", line 707, in invoke
+    input = context.run(step.invoke, input, config, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/venv/lib/python3.11/site-packages/langgraph/_internal/_runnable.py", line 447, in invoke
+    ret = self.func(*args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/agent/graph.py", line 40, in wrapper
+    result = fn(state)
+             ^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/agent/graph.py", line 50, in <lambda>
+    graph.add_node("plan", _timed("plan", lambda state: plan_node(state, llm=llm)))
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/agent/nodes/plan_node.py", line 61, in plan_node
+    response = gateway.generate(
+               ^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/fallback.py", line 23, in generate
+    return self._primary.generate(messages, model_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in generate
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 44, in call_with_retry
+    raise last_error
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/retry.py", line 32, in call_with_retry
+    return call_once()
+           ^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 46, in <lambda>
+    return call_with_retry(lambda: self._call_once(messages, model_name))
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/01DC7E1E309A75E0/CODE/BTL_PTHTTM/paperai/app/ai/llm_gateway/openrouter_adapter.py", line 96, in _call_once
+    raise LLMGatewayError(f"OpenRouter upstream error: {err_msg}")
+app.ai.llm_gateway.base.LLMGatewayError: OpenRouter upstream error: Provider timed out after 11167ms
+During task with name 'plan' and id 'da78ea5b-fef2-1621-d673-a3b74b34adbe'

@@ -25,7 +25,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Chromium cho xuất PDF (render Mermaid/KaTeX)
 RUN playwright install --with-deps chromium
 
-# Tectonic (XeTeX + BibTeX) cho xuất PDF chuẩn LaTeX IEEEtran; biên dịch thử một lần để tải sẵn gói vào cache của image
+# Tectonic (XeTeX + BibTeX) cho xuất PDF chuẩn LaTeX IEEEtran.
+# Biên dịch docker/latex-warmup (cùng preamble với app) một lần để tải sẵn gói + font vào image -> chạy được khi offline.
 ARG TECTONIC_VERSION=0.15.0
 # Chọn bản theo kiến trúc CPU (Linux/Windows x86_64 hoặc Mac Apple Silicon arm64)
 RUN case "$(uname -m)" in \
@@ -35,13 +36,9 @@ RUN case "$(uname -m)" in \
     esac \
     && curl -fsSL "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%40${TECTONIC_VERSION}/tectonic-${TECTONIC_VERSION}-${TT_ARCH}-unknown-linux-musl.tar.gz" \
         | tar -xz -C /usr/local/bin tectonic \
-    && tectonic --version \
-    && mkdir -p /tmp/warm && cd /tmp/warm \
-    && printf '%s\n' '\documentclass[conference]{IEEEtran}' '\usepackage{iftex,fontspec,amsmath,amssymb,graphicx,booktabs,multirow,textcomp,xcolor,array,tabularx,cite,hyperref}' \
-        '\setmainfont{texgyretermes}[Extension=.otf,UprightFont=*-regular,BoldFont=*-bold,ItalicFont=*-italic,BoldItalicFont=*-bolditalic]' \
-        '\begin{document}\title{T}\maketitle\begin{abstract}A\end{abstract}\begin{IEEEkeywords}k\end{IEEEkeywords}x~\cite{a}\bibliographystyle{IEEEtran}\bibliography{r}\end{document}' > p.tex \
-    && printf '@misc{a, title={A}, year={2024}}\n' > r.bib \
-    && tectonic -X compile p.tex && cd / && rm -rf /tmp/warm
+    && tectonic --version
+COPY docker/latex-warmup /tmp/latex-warmup
+RUN cd /tmp/latex-warmup && tectonic -X compile paper.tex && test -s paper.pdf && rm -rf /tmp/latex-warmup
 
 COPY --from=render-assets /render-assets/node_modules/mermaid/dist/mermaid.min.js /opt/paperai/render-assets/mermaid.min.js
 COPY --from=render-assets /render-assets/node_modules/mermaid/LICENSE /opt/paperai/render-assets/mermaid.LICENSE

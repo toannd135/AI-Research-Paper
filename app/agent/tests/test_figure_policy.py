@@ -123,3 +123,23 @@ def test_two_level_tree_reads_plain_and_compacted_taxonomy():
 def test_horizontal_flow_with_four_nodes_is_wide():
     assert mermaid_span('flowchart LR\n  A["a"] --> B["b"]\n  B --> C["c"]\n  C --> D["d"]') == WIDE
     assert mermaid_span('flowchart LR\n  A["a"] --> B["b"]\n  B --> C["c"]') == COLUMN
+
+
+def test_parallel_chains_roadmap_to_table_columns():
+    from app.pipeline.export.figure_layout import parallel_chains
+
+    code = "graph LR\n" + "\n".join(
+        f'    G{i}["Gap: missing thing {i} [3]"] --> D{i}["Direction: do {i}"] --> E{i}["Evaluation: metric {i}"]'
+        for i in range(1, 4)
+    )
+    headers, rows = parallel_chains(code)
+    assert headers == ["Gap", "Direction", "Evaluation"]
+    assert rows[0] == ["missing thing 1", "do 1", "metric 1"]
+
+
+def test_parallel_chains_rejects_branching_and_short():
+    from app.pipeline.export.figure_layout import parallel_chains
+
+    assert parallel_chains("graph LR\n  A --> B\n  A --> C\n  D --> E") is None
+    assert parallel_chains('graph LR\n  A["x"] --> B["y"]\n  C["z"] --> D["w"]') is None  # < 3 chuỗi
+    assert parallel_chains("graph TD\n  A --> B\n  C --> D\n  E --> F") is None

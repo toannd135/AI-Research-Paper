@@ -18,6 +18,16 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 MAX_MODELS_PER_REQUEST = 3
 
 
+def _extract_text(content) -> str:
+    """Lấy text từ content: chuỗi thường hoặc mảng part [{type: text, text: ...}]."""
+    if isinstance(content, str):
+        return content.strip()
+    if isinstance(content, list):
+        parts = [p.get("text", "") for p in content if isinstance(p, dict)]
+        return "".join(parts).strip()
+    return ""
+
+
 def _parse_retry_after(headers) -> float | None:
     """Đọc header Retry-After (giây). Trả None nếu thiếu hoặc không phải số."""
     try:
@@ -46,7 +56,6 @@ class OpenRouterAdapter(LLMGateway):
         return call_with_retry(lambda: self._call_once(messages, model_name))
 
     def _call_once(self, messages: list[Message], model_name: str) -> LLMResponse:
-        conversation = [{"role": m.role, "content": m.content} for m in messages]
         chosen_model = model_name or DEFAULT_MODEL
 
         # Tạo danh sách ưu tiên: model được yêu cầu đứng đầu, sau đó là danh sách fallback
@@ -54,9 +63,24 @@ class OpenRouterAdapter(LLMGateway):
         for m in self._fallback_models:
             if m not in model_candidates:
                 model_candidates.append(m)
-        # OpenRouter từ chối mảng "models" dài hơn 3 phần tử (HTTP 400).
-        model_candidates = model_candidates[:MAX_MODELS_PER_REQUEST]
 
+        # Model reasoning (vd. Nemotron) đôi khi trả HTTP 200 nhưng content rỗng (đáp án nằm trong
+        # "reasoning" hoặc hết token). Gửi lại cùng danh sách sẽ lại trúng model đó, nên loại nó ra
+        # và thử model kế tiếp.
+        empty_error: LLMGatewayError | None = None
+        while model_candidates:
+            # OpenRouter từ chối mảng "models" dài hơn 3 phần tử (HTTP 400).
+            batch = model_candidates[:MAX_MODELS_PER_REQUEST]
+            try:
+                return self._post(messages, batch)
+            except _EmptyContentError as exc:
+                empty_error = exc
+                bad_model = exc.model if exc.model in model_candidates else batch[0]
+                model_candidates.remove(bad_model)
+        raise empty_error or LLMGatewayError("OpenRouter trả về content rỗng")
+
+    def _post(self, messages: list[Message], models: list[str]) -> LLMResponse:
+        conversation = [{"role": m.role, "content": m.content} for m in messages]
         url = f"{self._base_url}/chat/completions"
         headers = {
             "Authorization": f"Bearer {self._api_key}",
@@ -67,7 +91,7 @@ class OpenRouterAdapter(LLMGateway):
 
         # OpenRouter hỗ trợ tính năng truyền danh sách models để tự động fallback khi model chính quá tải
         payload = {
-            "models": model_candidates,
+            "models": models,
             "messages": conversation,
             "temperature": 0.3,
         }
@@ -75,39 +99,52 @@ class OpenRouterAdapter(LLMGateway):
         try:
             with httpx.Client(timeout=_HTTP_TIMEOUT) as client:
                 res = client.post(url, headers=headers, json=payload)
-
-                if res.status_code == 401:
-                    raise LLMGatewayError(f"OpenRouter API Key không hợp lệ: {res.text}")
-
-                if res.status_code == 429:
-                    raise LLMRateLimitError(
-                        f"OpenRouter API bị giới hạn tần suất (HTTP 429): {res.text}",
-                        retry_after=_parse_retry_after(res.headers),
-                    )
-
-                if res.status_code != 200:
-                    raise LLMGatewayError(f"OpenRouter API returned HTTP {res.status_code}: {res.text}")
-
-                data = res.json()
-
-                # Kiểm tra lỗi trong payload JSON (OpenRouter có thể trả HTTP 200 kèm error dict)
-                if "error" in data:
-                    err_msg = data["error"].get("message", str(data["error"]))
-                    raise LLMGatewayError(f"OpenRouter upstream error: {err_msg}")
-
-                choices = data.get("choices", [])
-                if not choices:
-                    raise LLMGatewayError(f"OpenRouter trả về response rỗng: {res.text}")
-
-                message = choices[0].get("message", {})
-                text = message.get("content", "")
-                if not text:
-                    raise LLMGatewayError("OpenRouter trả về content rỗng")
-
-                resolved_model = data.get("model", chosen_model)
-                return LLMResponse(text=text, model=resolved_model)
-
-        except LLMGatewayError:
-            raise
-        except Exception as exc:
+        except httpx.HTTPError as exc:
             raise LLMGatewayError(f"Gọi OpenRouter API thất bại: {exc}") from exc
+
+        if res.status_code == 401:
+            raise LLMGatewayError(f"OpenRouter API Key không hợp lệ: {res.text}")
+
+        if res.status_code == 429:
+            raise LLMRateLimitError(
+                f"OpenRouter API bị giới hạn tần suất (HTTP 429): {res.text}",
+                retry_after=_parse_retry_after(res.headers),
+            )
+
+        if res.status_code != 200:
+            raise LLMGatewayError(f"OpenRouter API returned HTTP {res.status_code}: {res.text}")
+
+        try:
+            data = res.json()
+        except ValueError as exc:
+            raise LLMGatewayError(f"OpenRouter trả về JSON không hợp lệ: {exc}") from exc
+
+        # Kiểm tra lỗi trong payload JSON (OpenRouter có thể trả HTTP 200 kèm error dict)
+        if "error" in data:
+            err = data["error"]
+            err_msg = err.get("message", str(err)) if isinstance(err, dict) else str(err)
+            raise LLMGatewayError(f"OpenRouter upstream error: {err_msg}")
+
+        choices = data.get("choices") or []
+        if not choices:
+            raise LLMGatewayError(f"OpenRouter trả về response rỗng: {res.text}")
+
+        resolved_model = data.get("model") or models[0]
+        choice = choices[0]
+        text = _extract_text((choice.get("message") or {}).get("content"))
+        if not text:
+            raise _EmptyContentError(
+                f"OpenRouter trả về content rỗng (model={resolved_model}, "
+                f"finish_reason={choice.get('finish_reason')})",
+                model=resolved_model,
+            )
+
+        return LLMResponse(text=text, model=resolved_model)
+
+
+class _EmptyContentError(LLMGatewayError):
+    """Model trả HTTP 200 nhưng content rỗng — nên chuyển sang model khác."""
+
+    def __init__(self, message: str, model: str) -> None:
+        super().__init__(message)
+        self.model = model

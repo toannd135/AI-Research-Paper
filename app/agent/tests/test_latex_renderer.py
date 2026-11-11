@@ -212,3 +212,28 @@ def test_grouped_table_rules_between_groups():
     spec = {"caption": "G", "columns": ["Axis", "Cat"], "rows": [["A", "x"], ["", "y"], ["B", "z"]]}
     tex = _paper_tex("# T\n\n## 1. Intro\n\n```table\n" + json.dumps(spec) + "\n```\n")
     assert tex.count(r"\midrule[0.3pt]") == 1
+
+
+def test_roadmap_chains_render_as_native_figure(tmp_path):
+    from app.pipeline.export.latex_renderer import report_to_latex
+
+    chains = "\n".join(
+        f'    G{i}["Gap: g{i}"] --> D{i}["Direction: d{i}"] --> E{i}["Evaluation: e{i}"]' for i in range(1, 4)
+    )
+    md = f"# T\n\n## 1. Intro\n\n**Figure 1: Research roadmap**\n\n```mermaid\ngraph LR\n{chains}\n```\n\nText.\n"
+    tex = report_to_latex(md, tmp_path)
+    assert "\\begin{figure*}" in tex and "\\textbf{Direction}" in tex and "$\\rightarrow$" in tex
+    assert "\\raggedbottom" in tex
+
+
+def test_latex_warmup_matches_ieee_preamble():
+    """Docker biên dịch docker/latex-warmup lúc build để cache gói; preamble lệch thì xuất PDF trong container phải tải mạng."""
+    import re
+    from pathlib import Path
+
+    from app.pipeline.export.latex_renderer import _PREAMBLES
+
+    warmup = (Path(__file__).resolve().parents[3] / "docker" / "latex-warmup" / "paper.tex").read_text(encoding="utf-8")
+    pattern = re.compile(r"\\(?:documentclass|usepackage|setmainfont)(?:\[[^\]]*\])?\{[^}]*\}(?:\[[^\]]*\])?")
+    missing = [cmd for cmd in pattern.findall(_PREAMBLES["ieee"]) if cmd not in warmup]
+    assert not missing, f"Thêm vào docker/latex-warmup/paper.tex: {missing}"
