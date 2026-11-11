@@ -11,6 +11,7 @@ from app.ai.llm_gateway.base import (
     LLMGateway,
     LLMGatewayError,
     LLMRateLimitError,
+    LLMRequestTooLargeError,
     LLMResponse,
     Message,
 )
@@ -99,6 +100,8 @@ class GroqAdapter(LLMGateway):
                     raise LLMRateLimitError(
                         f"Groq Cloud bị rate limit: {exc}", _parse_retry_after(headers)
                     ) from exc
+                if "413" in err_str or "request_too_large" in err_str.lower():
+                    raise LLMRequestTooLargeError(f"Groq Cloud từ chối request quá lớn (HTTP 413): {exc}") from exc
                 if "401" in err_str or "Authentication" in err_str:
                     raise LLMGatewayError(f"Groq Cloud API Key không hợp lệ: {exc}") from exc
                 if "404" in err_str or "model_not_found" in err_str:
@@ -135,6 +138,8 @@ class GroqAdapter(LLMGateway):
                     raise LLMRateLimitError(
                         f"Groq Cloud bị rate limit: {res.text}", _parse_retry_after(res.headers)
                     )
+                if res.status_code == 413:
+                    raise LLMRequestTooLargeError(f"Groq Cloud từ chối request quá lớn (HTTP 413): {res.text}")
                 if res.status_code != 200:
                     raise LLMGatewayError(f"Groq API returned HTTP {res.status_code}: {res.text}")
                 data = res.json()

@@ -33,7 +33,8 @@ _UNICODE = {
     "±": r"$\pm$", "×": r"$\times$", "≥": r"$\geq$", "≤": r"$\leq$", "≈": r"$\approx$", "→": r"$\rightarrow$",
     "α": r"$\alpha$", "β": r"$\beta$", "γ": r"$\gamma$", "δ": r"$\delta$", "ε": r"$\epsilon$", "λ": r"$\lambda$",
     "μ": r"$\mu$", "σ": r"$\sigma$", "τ": r"$\tau$", "φ": r"$\phi$", "ω": r"$\omega$", "Δ": r"$\Delta$",
-    "−": "-", "\u00a0": "~", "\u2009": r"\,", "“": "``", "”": "''", "’": "'", "…": r"\ldots{}",
+    "⊃": r"$\supset$", "⊂": r"$\subset$", "⊇": r"$\supseteq$", "⊆": r"$\subseteq$", "∈": r"$\in$",
+    "≠": r"$\neq$", "∞": r"$\infty$", "−": "-", "\u00a0": "~", "\u2009": r"\,", "“": "``", "”": "''", "’": "'", "…": r"\ldots{}",
 }
 _MATH_RE = re.compile(r"(?<![\\$])\$(?!\$)((?:\\[$]|[^$\n])+?)(?<![\\$])\$(?!\$)|\\\((.+?)\\\)")
 _LINK_RE = re.compile(r"\[([^\]]+)\]\((https?://[^)\s]+)\)")
@@ -66,8 +67,16 @@ _COMMON_PACKAGES = r"""\usepackage{iftex}
 \setcounter{dbltopnumber}{3}
 \setcounter{totalnumber}{5}
 """
+# Kiểu chú thích: nhãn đậm + dấu chấm ("**Table 1.** …" phía trên bảng, "**Figure 2.** …" dưới hình), bảng số Ả Rập
+_CAPTION_STYLE = r"""\usepackage[compatibility=false,labelfont=bf,labelsep=period,font=footnotesize]{caption}
+\captionsetup[table]{name=Table,justification=centering,skip=4pt}
+\captionsetup[figure]{name=Figure,justification=justified,singlelinecheck=false}
+\renewcommand{\thetable}{\arabic{table}}
+"""
+
 _PREAMBLES = {
-    "ieee": "\\documentclass[conference]{IEEEtran}\n" + _COMMON_PACKAGES + "\\usepackage{cite}\n\\usepackage[hidelinks]{hyperref}\n",
+    "ieee": "\\documentclass[conference]{IEEEtran}\n" + _COMMON_PACKAGES + _CAPTION_STYLE
+    + "\\usepackage{cite}\n\\usepackage[hidelinks]{hyperref}\n",
     # cvpr.sty (+ ieeenat_fullname.bst / ieee_fullname.bst) do hội nghị cung cấp, đặt cạnh paper.tex
     "cvpr": "\\documentclass[10pt,twocolumn,letterpaper]{article}\n\\usepackage[review]{cvpr}\n" + _COMMON_PACKAGES
     + "\\usepackage[pagebackref,breaklinks,colorlinks]{hyperref}\n",
@@ -330,6 +339,20 @@ def _diagram_scale(pdf: bytes, wide: bool) -> float:
     return round(min(1.0, natural * _DIAGRAM_FONT_RATIO / (_TEXT_PT if wide else _COLUMN_PT)), 3)
 
 
+_SECTION_REF_RE = re.compile(r"\b(Sections?)\s+(\d+(?:\.\d+)*)\b(?!\s+(?:of|in)\s+(?:\[|the\s+original))|§\s?(\d+(?:\.\d+)*)")
+
+
+def _section_ref_tokens(body: str, known: set[str]) -> str:
+    """'Section 4.2' / '§4.2' trỏ tới mục có thật → token, thành 'Section~\\ref{sec:4.2}' (in 'Section IV-B' kiểu IEEE)."""
+    def _sub(m: re.Match) -> str:
+        num = m.group(2) or m.group(3)
+        if num not in known:
+            return m.group(0)
+        return f"{m.group(1) or 'Section'}PAISECREF{num}END"
+
+    return _SECTION_REF_RE.sub(_sub, body)
+
+
 def report_to_latex(
     report_md: str, work_dir: Path, chart_format: str = "pdf", add_survey_table: bool = False, template: str = "ieee",
     render_diagrams: bool = False,
@@ -459,8 +482,7 @@ def report_to_latex(
     body = re.sub(r"```table[ \t]*\n(.*?)```", repl_json_table, body, flags=re.DOTALL)
     body = re.sub(r"```([a-zA-Z0-9_-]*)[ \t]*\n(.*?)```", repl_code, body, flags=re.DOTALL)
     body = re.sub(r"\$\$(.+?)\$\$", lambda m: keep("\\begin{equation}\n" + m.group(1).strip() + "\n\\end{equation}"), body, flags=re.DOTALL)
-    if template == "ieee":
-        body = roman_table_refs(body)
+    body = _section_ref_tokens(body, set(re.findall(r"^#{2,4}\s+(\d+(?:\.\d+)*)\.?\s", body, re.MULTILINE)))
 
     out: list[str] = []
     lines = body.splitlines()
@@ -475,8 +497,8 @@ def report_to_latex(
     while i < len(lines):
         line = lines[i]
         stripped = line.strip()
-        if not stripped:
-            flush()
+        if not stripped or re.fullmatch(r"(?:-{3,}|\*{3,}|_{3,})", stripped):
+            flush()  # đường kẻ ngang Markdown không có nghĩa trong bài báo: bỏ, coi như ngắt đoạn
         elif (h := re.match(r"^(#{2,4})\s+(.+)$", stripped)):
             flush()
             cmd = {2: "section", 3: "subsection", 4: "subsubsection"}[len(h.group(1))]
@@ -487,7 +509,8 @@ def report_to_latex(
                     in_appendix = True
                 raw_heading = _APPENDIX_RE.sub("", raw_heading)
             heading = inline_to_tex(_NUMBERING_RE.sub("", raw_heading))
-            out.append(f"\\{cmd}{{{heading}}}")
+            num = re.match(r"(\d+(?:\.\d+)*)\.?\s", raw_heading)
+            out.append(f"\\{cmd}{{{heading}}}" + (f"\\label{{sec:{num.group(1)}}}" if num and not in_appendix else ""))
         elif (b := re.fullmatch(r"PAIBLOCK(\d+)END", stripped)):
             flush()
             out.append(blocks[int(b.group(1))])
@@ -563,12 +586,14 @@ def report_to_latex(
     back = back_matter(body_md)
     if back:  # mục cuối bài đứng trước phụ lục (nếu có)
         out.insert(out.index("\\appendix") if "\\appendix" in out else len(out), back)
-    return (
-        f"{_PREAMBLES[template]}\\begin{{document}}\n{front}\n"
+    # \nocite{*} đứng trước mọi \cite: thứ tự BibTeX = thứ tự file .bib (= số trong report, kể cả số in sẵn trong hình)
+    tex = (
+        f"{_PREAMBLES[template]}\\begin{{document}}\n" + ("\\nocite{*}\n" if refs else "") + f"{front}\n"
         + "\n\n".join(out)
         + (f"\n\n{bib}" if refs else "\n")
         + "\n\\end{document}\n"
     )
+    return re.sub(r"PAISECREF(\d+(?:\.\d+)*)END", r"~\\ref{sec:\1}", tex)
 
 
 TAXONOMY_MIN_LEAVES = 6  # cây ít lá hơn vẫn vẽ bằng Mermaid được
@@ -607,6 +632,9 @@ def _next_is_table(lines: list[str], i: int) -> bool:
 def _write_latex_project(
     work: Path, report_md: str, chart_format: str, add_survey_table: bool, template: str, render_diagrams: bool
 ) -> None:
+    from app.pipeline.export.publication_prep import prepare_report_for_latex
+
+    report_md = prepare_report_for_latex(report_md)
     tex = report_to_latex(report_md, work, chart_format, add_survey_table, template, render_diagrams)
     (work / "paper.tex").write_text(tex, encoding="utf-8")
     (work / "references.bib").write_text(references_to_bibtex(parse_references(report_md)), encoding="utf-8")

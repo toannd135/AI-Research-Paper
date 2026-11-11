@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     openrouter_api_key: str | None = None
     openrouter_api_key_2: str | None = None  # khóa OpenRouter thứ hai, dự phòng khi Groq cũng bị rate limit
     openrouter_model: str = "nvidia/nemotron-3-ultra-550b-a55b:free"
+    openrouter_model_2: str | None = None  # model cho khóa 2; trống -> dùng lại OPENROUTER_MODEL
     openrouter_fallback_models: list[str] = [
         "nvidia/nemotron-3-ultra-550b-a55b:free",
         "google/gemma-4-31b-it:free",

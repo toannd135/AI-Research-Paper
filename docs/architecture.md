@@ -48,7 +48,7 @@ plan -> search -> analyze -> critique --(thiếu evidence)--> analyze
 
 ## LLM gateway (`app/ai/llm_gateway`)
 Adapter: anthropic, openai, gemini, groq, openrouter; `registry.py` chọn theo `agent_provider`/model; `retry.py` backoff + fallback model OpenRouter.
-Khi OpenRouter trả 429, `FallbackGateway` (`fallback.py`) gọi lại cùng lời gọi theo chuỗi: Groq (nếu có `GROQ_API_KEY`, model `GROQ_MODEL`) rồi OpenRouter khóa thứ hai (nếu có `OPENROUTER_API_KEY_2`, cùng model chính); lỗi khác không fallback.
+Khi provider trả 429 (rate limit) hoặc 413 (request vượt giới hạn token, không retry), `FallbackGateway` (`fallback.py`) gọi lại cùng lời gọi theo chuỗi: Groq (nếu có `GROQ_API_KEY`, model `GROQ_MODEL`) rồi OpenRouter khóa thứ hai (nếu có `OPENROUTER_API_KEY_2`, model `OPENROUTER_MODEL_2`, trống thì dùng model chính); lỗi khác không fallback.
 
 ## Phụ thuộc giữa module (một chiều)
 `core` <- `ai`, `pipeline` <- `agent`, `api`. `agent` không import `api`. `api` gọi agent qua Celery task, không chạy agent trong request.

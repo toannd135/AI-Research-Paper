@@ -9,7 +9,7 @@ import time
 from collections.abc import Callable
 from typing import TypeVar
 
-from app.ai.llm_gateway.base import LLMGatewayError, LLMRateLimitError
+from app.ai.llm_gateway.base import LLMGatewayError, LLMRateLimitError, LLMRequestTooLargeError
 
 T = TypeVar("T")
 
@@ -30,6 +30,8 @@ def call_with_retry(call_once: Callable[[], T]) -> T:
     while True:
         try:
             return call_once()
+        except LLMRequestTooLargeError:
+            raise
         except LLMGatewayError as exc:
             last_error = exc
 

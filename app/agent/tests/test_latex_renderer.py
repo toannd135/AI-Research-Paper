@@ -189,8 +189,8 @@ def test_ieee_table_refs_roman_but_captions_and_source_tables_kept():
     assert out.startswith("**Table 3: Taxonomy**")
     assert "**Table III**" in out and "Tables II and IV" in out and "Table 2 of [5]" in out and "[52, Table 1]" in out
     md = "# T\n\n## 1. Intro\n\nAs Table 1 shows.\n\n**Table 1: Results**\n\n| A | B |\n|---|---|\n| x | 1 |\n"
-    tex = _paper_tex(md)
-    assert "As Table I shows." in tex and r"\caption{Results}" in tex
+    tex = _paper_tex(md)  # bảng giờ đánh số Ả Rập ("**Table 1.**"), tham chiếu giữ nguyên số
+    assert "As Table 1 shows." in tex and r"\caption{Results}" in tex and r"\renewcommand{\thetable}{\arabic{table}}" in tex
 
 
 def test_back_matter_added_only_when_missing():
@@ -237,3 +237,49 @@ def test_latex_warmup_matches_ieee_preamble():
     pattern = re.compile(r"\\(?:documentclass|usepackage|setmainfont)(?:\[[^\]]*\])?\{[^}]*\}(?:\[[^\]]*\])?")
     missing = [cmd for cmd in pattern.findall(_PREAMBLES["ieee"]) if cmd not in warmup]
     assert not missing, f"Thêm vào docker/latex-warmup/paper.tex: {missing}"
+
+
+def test_markdown_rule_dropped_and_set_symbols_mapped(tmp_path):
+    from app.pipeline.export.latex_renderer import report_to_latex
+
+    tex = report_to_latex("# T\n\n## Intro\n\nWT ⊃ TC ⊃ ET.\n\n---\n\n## End\n\nDone.\n", tmp_path)
+    assert "$\\supset$" in tex and "⊃" not in tex
+    assert "\n---\n" not in tex
+
+
+def test_scatter_legend_with_long_names_fits_column_width():
+    import re
+
+    from app.pipeline.export.chart_scientific import render_scientific_svg
+
+    names = [f"Architecture name number {i} et al. (2021) [39]" for i in range(10)]
+    spec = {"type": "scatter", "series": [{"name": n, "x": [i], "y": [0.86]} for i, n in enumerate(names)]}
+    svg = render_scientific_svg(spec, "svg")
+    width_pt = float(re.search(r'width="([\d.]+)pt"', svg).group(1))
+    assert width_pt < 300  # ~1 cột IEEE (252pt); legend 4 cột trước đây làm hình rộng ~700pt
+
+
+def test_citations_renumbered_by_first_appearance_including_chart_labels():
+    from app.pipeline.export.publication_prep import renumber_citations
+
+    md = (
+        "# T\n\nIntro [3] then [1, 3].\n\n```chart\n"
+        '{"type": "scatter", "series": [{"name": "Net [3]", "x": [1, 2], "y": [0.5, 0.6]}]}\n```\n'
+        "Bad [9].\n\n## References\n\n[1] A, \"One,\" 2020.\n\n[2] B, \"Unused,\" 2021.\n\n[3] C, \"Three,\" 2022.\n"
+    )
+    out = renumber_citations(md)
+    assert "Intro [1] then [2, 1]." in out
+    assert '"Net [1]"' in out and '"x": [1, 2]' in out  # mảng dữ liệu không bị coi là trích dẫn
+    assert "Bad." in out
+    assert "[1] C, \"Three,\"" in out and "[2] A, \"One,\"" in out and "Unused" not in out
+
+
+def test_duplicate_research_questions_replaced_and_section_refs_use_labels():
+    from app.pipeline.export.publication_prep import dedupe_research_questions
+
+    md = ("## 1. Introduction\n\n### 1.1 Questions\n\n**RQ1.** How?\n\n**RQ2.** Why?\n\n"
+          "## 2. Method\n\n### 2.1 Research Questions\n\n**RQ1.** How?\n\n**RQ2.** Why?\n\n### 2.2 Corpus\n\nSee Section 1.1.\n")
+    out = dedupe_research_questions(md)
+    assert out.count("**RQ1.**") == 1 and "RQ1–RQ2 stated in Section 1.1" in out
+    tex = _paper_tex("# T\n\n" + out)
+    assert r"\label{sec:1.1}" in tex and tex.count(r"Section~\ref{sec:1.1}") == 2

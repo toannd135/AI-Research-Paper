@@ -28,6 +28,10 @@ class LLMRateLimitError(LLMGatewayError):
         self.retry_after = retry_after
 
 
+class LLMRequestTooLargeError(LLMGatewayError):
+    """Provider trả 413: request vượt giới hạn token của model/tier — gửi lại y nguyên vô ích, nên chuyển provider."""
+
+
 class LLMGateway(ABC):
     @abstractmethod
     def generate(self, messages: list[Message], model_name: str) -> LLMResponse:

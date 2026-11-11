@@ -13,6 +13,7 @@ def _settings(**overrides) -> MagicMock:
         "agent_provider": None,
         "openrouter_api_key": None,
         "openrouter_api_key_2": None,
+        "openrouter_model_2": None,
         "groq_api_key": None,
         "gemini_api_key": "",
         "anthropic_api_key": None,

@@ -26,7 +26,7 @@ def _build(provider: str, settings: Settings) -> tuple[LLMGateway, str]:
     if provider == "openrouter":
         primary_model = settings.openrouter_model or OPENROUTER_DEFAULT_MODEL
         gateway: LLMGateway = OpenRouterAdapter()
-        # Chuỗi dự phòng khi gặp 429: OpenRouter (khóa 1) -> Groq (nếu có key) -> OpenRouter (khóa 2, nếu có).
+        # Chuỗi dự phòng khi gặp 429/413: OpenRouter (khóa 1) -> Groq (nếu có key) -> OpenRouter (khóa 2, nếu có).
         if settings.groq_api_key:
             try:
                 groq = GroqAdapter()
@@ -44,7 +44,11 @@ def _build(provider: str, settings: Settings) -> tuple[LLMGateway, str]:
             except LLMGatewayError:
                 logger.exception("Không khởi tạo được OpenRouter khóa 2 dự phòng, bỏ qua")
             else:
-                gateway = FallbackGateway(primary=gateway, fallback=backup, fallback_model=primary_model)
+                gateway = FallbackGateway(
+                    primary=gateway,
+                    fallback=backup,
+                    fallback_model=settings.openrouter_model_2 or primary_model,
+                )
         return gateway, primary_model
     if provider == "groq":
         return GroqAdapter(), settings.groq_model or GROQ_DEFAULT_MODEL

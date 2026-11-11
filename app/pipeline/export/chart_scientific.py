@@ -20,7 +20,8 @@ MAX_PANELS = 8
 _EVIDENCE_COLORS = {"yes": "#4f9a5b", "partial": "#e3b448", "no": "#c8553d", "nr": "#e6e6e6"}
 
 _PALETTE = ["#1f4e79", "#c55a11", "#548235", "#7f6000", "#7030a0", "#2e75b6"]
-_MARKERS = ["o", "s", "^", "D", "v", "P"]
+# 7 marker × 6 màu (nguyên tố cùng nhau): 42 series đầu không trùng cặp màu–marker
+_MARKERS = ["o", "s", "^", "D", "v", "P", "X"]
 
 
 def _floats(seq) -> list[float]:
@@ -169,6 +170,9 @@ def _draw_evidence_map(ax, spec: dict) -> int:
                        if k != "partial" or any(_evidence_key(v) == "partial" for r in rows for v in r)],
               loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=4, frameon=False, fontsize=FIGURE_FONT_PT - 1)
     return 1
+
+
+_LEGEND_CHARS_PER_ROW = 56  # ~số ký tự 8pt vừa một hàng legend trong hình rộng 1 cột
 
 
 def finish_figure(fig, fmt: str = "svg") -> str | bytes:
@@ -451,8 +455,15 @@ def render_scientific_svg(spec: dict, fmt: str = "svg") -> str | bytes:
         ax.spines[["top", "right"]].set_visible(False)
         ax.grid(linestyle=":", alpha=0.6)
         ax.set_axisbelow(True)
-    if kind in ("xyline", "scatter", "cdf", "histogram", "dot", "dumbbell") and len([s for s in series if s.get("name")]) > 1:
-        ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.01), ncol=min(len(series), 4), frameon=True, fontsize=8, edgecolor="#bbb")
+    named = [str(s.get("name")) for s in series if s.get("name")]
+    if kind in ("xyline", "scatter", "cdf", "histogram", "dot", "dumbbell") and len(named) > 1:
+        # Số cột legend theo độ dài nhãn: legend rộng hơn hình làm bbox "tight" nở ngang, LaTeX thu nhỏ cả hình -> chữ không đọc được
+        ncol = max(1, min(4, len(named), _LEGEND_CHARS_PER_ROW // (max(map(len, named)) + 4)))
+        legend_rows = -(-len(named) // ncol)
+        if legend_rows > 1:  # legend nhiều dòng chiếm chỗ của trục: nới chiều cao để vùng vẽ không bị bẹp
+            w, h = fig.get_size_inches()
+            fig.set_size_inches(w, h + min(0.6, 0.1 * (legend_rows - 1)))
+        ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.01), ncol=ncol, frameon=True, fontsize=7 if len(named) > 4 else 8, edgecolor="#bbb")
     fig.tight_layout()
 
     return finish_figure(fig, fmt)

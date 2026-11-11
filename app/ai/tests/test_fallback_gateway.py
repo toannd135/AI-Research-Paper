@@ -46,3 +46,31 @@ def test_other_gateway_error_is_reraised_without_fallback():
         gateway.generate(MESSAGES, "or-model")
 
     fallback.generate.assert_not_called()
+
+
+def test_request_too_large_on_primary_calls_fallback():
+    from app.ai.llm_gateway.base import LLMRequestTooLargeError
+
+    primary = MagicMock()
+    primary.generate.side_effect = LLMRequestTooLargeError("413")
+    fallback = MagicMock()
+    fallback.generate.return_value = LLMResponse(text="from or-2", model="or-model-2")
+
+    gateway = FallbackGateway(primary=primary, fallback=fallback, fallback_model="or-model-2")
+    assert gateway.generate(MESSAGES, "groq-model").text == "from or-2"
+    fallback.generate.assert_called_once_with(MESSAGES, "or-model-2")
+
+
+def test_request_too_large_is_not_retried():
+    from app.ai.llm_gateway.base import LLMRequestTooLargeError
+    from app.ai.llm_gateway.retry import call_with_retry
+
+    calls = []
+
+    def once():
+        calls.append(1)
+        raise LLMRequestTooLargeError("413")
+
+    with pytest.raises(LLMRequestTooLargeError):
+        call_with_retry(once)
+    assert len(calls) == 1
