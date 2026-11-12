@@ -64,6 +64,90 @@ def _local_catalog() -> dict[str, dict[str, str]]:
     return merged
 
 
+_DB_META: dict[str, dict[str, str]] = {}  # paper_id -> metadata đọc từ PDF ({} = không có trong DB); cache trong tiến trình
+_UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
+
+
+@lru_cache(maxsize=1)
+def _manifest_index() -> dict[str, dict[str, Any]]:
+    """Tên tệp PDF -> mục trong `_manifest.json` (title, year, doi lấy từ OpenAlex lúc tải corpus), gộp mọi thư mục data/*."""
+    upload_dir = Path(get_settings().upload_dir)
+    index: dict[str, dict[str, Any]] = {}
+    for path in [upload_dir / "_manifest.json", *sorted(upload_dir.parent.glob("*/_manifest.json"))]:
+        if not path.is_file():
+            continue
+        try:
+            entries = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            logger.warning("Không đọc được manifest %s", path)
+            continue
+        for e in entries if isinstance(entries, list) else []:
+            if isinstance(e, dict) and e.get("file"):
+                index.setdefault(str(e["file"]), e)
+    return index
+
+
+def _apply_manifest(meta: dict[str, str], *names: str) -> dict[str, str]:
+    """Manifest (tiêu đề/năm/DOI chuẩn) đè lên metadata đoán từ PDF; tác giả vẫn lấy từ PDF."""
+    entry = next((_manifest_index()[n] for n in names if n and n in _manifest_index()), None)
+    if not entry:
+        return meta
+    out = dict(meta)
+    if entry.get("title"):
+        out["title"] = str(entry["title"])
+    if entry.get("year"):
+        out["year"] = str(entry["year"])
+    if entry.get("doi"):
+        out["doi"] = re.sub(r"^https?://(dx\.)?doi\.org/", "", str(entry["doi"]))
+    return out
+
+
+def _db_metadata(ids: set[str]) -> dict[str, dict[str, str]]:
+    """Metadata trích dẫn của các paper trong DB (đọc từ chính PDF đã upload) — cho paper không có trong catalog.json.
+
+    Chỉ tra id dạng UUID (paper nội bộ); lỗi DB (vd. chạy test không có Postgres) → bỏ qua.
+    """
+    missing = {i for i in ids if i and _UUID_RE.match(i) and i not in _DB_META}
+    if missing:
+        try:
+            from sqlalchemy import select
+
+            from app.agent.evidence.pdf_metadata import pdf_citation_metadata
+            from app.api.models.paper import Paper
+            from app.core.database import SessionLocal
+
+            with SessionLocal() as db:
+                rows = db.execute(select(Paper.id, Paper.filename, Paper.file_path).where(Paper.id.in_(missing))).all()
+            found = {
+                str(pid): _apply_manifest(pdf_citation_metadata(fp, fn), fn, Path(fp or "").name) for pid, fn, fp in rows
+            }
+            for pid in missing:
+                meta = found.get(pid) or {}
+                _DB_META[pid] = meta if meta.get("title") else {}
+        except Exception:
+            logger.warning("Không lấy được metadata paper từ DB", exc_info=True)
+    return {i: _DB_META[i] for i in ids if _DB_META.get(i)}
+
+
+def corpus_catalog() -> dict[str, dict[str, str]]:
+    """Catalog của kho đang chạy: catalog.json (đã duyệt tay) + metadata đọc từ PDF cho paper upload chưa có trong catalog.
+
+    Task chạy trong một kho (có phạm vi paper) → chỉ gồm paper của kho đó, để số paper/khoảng năm/survey trong bài
+    không lấy nhầm catalog của kho khác (vd. kho deepfake bị ghi '52 catalogued papers' của kho MRI).
+    Không có phạm vi → giữ nguyên catalog.json như trước.
+    """
+    from app.core.scope import get_allowed_paper_ids
+
+    files = _local_catalog()
+    allowed = get_allowed_paper_ids()
+    if allowed is None:
+        return files
+    allowed = {str(i) for i in allowed}
+    scoped = {pid: meta for pid, meta in files.items() if pid in allowed}
+    scoped.update(_db_metadata(allowed - set(scoped)))
+    return scoped
+
+
 def _normalize_title(title: str) -> str:
     """Chuẩn hóa tiêu đề để so khớp deduplication."""
     clean = re.sub(r"[^a-zA-Z0-9\s]", " ", title).lower()
@@ -73,14 +157,15 @@ def _normalize_title(title: str) -> str:
 def _extract_citation_metadata(paper_id: str, snippet: str = "") -> dict[str, str]:
     """Trích xuất authors, title, year, venue từ chuỗi paper_id hoặc snippet."""
     # Paper nội bộ có metadata trong catalog: dùng nguyên, không đoán từ snippet
-    local = _local_catalog().get(paper_id.strip())
+    pid = paper_id.strip()
+    local = _local_catalog().get(pid) or _db_metadata({pid}).get(pid)
     if local:
         authors = [a.strip() for a in local.get("authors", "").split(",") if a.strip()]
         return {
             "title": local.get("title", paper_id)[:180],
             "authors": f"{authors[0]} et al." if len(authors) > 2 else " and ".join(authors) or "Anonymous",
-            "year": local.get("year", ""),
-            "venue": local.get("venue", ""),
+            "year": local.get("year", "") or "n.d.",
+            "venue": local.get("venue", "") or "Full text in the review corpus",
             "doi": local.get("doi", ""),
         }
 

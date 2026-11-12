@@ -102,11 +102,11 @@ def run_quality_gate(
 ) -> dict[str, Any]:
     """Kiểm chứng `text`. `numbered_citations` (từ `clean_and_deduplicate_citations_ex`) cho văn bản đã đánh số lại [n]:
     `numbered_citations[k-1]` là nguồn của [k]; không truyền thì [n] là chỉ số trong `state["citations"]` (văn bản thô)."""
-    from app.agent.evidence.citation_cleaner import _local_catalog
+    from app.agent.evidence.citation_cleaner import corpus_catalog
 
     all_citations = state.get("citations", [])
     citations = all_citations if numbered_citations is None else numbered_citations
-    catalog = _local_catalog() if catalog is None else catalog
+    catalog = corpus_catalog() if catalog is None else catalog
     from app.agent.evidence.citation_validator import expand_citation_clusters
 
     cited_numbers = {int(n) for n in re.findall(r"\[(\d+)\]", expand_citation_clusters(text))}

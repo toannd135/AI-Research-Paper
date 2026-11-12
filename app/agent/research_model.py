@@ -90,7 +90,23 @@ def normalize_choice(value: Any, allowed: tuple[str, ...], default: str) -> str:
     return value if isinstance(value, str) and value in allowed else default
 
 
+_LITERATURE_COMPARISON_GUIDANCE = (
+    "CONTRIBUTION TYPE = COMPARATIVE ANALYSIS OF PUBLISHED RESULTS (no experiments were run by the authors). Unlike a survey, the paper "
+    "is organised around the comparison, not around a taxonomy: (1) define the compared method families and the comparison axes up front; "
+    "(2) state the comparison protocol explicitly — which dataset version, split, evaluation setting and metric make two results comparable — "
+    "and group results into strictly comparable sets (one table per setting); (3) for each set, compare methods only within it, report "
+    "head-to-head differences only when the same source or the same protocol supports them, and explain which design choices plausibly "
+    "drive the differences according to the sources; (4) end with a decision-oriented synthesis: which family to choose under which "
+    "constraint (cross-dataset generalization, compression robustness, compute budget, explainability), with the evidence strength for each. "
+    "Keep the taxonomy short (one table at most). Never claim to have re-run or re-tuned any model, and never report variance that the "
+    "sources do not report."
+)
+
+
 def contribution_guidance(state: dict) -> str:
+    # So sánh không có số liệu tự chạy: chạy khung survey (plan_node) nhưng hướng nội dung vào so sánh kết quả đã công bố
+    if normalize_contribution(state.get("contribution_type")) == "comparison" and not state.get("user_results"):
+        return _LITERATURE_COMPARISON_GUIDANCE
     return contribution_profile(state)["guidance"]
 
 

@@ -160,7 +160,9 @@ _RULES: dict[str, str] = {
         "frame-level vs video-level evaluation; in-domain vs cross-dataset, cross-manipulation and cross-generator generalization "
         "(e.g. FaceForensics++ → Celeb-DF/DFDC); robustness to compression, resizing and adversarial perturbation.\n"
         "   - Values from different evaluation settings (in-domain vs cross-dataset, frame vs video level, compression level c23/c40) "
-        "are not comparable; keep them in separate columns or tables.\n"
+        "are not comparable; keep them in separate tables (one table per setting: in-domain, cross-dataset, cross-generator/"
+        "manipulation, robustness), each with at most 8 columns; never build one wide table with a column group per setting, "
+        "and drop a column that would be NR/– for every row.\n"
         "   - Separate method families clearly (spatial artifact, frequency-domain, temporal/biological-signal, multimodal audio-visual, "
         "foundation-model/CLIP-based) and do not mix generation methods with detection methods.\n"
     ),

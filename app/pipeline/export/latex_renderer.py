@@ -224,6 +224,8 @@ def chains_figure(headers: list[str], rows: list[list[str]], caption: str) -> st
 
 _SHORT_CELL = 14  # cột có mọi ô ngắn hơn ngưỡng này không cần xuống dòng
 _PAGE_LINES = 58  # số dòng chữ nhỏ vừa một trang, dùng để cắt bảng dài thành nhiều phần "(continued)"
+_MAX_COLS = 9  # bảng rộng cả trang IEEE (\footnotesize) chứa tối đa ~9 cột mà chữ không đè nhau
+_EMPTY_CELLS = {"", "nr", "–", "-", "—", "n/a", "na", "none", "null", "not reported"}
 
 
 def _plain(text) -> str:
@@ -303,28 +305,123 @@ def _tabular(columns: list[str], rows: list[list], groups=None, bold_rows=(), wi
     return "\n".join(lines)
 
 
-def _table_env(columns, rows, caption: str, groups=None, bold_rows=()) -> str:
-    """Bảng nổi (float) kiểu LaTeX; bảng dài hơn một trang được cắt thành nhiều phần '(continued)' (float không tự ngắt trang)."""
-    wide = _is_wide(columns, rows)
-    env = "table*" if wide else "table"
+def _is_empty_cell(value) -> bool:
+    return _plain(value).lower() in _EMPTY_CELLS
+
+
+def _group_ids(groups, n: int) -> list[int] | None:
+    """Chỉ số nhóm header (header_groups) của từng cột; None nếu không có nhóm hợp lệ."""
+    if not groups or sum(int(g["span"]) for g in groups) != n:
+        return None
+    return [k for k, g in enumerate(groups) for _ in range(int(g["span"]))]
+
+
+def _regroup(groups, ids: list[int] | None) -> list[dict] | None:
+    """Dựng lại header_groups cho tập cột còn lại (ids = nhóm gốc của từng cột còn lại, theo thứ tự)."""
+    if ids is None:
+        return None
+    out: list[dict] = []
+    for k in ids:
+        if out and out[-1]["_k"] == k:
+            out[-1]["span"] += 1
+        else:
+            out.append({"label": groups[k].get("label", "") if k >= 0 else "", "span": 1, "_k": k})
+    return [{"label": g["label"], "span": g["span"]} for g in out]
+
+
+def _key_columns(columns: list[str], rows: list[list]) -> int:
+    """Số cột định danh ở đầu bảng (paradigm/method/backbone…) lặp lại ở mọi phần khi tách bảng theo cột."""
     specs = _column_specs(columns, rows)
-    chunks: list[tuple[int, list[list]]] = []
-    start, used = 0, 0
-    for i, row in enumerate(rows):
-        lines = _row_lines(row, specs, wide)
-        # chỉ cắt tại hàng bắt đầu nhóm mới, không cắt giữa ô gộp dọc
-        if used + lines > _PAGE_LINES and i > start and str(row[0] or "").strip():
-            chunks.append((start, rows[start:i]))
-            start, used = i, 0
-        used += lines
-    chunks.append((start, rows[start:]))
+    k = 0
+    while k < min(3, len(columns) - 1) and specs[k] != "c":
+        k += 1
+    return max(1, k)
+
+
+def _fit_columns(columns: list[str], rows: list[list], groups=None, bold_rows=()):
+    """Bỏ cột toàn NR/–/rỗng; bảng còn quá _MAX_COLS cột thì tách thành nhiều bảng theo cột, mỗi phần lặp lại cột định danh
+    và chỉ giữ hàng có số liệu trong phần đó — tránh bảng 15–20 cột bị nén làm chữ đè lên nhau.
+
+    Trả về list[(columns, rows, groups, bold_rows)].
+    """
+    n = len(columns)
+    gid = _group_ids(groups, n)
+    keep = [j for j in range(n) if j == 0 or any(not _is_empty_cell(r[j]) for r in rows)]
+    if len(keep) <= _MAX_COLS:
+        if len(keep) == n:
+            return [(columns, rows, groups, set(bold_rows))]
+        sub_rows = [[r[j] for j in keep] for r in rows]
+        return [([columns[j] for j in keep], sub_rows, _regroup(groups, [gid[j] for j in keep] if gid else None), set(bold_rows))]
+
+    key = _key_columns([columns[j] for j in keep], [[r[j] for j in keep] for r in rows])
+    key_cols, value_cols = keep[:key], keep[key:]
+    per = max(1, _MAX_COLS - key)
+    # chia cột giá trị thành từng khối, ưu tiên không cắt ngang một nhóm header
+    blocks: list[list[int]] = []
+    for j in value_cols:
+        same_group = gid is not None and blocks and gid[blocks[-1][-1]] == gid[j]
+        if blocks and len(blocks[-1]) < per and (same_group or len(blocks[-1]) + _group_len(gid, value_cols, j) <= per):
+            blocks[-1].append(j)
+        else:
+            blocks.append([j])
+    out = []
+    for block in blocks:
+        cols_idx = key_cols + block
+        kept_rows, bold, leader = [], set(), None
+        for i, r in enumerate(rows):
+            if str(r[0] or "").strip():
+                leader = r[0]
+            if all(_is_empty_cell(r[j]) for j in block):
+                continue
+            cells = [r[j] for j in cols_idx]
+            # hàng mở nhóm (ô cột đầu) bị lọc mất: điền lại nhãn nhóm để ô gộp dọc không dính vào nhóm trước
+            if not str(cells[0] or "").strip() and (not kept_rows or kept_rows[-1][1] != leader):
+                cells[0] = leader or ""
+            if i in bold_rows:
+                bold.add(len(kept_rows))
+            kept_rows.append((cells, leader))
+        ids = None
+        if gid is not None:
+            ids = [-1] * len(key_cols) + [gid[j] for j in block]
+        out.append((
+            [columns[j] for j in cols_idx], [c for c, _ in kept_rows] or [[r[j] for j in cols_idx] for r in rows],
+            _regroup(groups, ids), bold,
+        ))
+    return out
+
+
+def _group_len(gid: list[int] | None, value_cols: list[int], j: int) -> int:
+    """Số cột (trong value_cols) thuộc cùng nhóm header với cột j, tính từ j."""
+    if gid is None:
+        return 1
+    return sum(1 for c in value_cols if c >= j and gid[c] == gid[j])
+
+
+def _table_env(columns, rows, caption: str, groups=None, bold_rows=()) -> str:
+    """Bảng nổi (float) kiểu LaTeX; bảng dài hơn một trang được cắt thành nhiều phần '(continued)' (float không tự ngắt trang);
+    bảng quá nhiều cột được bỏ cột rỗng / tách theo cột (xem _fit_columns)."""
     cap = _clean_caption(caption)
     parts = []
-    for k, (first, part) in enumerate(chunks):
-        label = cap if k == 0 else rf"{cap} (continued)"
-        prefix = r"\addtocounter{table}{-1}" + "\n" if k else ""
-        tab = _tabular(columns, part, groups, bold_rows, wide, first)
-        parts.append(f"{prefix}\\begin{{{env}}}[!t]\n\\centering\n\\caption{{{label}}}\n{tab}\n\\end{{{env}}}")
+    for p_cols, p_rows, p_groups, p_bold in _fit_columns(columns, rows, groups, bold_rows):
+        wide = _is_wide(p_cols, p_rows)
+        env = "table*" if wide else "table"
+        specs = _column_specs(p_cols, p_rows)
+        chunks: list[tuple[int, list[list]]] = []
+        start, used = 0, 0
+        for i, row in enumerate(p_rows):
+            lines = _row_lines(row, specs, wide)
+            # chỉ cắt tại hàng bắt đầu nhóm mới, không cắt giữa ô gộp dọc
+            if used + lines > _PAGE_LINES and i > start and str(row[0] or "").strip():
+                chunks.append((start, p_rows[start:i]))
+                start, used = i, 0
+            used += lines
+        chunks.append((start, p_rows[start:]))
+        for first, part in chunks:
+            k = len(parts)
+            label = cap if k == 0 else rf"{cap} (continued)"
+            prefix = r"\addtocounter{table}{-1}" + "\n" if k else ""
+            tab = _tabular(p_cols, part, p_groups, p_bold, wide, first)
+            parts.append(f"{prefix}\\begin{{{env}}}[!t]\n\\centering\n\\caption{{{label}}}\n{tab}\n\\end{{{env}}}")
     return "\n\n".join(parts)
 
 
@@ -376,7 +473,12 @@ def _section_ref_tokens(body: str, known: set[str]) -> str:
             return m.group(0)
         return f"{m.group(1) or 'Section'}PAISECREF{num}END"
 
-    return _SECTION_REF_RE.sub(_sub, body)
+    def _range(m: re.Match) -> str:
+        # 'Section 4.2–4.4' / '4.2 and 4.3': số thứ hai cũng phải đổi, không thì in lẫn 'IV-B–4.4'
+        return f"{m.group(1)}PAIREF{m.group(2)}END" if m.group(2) in known else m.group(0)
+
+    body = _SECTION_REF_RE.sub(_sub, body)
+    return re.sub(r"(?<=END)(\s*(?:–|—|-|,|\bto\b|\band\b)\s*)(\d+(?:\.\d+)*)\b", _range, body)
 
 
 def report_to_latex(
@@ -635,7 +737,8 @@ def report_to_latex(
         + (f"\n\n{bib}" if refs else "\n")
         + "\n\\end{document}\n"
     )
-    return re.sub(r"PAISECREF(\d+(?:\.\d+)*)END", r"~\\ref{sec:\1}", tex)
+    tex = re.sub(r"PAISECREF(\d+(?:\.\d+)*)END", r"~\\ref{sec:\1}", tex)
+    return re.sub(r"PAIREF(\d+(?:\.\d+)*)END", r"\\ref{sec:\1}", tex)
 
 
 TAXONOMY_MIN_LEAVES = 6  # cây ít lá hơn vẫn vẽ bằng Mermaid được

@@ -20,7 +20,7 @@ from datetime import date
 from typing import Any
 
 from app.agent.domains import GENERAL, current_domain, domain_rules, domain_stage4, is_mri
-from app.agent.evidence.citation_cleaner import _local_catalog, clean_and_deduplicate_citations_ex
+from app.agent.evidence.citation_cleaner import clean_and_deduplicate_citations_ex, corpus_catalog
 from app.agent.evidence.claim_scan import find_leaked_claims, soften_leaked_claims
 from app.agent.evidence.coverage import coverage_target, full_coverage_applies
 from app.agent.evidence.dataset_catalog import get_dataset_grounding_context
@@ -85,7 +85,7 @@ _CHART_BLOCK_RULE = """   - FIGURES: visualize quantitative values that already 
 _IMAGE_BLOCK_RULE = """   - REAL FIGURES: to show a real image from the AVAILABLE FIGURES list, write a ```image fenced block containing JSON:
      {"ref": "F2", "caption": "What the image shows and why it matters ([n])"}
      Use only refs from the list, at most once each, placed where the text discusses them; describe only what the original caption supports. Never refer to images that are not in the list.
-     IMAGES ARE ILLUSTRATIONS, NOT DATA: you only see an image's caption, never its pixels or plotted values. Never read, estimate or quote numbers from an image (bar heights, curve points, Dice/IoU values) and never build a table or ```chart from one; numeric values come only from the text, tables and ledger of the sources, with [n].
+     IMAGES ARE ILLUSTRATIONS, NOT DATA: you only see an image's caption, never its pixels or plotted values. Never read, estimate or quote numbers from an image (bar heights, curve points, metric values) and never build a table or ```chart from one; numeric values come only from the text, tables and ledger of the sources, with [n].
 """
 
 # Số hình thật tối đa đưa vào prompt (tránh prompt quá dài với model free).
@@ -97,7 +97,7 @@ _MERMAID_BLOCK_RULE = """   - MERMAID SYNTAX: start with `graph TD` or `graph LR
 
 # Chuẩn nội bộ PaperAI về Figure/Table (không phải quy định xuất bản bắt buộc): số lượng chỉ là mục tiêu, không được bịa dữ liệu để cho đủ.
 _DISPLAY_ITEMS_RULE = """7b. FIGURES & TABLES POLICY (PaperAI internal quality standard):
-   - TARGETS: {targets} These are targets, NOT quotas: NEVER create a figure or table only to reach a count, and NEVER invent Dice, Accuracy, Loss, F1 or any comparison value to fill one. Every result figure/table must come from the Draft Basis, the cited sources or USER-PROVIDED RESULTS, with its [n]. If the evidence is insufficient, use fewer items and say so in the text.
+   - TARGETS: {targets} These are targets, NOT quotas: NEVER create a figure or table only to reach a count, and NEVER invent a metric value or any other comparison value to fill one. Every result figure/table must come from the Draft Basis, the cited sources or USER-PROVIDED RESULTS, with its [n]. If the evidence is insufficient, use fewer items and say so in the text.
    - Distinguish Figure (diagram, plot, image) from Table (data). Number them in order of appearance (Figure 1, Figure 2, ... / Table 1, ...); give every one a caption that says what it shows; mention every one in the body text ('as shown in Figure 2'); do not show the same data both as a table and as a figure.
    - Plots need axis names, units and a legend when there is more than one series; never use scales or crops that mislead. An image taken from another study must name its source [n].
    - PRIORITY OF FIGURES (use those the evidence supports): (1) research framework / pipeline overview; (2) dataset or input illustration (only a real image from AVAILABLE FIGURES); (3) model/system architecture; (4) training/validation curves (only with reported per-epoch values); (5) qualitative results (real images only); (6) performance comparison of proposed vs. baselines; (7) ablation (only when a component-level improvement is proposed); (8) error analysis.
@@ -148,7 +148,7 @@ STRICT PEER-REVIEW PUBLICATION STANDARDS (MANDATORY ACROSS ALL SECTIONS):
    - Refer to previous parts naturally using standard academic conventions (e.g., 'as formalized in Section 3').
 3. QUANTITATIVE DENSITY (EVIDENCE-BACKED NUMBERS):
    - The Draft Basis ends with a 'Quantitative Evidence Ledger'. Build tables, charts and claims from it: every relevant value in the ledger should appear somewhere in the paper with its [n].
-   - Prefer ONE dense comparison table (rows = methods/models/studies, columns = datasets/metrics, '–' for missing cells, add an 'Average' column only if all its inputs exist) over several sparse ones; set "highlight_best" so the best value of each column is highlighted.
+   - Prefer ONE dense comparison table (rows = methods/models/studies, columns = datasets/metrics, '–' for missing cells, add an 'Average' column only if all its inputs exist) over several sparse ones (unless the DOMAIN SCOPE requires one table per evaluation setting), with at most 8 columns per table; set "highlight_best" so the best value of each column is highlighted.
    - Support key claims in the text with the specific numbers (e.g. 'F1 of 0.884 on Banking77 [3]') rather than vague words like 'significantly better'.
    - Do NOT copy the ledger itself into the paper as a raw list.
 4. EVIDENCE DISCIPLINE (NO FABRICATION):
@@ -571,7 +571,7 @@ def _review_facts(state: ResearchState, mode: str) -> str:
     settings = get_settings()
     cited = {getattr(c, "paper_id", None) for c in state.get("citations", [])} - {None}
     queries = "; ".join(f'"{q}"' for q in (state.get("search_queries") or [])[:8]) or "(not recorded)"
-    catalog = _local_catalog()
+    catalog = corpus_catalog()
     corpus = len(catalog) or "unknown"
     not_retrieved = len(set(catalog) - {str(c) for c in cited}) if catalog else None
     surveys = _prior_surveys_fact(state, catalog)
@@ -680,7 +680,7 @@ def _format_references_prompt(citations: list[Any]) -> str:
         section = getattr(c, "section", None) or (c.get("section") if isinstance(c, dict) else None)
         snippet = getattr(c, "text_snippet", "") or (c.get("text_snippet") if isinstance(c, dict) else "")
 
-        local = _local_catalog().get(str(pid))
+        local = corpus_catalog().get(str(pid))
         ref_line = f"[{i}] {pid}" if not local else f"[{i}] {local.get('title')} ({local.get('year')})"
         if page:
             ref_line += f", Page: {page}"
@@ -1076,7 +1076,7 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
         from app.agent.evidence.review_protocol import inject_prisma, load_protocol, prisma_block, validate_protocol
 
         protocol = load_protocol()
-        if protocol and not validate_protocol(protocol, len(_local_catalog()) or None):
+        if protocol and not validate_protocol(protocol, len(corpus_catalog()) or None):
             raw_stitched = inject_prisma(raw_stitched, prisma_block(protocol))
             has_protocol = True
 
@@ -1102,9 +1102,9 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
     # chỉ phủ trọn kho khi task chạy TRONG một kho; không chọn kho (chế độ chung/OpenAlex) thì không kéo cả catalog trên đĩa
     # vào bài (vd. bài chung/deepfake bị chèn danh sách bài BraTS)
     if is_local_only():
-        citations = pad_corpus_citations(citations, get_allowed_paper_ids(), _local_catalog())
+        citations = pad_corpus_citations(citations, get_allowed_paper_ids(), corpus_catalog())
     try:
-        raw_stitched, _ = add_uncited_corpus(raw_stitched, citations, _local_catalog())
+        raw_stitched, _ = add_uncited_corpus(raw_stitched, citations, corpus_catalog())
     except (KeyError, ValueError, TypeError, AttributeError, OSError):
         logger.exception("Bổ sung paper chưa cite lỗi, giữ nguyên bài")
 

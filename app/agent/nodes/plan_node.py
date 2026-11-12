@@ -94,6 +94,8 @@ def plan_node(state: ResearchState, llm: LLMGateway | None = None) -> ResearchSt
         mode = detect_research_mode(question, detected_mode)
         contribution = contribution_from_mode(mode)
     profile = CONTRIBUTION_TYPES[contribution]
+    # so sánh kết quả đã công bố (không số liệu tự chạy) là bài tổng hợp tài liệu: không ghi phương pháp "experimental"
+    literature_comparison = contribution == "comparison" and mode == "survey"
 
     from app.agent.domains import domain_field
 
@@ -107,7 +109,9 @@ def plan_node(state: ResearchState, llm: LLMGateway | None = None) -> ResearchSt
         "research_mode": mode,
         "field": field,
         "contribution_type": contribution,
-        "methodology": normalize_choice(parsed_dict.get("methodology"), METHODOLOGIES, profile["methodology"]),
-        "paper_type": normalize_choice(parsed_dict.get("paper_type"), PAPER_TYPES, profile["paper_type"]),
+        "methodology": "survey_review" if literature_comparison
+        else normalize_choice(parsed_dict.get("methodology"), METHODOLOGIES, profile["methodology"]),
+        "paper_type": "review" if literature_comparison
+        else normalize_choice(parsed_dict.get("paper_type"), PAPER_TYPES, profile["paper_type"]),
         "topic": topic.strip(),
     }

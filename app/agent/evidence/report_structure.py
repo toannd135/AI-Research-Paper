@@ -73,7 +73,11 @@ def renumber_sections(text: str) -> str:
     return _update_section_refs(renumbered, mapping)
 
 
-_SECTION_REF_RE = re.compile(r"\b(Section|Sec\.)(\s+)(\d+(?:\.\d+)?)\b|(§\s*)(\d+(?:\.\d+)?)\b")
+_SECTION_REF_RE = re.compile(
+    r"(?:\b(Sections?|Secs?\.)(\s+)(\d+(?:\.\d+)?)\b|(§\s*)(\d+(?:\.\d+)?)\b)"
+    # đầu thứ hai của khoảng/liệt kê: 'Section 4.2–4.4', 'Sections 4.2 and 4.4' (trước đây chỉ đổi số đầu → 'II-B–4.4')
+    r"(?:(\s*(?:–|—|-|,|\bto\b|\band\b)\s*)(\d+(?:\.\d+)?)\b)?"
+)
 
 
 def _update_section_refs(text: str, mapping: dict[str, str]) -> str:
@@ -81,14 +85,22 @@ def _update_section_refs(text: str, mapping: dict[str, str]) -> str:
     head, sep, refs = text.partition("\n## References")
     unknown: set[str] = set()
 
+    def _map(num: str) -> str | None:
+        return mapping.get(".".join(str(int(x)) for x in num.split(".")))
+
     def _ref(m: re.Match) -> str:
         num = m.group(3) or m.group(5)
-        key = ".".join(str(int(x)) for x in num.split("."))
-        new = mapping.get(key)
+        new = _map(num)
         if new is None:
             unknown.add(num)
             return m.group(0)
-        return f"{m.group(1)}{m.group(2)}{new}" if m.group(3) else f"{m.group(4)}{new}"
+        head_txt = f"{m.group(1)}{m.group(2)}{new}" if m.group(3) else f"{m.group(4)}{new}"
+        if m.group(7):
+            tail = _map(m.group(7))
+            if tail is None:
+                unknown.add(m.group(7))
+            head_txt += f"{m.group(6)}{tail or m.group(7)}"
+        return head_txt
 
     out: list[str] = []
     for is_code, chunk in _split_fences(head):
