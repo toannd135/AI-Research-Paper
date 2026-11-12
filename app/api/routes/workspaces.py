@@ -8,7 +8,7 @@ from app.api.deps import can_access, get_current_user
 from app.api.models.user import ROLE_ADMIN, User
 from app.api.models.workspace import Workspace
 from app.core.database import get_db
-from app.core.schemas import WorkspaceCreate, WorkspaceResponse
+from app.core.schemas import WorkspaceCreate, WorkspaceResponse, WorkspaceUpdate
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 
@@ -27,8 +27,20 @@ def get_owned_workspace_id(db: Session, user: User, workspace_id: str | None) ->
 def create_workspace(
     payload: WorkspaceCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ) -> Workspace:
-    ws = Workspace(user_id=user.id, name=payload.name.strip())
+    ws = Workspace(user_id=user.id, name=payload.name.strip(), domain=payload.domain)
     db.add(ws)
+    db.commit()
+    db.refresh(ws)
+    return ws
+
+
+@router.patch("/{workspace_id}", response_model=WorkspaceResponse)
+def update_workspace(
+    workspace_id: str, payload: WorkspaceUpdate, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> Workspace:
+    """Đổi chế độ của kho; áp cho các lượt nghiên cứu bắt đầu SAU khi đổi (task đang chạy giữ chế độ đã đọc lúc bắt đầu)."""
+    ws = db.get(Workspace, get_owned_workspace_id(db, user, workspace_id))
+    ws.domain = payload.domain
     db.commit()
     db.refresh(ws)
     return ws

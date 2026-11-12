@@ -149,10 +149,19 @@ def run_research(task_id: str) -> dict:
             allowed = _research_scope(db, allowed_paper_ids_for(db, owner, task.workspace_id))
             set_allowed_paper_ids(allowed)
             set_local_only(bool(task.workspace_id))
+            from app.agent.domains import DOMAIN_LABELS, GENERAL, set_domain
+            from app.api.models.workspace import Workspace
+
+            # Chế độ lấy từ kho; không chọn kho → chế độ chung (OpenAlex). Đặt lại ở đầu MỌI task để không rò giữa các task.
+            ws = db.get(Workspace, task.workspace_id) if task.workspace_id else None
+            domain = (ws.domain if ws else None) or GENERAL
+            set_domain(domain)
             if task.workspace_id:
-                log_progress(f"Bắt đầu: chỉ dùng {len(allowed or ())} tài liệu đã xử lý trong kho, không tìm nguồn ngoài")
+                log_progress(
+                    f"Bắt đầu [{DOMAIN_LABELS.get(domain, domain)}]: chỉ dùng {len(allowed or ())} tài liệu đã xử lý trong kho, không tìm nguồn ngoài"
+                )
             else:
-                log_progress("Bắt đầu: dùng thư viện chung và nguồn ngoài (OpenAlex)")
+                log_progress("Bắt đầu [Chung]: dùng thư viện chung và nguồn ngoài (OpenAlex)")
             question = task.refined_question or task.question
             state = run_graph(
                 question,
@@ -200,5 +209,8 @@ def run_research(task_id: str) -> dict:
 
         set_allowed_paper_ids(None)
         set_local_only(False)
+        from app.agent.domains import set_domain
+
+        set_domain(None)
         _set_task(None)
         db.close()

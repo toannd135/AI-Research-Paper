@@ -28,6 +28,11 @@ def set_local_only(value: bool) -> None:
     _local_only = value
 
 
+def is_local_only() -> bool:
+    """Task đang chạy trong một kho (workspace)."""
+    return _local_only
+
+
 def external_search_allowed() -> bool:
     from app.core.config import get_settings
 

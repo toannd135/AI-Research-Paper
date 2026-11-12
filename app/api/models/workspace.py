@@ -15,6 +15,8 @@ class Workspace(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
+    # chế độ nghiên cứu của kho: general | mri_brain | deepfake (app/agent/domains.py)
+    domain: Mapped[str] = mapped_column(String(32), nullable=False, default="general", server_default="general")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )

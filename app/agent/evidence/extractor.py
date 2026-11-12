@@ -16,6 +16,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from app.agent.domains import extract_profile
 from app.agent.evidence.quant_check import ResultRecord
 from app.ai.llm_gateway.base import LLMGateway, LLMGatewayError, Message
 
@@ -29,29 +30,22 @@ MAX_ATTEMPTS = 3  # thử lại khi LLM lỗi; không đặt timeout từng lệ
 MAX_TOTAL_SECONDS = 2400.0  # nâng từ 1500s khi mỗi paper có thêm chunk kết quả; vẫn dưới task_soft_time_limit (6900s)
 MAX_CHARS_PER_CHUNK = 3000  # bảng kết quả dài; 1800 hay cắt mất nửa bảng
 CACHE_ENABLED = True  # cache phản hồi LLM thô theo lô (khóa = prompt + model + đoạn văn); test tắt mặc định
-_KEY_RE = re.compile(
-    r"\b(dice|hd95|hausdorff|iou|params?|parameters|gflops|flops|inference|latency"
-    r"|auc|auroc|eer|acc|accuracy|f1|average precision|precision|recall|sensitivity|specificity|jaccard|miou"
-    r"|psnr|ssim|lpips|fid|mae|rmse|mse|assd|asd|nsd)\b",
-    re.I,
-)
 _NUM_RE = re.compile(r"\d+(?:\.\d+)?")
-_REGIONS = {"wt": "WT", "tc": "TC", "et": "ET", "whole tumor": "WT", "tumor core": "TC", "enhancing tumor": "ET", "avg": "AVG", "average": "AVG", "mean": "AVG"}
 
-_PROMPT = (
-    "Extract quantitative results from the passages. Return ONLY a JSON list; each item: "
-    '{"paper_id","model","dataset","dataset_version","split","region","metric","value","unit","variant","modality","table","spread","spread_type"}. '
-    "metric is one of Dice, HD95, IoU, Jaccard, Sensitivity, Specificity, Precision, Recall, PSNR, SSIM, LPIPS, FID, MAE, RMSE, "
-    "ASSD, AUC, EER, ACC, F1, AP, Params, GFLOPs, InferenceTime. region is WT/TC/ET/AVG or null "
-    "(null for non-segmentation metrics). unit is ratio|percent|mm|dB|M|G|ms or null. "
-    "For detection tasks, put the evaluation setting (e.g. 'cross-dataset', 'in-domain', 'frame-level') in split only if printed. "
-    "value must be the number EXACTLY as printed in the passage. Use null for any field the passage does not state; "
-    "never guess, convert or compute. variant = ablation variant name (e.g. 'w/o X') or null for the full model. "
-    "spread = the number printed after '±' for that value (std/CI half-width) EXACTLY as printed, else null; "
-    "spread_type is SD, SE or CI95 only if the passage says which, else null. "
-    "If there are no numeric results, return []."
-)
 _SPREAD_TYPES = {"SD", "SE", "CI95"}
+
+
+# Prompt/regex/vùng theo chế độ (chung / MRI não / deepfake) — xem app/agent/domains.py
+def _key_re() -> re.Pattern[str]:
+    return extract_profile()["key_re"]
+
+
+def _prompt() -> str:
+    return extract_profile()["prompt"]
+
+
+def _regions() -> dict[str, str]:
+    return extract_profile()["regions"]
 
 
 def _paper_chunks(evidence: list[Any]) -> dict[str, list[dict[str, Any]]]:
@@ -65,8 +59,8 @@ def _paper_chunks(evidence: list[Any]) -> dict[str, list[dict[str, Any]]]:
                 continue
             seen.add(cid)
         text = getattr(c, "text", "") or ""
-        if _KEY_RE.search(text) and _NUM_RE.search(text):
-            by_paper.setdefault(c.paper_id, []).append({"page": getattr(c, "page", None), "text": text, "score": len(_KEY_RE.findall(text))})
+        if _key_re().search(text) and _NUM_RE.search(text):
+            by_paper.setdefault(c.paper_id, []).append({"page": getattr(c, "page", None), "text": text, "score": len(_key_re().findall(text))})
     for chunks in by_paper.values():
         chunks.sort(key=lambda x: -x["score"])
         del chunks[MAX_CHUNKS_PER_PAPER:]
@@ -113,7 +107,7 @@ def _verify(item: dict[str, Any], chunks: list[dict[str, Any]]) -> ResultRecord 
         return None  # giá trị không có nguyên văn trong PDF → bỏ
     spread, spread_type = _verified_spread(item, hits)
     raw_region = _s(item.get("region"))
-    region = _REGIONS.get(raw_region.lower()) if raw_region else None
+    region = _regions().get(raw_region.lower()) if raw_region else None
     modality = item.get("modality")
     mods = tuple(str(x).strip() for x in modality if str(x).strip()) if isinstance(modality, list) else ()
     return ResultRecord(
@@ -142,7 +136,7 @@ def _cache_dir() -> Path:
 
 
 def _cache_key(passages: str, model_name: str | None) -> str:
-    return hashlib.sha256("\x00".join((_PROMPT, model_name or "", passages)).encode("utf-8")).hexdigest()
+    return hashlib.sha256("\x00".join((_prompt(), model_name or "", passages)).encode("utf-8")).hexdigest()
 
 
 def _cache_get(key: str) -> str | None:
@@ -173,7 +167,7 @@ def _call_llm(gateway: LLMGateway, passages: str, model_name: str | None, no: in
     for attempt in range(1, MAX_ATTEMPTS + 1):  # không đặt giới hạn thời gian: chờ LLM trả lời đủ từng lô
         try:
             resp = gateway.generate(
-                messages=[Message(role="system", content=_PROMPT), Message(role="user", content=passages)],
+                messages=[Message(role="system", content=_prompt()), Message(role="user", content=passages)],
                 model_name=model_name,
             )
             return resp.text

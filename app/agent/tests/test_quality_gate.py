@@ -4,6 +4,8 @@ import json
 from dataclasses import replace
 from types import SimpleNamespace
 
+import pytest
+
 from app.agent.evidence import quant_check as q
 from app.agent.evidence.consistency_check import check_review_claims
 from app.agent.evidence.display_check import check_figure_captions
@@ -24,6 +26,9 @@ BASE = q.ResultRecord(
     metric="Dice", value=0.9, unit="ratio", modality=("T1", "T1ce", "T2", "FLAIR"), preprocessing="z-score",
     source_page=8, source_table="Table 3",
 )
+
+# Fixture BraTS/MRI: các kiểm tra ở đây thuộc chế độ MRI não (app/agent/domains.py)
+pytestmark = pytest.mark.usefixtures("mri_domain")
 
 
 def _other(**kw):

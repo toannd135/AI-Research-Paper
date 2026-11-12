@@ -44,16 +44,26 @@ _TOPICS: dict[str, re.Pattern[str]] = {
     "uncertainty/calibration": re.compile(r"uncertaint|calibrat", re.I),
     "code availability": re.compile(r"code (?:availability|is available|release)|open-source code|publicly available code", re.I),
 }
+
+
+def _active_topics() -> dict[str, re.Pattern[str]]:
+    """Chủ đề 'missing-modality' chỉ có nghĩa ở chế độ MRI não."""
+    from app.agent.domains import is_mri
+
+    return _TOPICS if is_mri() else {k: v for k, v in _TOPICS.items() if k != "missing-modality results"}
+
+
 _EFF = re.compile(r"^(?:params|parameters|gflops|flops|inferencetime)$")
 
 
 def _evidence_counts(records: list[ResultRecord], paper_to_n: dict[str, int], attrs: dict[str, dict[str, dict[str, Any]]]) -> dict[str, int]:
+    from app.agent.domains import is_mri
     from app.agent.evidence.quant_analysis import missing_modality_record_count, modality_matrix_stats
 
     return {
         # nhóm ma trận cần ≥2 tập; bản ghi lẻ thiếu-modality cũng là bằng chứng nên câu "no missing-modality result" vẫn sai
         "missing-modality results": (
-            max(modality_matrix_stats(records, paper_to_n)["groups"], missing_modality_record_count(records, paper_to_n)) if paper_to_n else 0
+            0 if not is_mri() else max(modality_matrix_stats(records, paper_to_n)["groups"], missing_modality_record_count(records, paper_to_n)) if paper_to_n else 0
         ),
         "variance (SD/CI)": sum(1 for r in records if r.spread is not None),
         "computational cost": sum(1 for r in records if _EFF.match(re.sub(r"[\s_-]+", "", r.metric.lower()))),
@@ -79,7 +89,7 @@ def check_absence_claims(text: str, records: list[ResultRecord], paper_to_n: dic
             continue
         # chủ đề phải nằm ngay sau từ phủ định (cùng mệnh đề), không chỉ cùng câu
         windows = [sentence[m.start() : m.end() + ABSENCE_WINDOW] for m in _ABSENCE_RE.finditer(sentence)]
-        topic = next((t for t, rx in _TOPICS.items() if counts[t] and any(rx.search(w) for w in windows)), None)
+        topic = next((t for t, rx in _active_topics().items() if counts.get(t) and any(rx.search(w) for w in windows)), None)
         if topic:
             out.append(f"claim–evidence: '{sentence[:140]}' phủ nhận {topic} nhưng có {counts[topic]} bằng chứng đã trích/xác minh")
     return out[:MAX_ITEMS]
@@ -139,28 +149,15 @@ def check_ledger_claims(text: str, records: list[ResultRecord], paper_to_n: dict
 
 
 # ---------- thuật ngữ ----------
-_TERM_GROUPS: tuple[tuple[str, ...], ...] = (
-    (r"\bT1c\b", r"\bT1ce\b", r"\bT1Gd\b", r"\bT1-Gd\b", r"\bT1\+C\b", r"\bT1 post-contrast\b"),
-    (r"\bHD95\b", r"\bHD 95\b", r"\b95% Hausdorff\b", r"\bHausdorff95\b"),
-    (r"\btumor\b", r"\btumour\b"),
-    (r"\bgeneralization\b", r"\bgeneralisation\b"),
-    (r"\bmodeling\b", r"\bmodelling\b"),
-    (r"\bdeepfakes?\b", r"\bdeep-fakes?\b", r"\bdeep fakes?\b"),
-    (r"\bmultimodal\b", r"\bmulti-modal\b"),
-    (r"\bcross-modal\b", r"\bcross modal\b", r"\bcrossmodal\b"),
-    (r"\bcross-dataset\b", r"\bcross dataset\b"),
-    (r"\bcross-generator\b", r"\bcross generator\b"),
-    (r"\bvision-language\b", r"\bvision language\b"),
-    (r"\bAUROC\b", r"\bAUC-ROC\b", r"\bROC-AUC\b"),
-    (r"\bCeleb-DF\b", r"\bCelebDF\b", r"\bCeleb DF\b"),
-    (r"\bfull-modal\b", r"\bfull-modality\b", r"\bfull modality\b"),
-)
+# Nhóm thuật ngữ theo chế độ (chung / MRI não / deepfake): app/agent/domains.py term_groups()
 
 
 def check_terminology(text: str) -> list[str]:
     body = re.split(r"\n#{1,3}\s*References\b", text, maxsplit=1)[0]
     out = []
-    for group in _TERM_GROUPS:
+    from app.agent.domains import term_groups
+
+    for group in term_groups():
         used = {re.sub(r"\\b|\\", "", rx): n for rx in group if (n := len(re.findall(rx, body)))}
         if len(used) >= 2:
             forms = ", ".join(f"{k} ×{v}" for k, v in sorted(used.items(), key=lambda kv: -kv[1]))

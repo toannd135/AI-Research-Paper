@@ -10,6 +10,7 @@ import json
 import re
 from typing import Any
 
+from app.agent.domains import is_deepfake, is_mri, tradeoff_metrics
 from app.agent.evidence import study_profile as sp
 from app.agent.evidence.quant_check import ResultRecord, group_comparable
 from app.agent.evidence.stats import lower_is_better
@@ -52,7 +53,7 @@ def delta_table(records: list[ResultRecord], paper_to_n: dict[str, int]) -> str 
         best = (min if low else max)(r.value for r in items)
         for r in sorted(items, key=lambda r: r.value if low else -r.value)[:MAX_ROWS]:
             rows.append([
-                f"{r.model} [{paper_to_n[r.paper_id]}]", _setting(r), f"{sample.metric} {sample.region}", f"{r.value:g}", f"{r.value - best:+.2f}", _spread_cell(r),
+                f"{r.model} [{paper_to_n[r.paper_id]}]", _setting(r), f"{sample.metric} {sample.region or ''}".strip(), f"{r.value:g}", f"{r.value - best:+.2f}", _spread_cell(r),
             ])
     if not rows:
         return None
@@ -118,28 +119,34 @@ def ablation_table(records: list[ResultRecord], paper_to_n: dict[str, int]) -> s
 
 
 def tradeoff_scatter(records: list[ResultRecord], paper_to_n: dict[str, int]) -> str | None:
-    """Scatter Dice (một vùng, một setting) theo Params; mỗi điểm một phương pháp, đơn vị Params phải giống nhau."""
+    """Scatter metric chính của chế độ (MRI: Dice một vùng; deepfake: AUC/ACC; chung: Accuracy/F1/...) theo Params, một setting;
+    mỗi điểm một phương pháp, đơn vị Params phải giống nhau."""
+    metrics = tradeoff_metrics()
     params = {(r.paper_id, r.model): r for r in records if r.metric.lower() in ("params", "parameters") and not r.variant}
     by_setting: dict[tuple, list[tuple[ResultRecord, ResultRecord]]] = {}
     for r in records:
         p = params.get((r.paper_id, r.model))
-        if r.metric.lower() != "dice" or r.variant or p is None or r.paper_id not in paper_to_n:
+        if r.metric.lower() not in metrics or r.variant or p is None or r.paper_id not in paper_to_n:
             continue
-        if None in (r.dataset, r.dataset_version, r.split, r.region) or not r.unit or not p.unit:
+        # vùng WT/TC/ET bắt buộc chỉ ở MRI; dataset/split vẫn bắt buộc để chỉ so cùng một setting
+        if None in (r.dataset, r.split) or (is_mri() and (r.dataset_version is None or r.region is None)) or not r.unit or not p.unit:
             continue
-        by_setting.setdefault((r.dataset, r.dataset_version, r.split, r.region, r.unit, p.unit), []).append((r, p))
+        by_setting.setdefault((r.dataset, r.dataset_version, r.split, r.region, r.metric, r.unit, p.unit), []).append((r, p))
     best = max(by_setting.items(), key=lambda kv: len(kv[1]), default=None)
     # < MIN_SCATTER_POINTS phương pháp: không thể hiện được quan hệ/đường biên đánh đổi → bảng chi phí (efficiency_table) đảm nhận
     if not best or len({x[0].model for x in best[1]}) < MIN_SCATTER_POINTS:
         return None
-    (ds, ver, split, region, unit, p_unit), pairs = best
+    (ds, ver, split, region, metric, unit, p_unit), pairs = best
     seen: dict[str, tuple[ResultRecord, ResultRecord]] = {}
     for d, p in pairs:
         seen.setdefault(d.model, (d, p))
     series = [{"name": f"{m} [{paper_to_n[d.paper_id]}]", "x": [p.value], "y": [d.value]} for m, (d, p) in seen.items()]
     cites = ", ".join(sorted({f"[{paper_to_n[d.paper_id]}]" for d, _ in seen.values()}))
-    caption = f"Dice ({region}) versus parameter count on {ds} {ver} ({split}) {cites}"
-    return _block("chart", {"type": "scatter", "caption": caption, "x_label": f"Parameters ({p_unit})", "y_label": f"Dice {region} ({unit})", "series": series})
+    region_txt = f" ({region})" if region else ""
+    setting = " ".join(x for x in (ds, ver, f"({split})") if x)
+    caption = f"{metric}{region_txt} versus parameter count on {setting} {cites}"
+    y_label = " ".join(x for x in (metric, region) if x) + f" ({unit})"
+    return _block("chart", {"type": "scatter", "caption": caption, "x_label": f"Parameters ({p_unit})", "y_label": y_label, "series": series})
 
 
 FULL_MODALITIES = frozenset({"T1", "T1c", "T2", "FLAIR"})
@@ -397,7 +404,9 @@ def evidence_limits(
         f"'from {n_papers} papers' for it; {spread_txt}."
     )
     n_sub = stats["possible_subsets"]
-    if stats["groups"] == 0:
+    if not is_mri():
+        pass  # ma trận missing-modality (chuỗi MRI) chỉ có nghĩa ở chế độ MRI não
+    elif stats["groups"] == 0:
         lines.append(
             "- No missing-modality result (a model evaluated with one or more MRI sequences absent) was extracted into the structured records. "
             "Do NOT write that no source reports such results: sources may still discuss modality importance in prose (cite those passages). "
@@ -416,7 +425,25 @@ def evidence_limits(
             f"(b) they cover {stats['distinct_subsets']} of the {n_sub} non-empty modality subsets, so a complete combinatorial matrix cannot be built; "
             f"(c) {cross}. Δ is given only where the same source reports both conditions."
         )
-    if attrs_by_paper is not None:
+    if attrs_by_paper is not None and not is_mri():
+        a = {pid: v for pid, v in attrs_by_paper.items() if pid in paper_to_n}
+        lines.append(
+            "- Reliability evidence found as explicit sentences in the retrieved passages (other sources: not found, which is NOT the same as not done): "
+            f"external validation {sp.count(a, 'external_validation')}, cross-validation {sp.count(a, 'cross_validation')}, "
+            f"uncertainty/calibration/OOD {sp.count(a, 'uncertainty')}, code availability {sp.count(a, 'code_available')} of {n_papers} sources. "
+            "These are counts of sentences FOUND in the retrieved passages, so a count of 0 means 'not observed in the retrieved passages', "
+            "never 'no study does this': phrase it that way and do not write 'no method/study …' from a count alone. "
+            "Use these counts in the robustness and limitations discussion; never generalise beyond them."
+        )
+        if is_deepfake():
+            n_cross = sum(1 for r in records if r.paper_id in paper_to_n and r.split and re.search(r"cross", r.split, re.I))
+            lines.append(
+                "- Deepfake generalization evidence (sentences found in the retrieved passages; 0 = not observed, not 'not done'): "
+                f"cross-dataset evaluation {sp.count(a, 'cross_dataset_eval')}, unseen generator/manipulation {sp.count(a, 'unseen_generator')}, "
+                f"compression/perturbation robustness {sp.count(a, 'compression_robustness')} of {n_papers} sources; "
+                f"{n_cross} extracted record(s) carry a cross-dataset/cross-generator setting. Never compare in-domain and cross-dataset values as one ranking."
+            )
+    elif attrs_by_paper is not None:
         a = {pid: v for pid, v in attrs_by_paper.items() if pid in paper_to_n}
         lines.append(
             "- Reliability evidence found as explicit sentences in the retrieved passages (other sources: not found, which is NOT the same as not done): "
@@ -506,6 +533,18 @@ def study_profile_table(
     )
     columns = ["Ref", "Dataset (version)", "External validation", "Cross-validation", "Patient-wise split",
                "Missing-modality protocol", "Variance reported", "Uncertainty / calibration", "Code available"]
+    if not is_mri():  # chia theo bệnh nhân / giao thức thiếu chuỗi MRI chỉ có nghĩa ở chế độ MRI não
+        columns = [c for i, c in enumerate(columns) if i not in (4, 5)]
+        rows = [[c for i, c in enumerate(r) if i not in (4, 5)] for r in rows]
+    if is_deepfake():  # chế độ deepfake: thêm cột tổng quát hoá / độ bền, lấy từ câu nguyên văn như các cột khác
+        pids = [pid for pid, _ in sorted(by_paper.items(), key=lambda kv: paper_to_n[kv[0]])]
+        for row, pid in zip(rows, pids, strict=True):
+            attrs = attrs_by_paper.get(pid, {})
+            cross = sp.cell(attrs, "cross_dataset_eval")
+            if cross == sp.NR and _has(by_paper[pid], lambda r: bool(r.split and re.search(r"cross", r.split, re.I))):
+                cross = "Yes (reported split)"
+            row[4:4] = [cross, sp.cell(attrs, "unseen_generator"), sp.cell(attrs, "compression_robustness")]
+        columns[4:4] = ["Cross-dataset test", "Unseen generator / manipulation", "Compression / perturbation robustness"]
     if len(rows) > MAX_PROFILE_TABLE_ROWS:
         return _evidence_map(rows, columns)
     return _block("table", {"caption": caption, "columns": columns, "rows": rows, "derived": True})
@@ -581,6 +620,60 @@ def protocol_panels(records: list[ResultRecord], paper_to_n: dict[str, int]) -> 
     return _block("chart", {"type": "panels", "ncols": 2, "panels": panels, "caption": caption, "derived": True})
 
 
+MAX_CROSS_COLUMNS = 5
+
+
+def _setting_kind(split: str | None) -> str:
+    s = (split or "").lower()
+    if "generator" in s or "manipulation" in s:
+        return "cross-generator"
+    if "cross" in s:
+        return "cross-dataset"
+    if re.search(r"in[- ]?domain|intra|within", s):
+        return "in-domain"
+    return "setting NR"
+
+
+def cross_dataset_table(records: list[ResultRecord], paper_to_n: dict[str, int]) -> str | None:
+    """Deepfake: phương pháp × (tập test, setting) cho metric phổ biến nhất (AUC trước). Giá trị nguyên văn; ô thiếu = NR.
+
+    Chỉ sinh khi ≥3 phương pháp và ≥2 cột; mỗi cột chỉ một đơn vị (cột trộn đơn vị bị bỏ) để không đặt % cạnh tỷ lệ.
+    """
+    main = [r for r in records if not r.variant and r.paper_id in paper_to_n and r.dataset and r.model]
+    by_metric: dict[str, list[ResultRecord]] = {}
+    for r in main:
+        key = {"auroc": "auc"}.get(r.metric.lower(), r.metric.lower())
+        if key in ("auc", "eer", "hter", "acc", "accuracy", "ap"):
+            by_metric.setdefault(key, []).append(r)
+    if not by_metric:
+        return None
+    order = ("auc", "acc", "accuracy", "ap", "eer", "hter")
+    metric_key = max(by_metric, key=lambda k: (len(by_metric[k]), -order.index(k)))
+    cells: dict[tuple[str, str], dict[str, ResultRecord]] = {}
+    units: dict[tuple[str, str], set[str | None]] = {}
+    for r in by_metric[metric_key]:
+        col = (r.dataset or "", _setting_kind(r.split))
+        units.setdefault(col, set()).add(r.unit)
+        cells.setdefault(col, {}).setdefault(f"{r.model} [{paper_to_n[r.paper_id]}]", r)
+    cols = [c for c in cells if len(units[c]) == 1 and len(cells[c]) >= 1]
+    cols.sort(key=lambda c: (-len(cells[c]), c[1] != "in-domain", c[0]))
+    cols = cols[:MAX_CROSS_COLUMNS]
+    methods = list(dict.fromkeys(m for c in cols for m in cells[c]))
+    methods = [m for m in methods if sum(1 for c in cols if m in cells[c]) >= 1]
+    if len(cols) < 2 or len(methods) < MIN_METHODS:
+        return None
+    methods.sort(key=lambda m: (-sum(1 for c in cols if m in cells[c]), int(re.search(r"\[(\d+)\]$", m).group(1))))
+    rows = [[m] + [f"{cells[c][m].value:g}" if m in cells[c] else "NR" for c in cols] for m in methods[:MAX_ROWS]]
+    metric = by_metric[metric_key][0].metric
+    columns = ["Method [Ref]"] + [f"{ds} ({kind}{', ' + next(iter(units[(ds, kind)])) if next(iter(units[(ds, kind)])) else ''})" for ds, kind in cols]
+    caption = (
+        f"Reported {metric} by test dataset and evaluation setting (values as printed in the cited sources; unit in the column header). "
+        "Training data and protocols differ across sources, so compare values within a column only; the in-domain → cross-dataset drop "
+        "is meaningful only within the same source. NR = not reported or not extracted"
+    )
+    return _block("table", {"caption": caption, "columns": columns, "rows": rows, "derived": True})
+
+
 def build_quant_blocks(
     records: list[ResultRecord],
     paper_to_n: dict[str, int],
@@ -592,8 +685,9 @@ def build_quant_blocks(
         for b in (
             delta_table(records, paper_to_n),
             protocol_panels(records, paper_to_n),
-            modality_coverage_matrix(records, paper_to_n),
-            modality_degradation_chart(records, paper_to_n),
+            modality_coverage_matrix(records, paper_to_n) if is_mri() else None,
+            modality_degradation_chart(records, paper_to_n) if is_mri() else None,
+            cross_dataset_table(records, paper_to_n) if is_deepfake() else None,
             ablation_table(records, paper_to_n),
             tradeoff_scatter(records, paper_to_n),
             efficiency_table(records, paper_to_n),

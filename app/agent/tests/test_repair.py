@@ -3,6 +3,8 @@
 import json
 from types import SimpleNamespace
 
+import pytest
+
 from app.agent.evidence.consistency_check import check_ledger_claims
 from app.agent.evidence.coverage import uncited_papers
 from app.agent.evidence.quant_check import check_chart_block
@@ -14,6 +16,9 @@ from app.agent.evidence.repair import (
     repair_ledger_claims,
 )
 from app.agent.evidence.traceability import TRACED, UNTRACED, extract_numeric_claims
+
+# Fixture BraTS/MRI: các kiểm tra ở đây thuộc chế độ MRI não (app/agent/domains.py)
+pytestmark = pytest.mark.usefixtures("mri_domain")
 
 
 def _chart(spec):

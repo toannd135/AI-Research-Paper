@@ -198,11 +198,19 @@ class RetrieveEvidenceInput(BaseModel):
 
 class WorkspaceCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200, description="Tên phiên/đề tài nghiên cứu")
+    domain: Literal["general", "mri_brain", "deepfake"] = Field(
+        "general", description="Chế độ nghiên cứu của kho: chung, MRI não hoặc deepfake (prompt tách biệt)"
+    )
+
+
+class WorkspaceUpdate(BaseModel):
+    domain: Literal["general", "mri_brain", "deepfake"] = Field(..., description="Đổi chế độ nghiên cứu của kho")
 
 
 class WorkspaceResponse(BaseModel):
     id: str
     name: str
+    domain: str = "general"
     created_at: datetime
 
 

@@ -10,6 +10,8 @@ import json
 import re
 from typing import Any
 
+from app.agent.domains import is_mri
+
 ABSTRACT_WORDS = (150, 220)
 _FENCE_RE = re.compile(r"```(mermaid|chart|image|table)[ \t]*\n(.*?)```", re.DOTALL)
 _HEAD_RE = re.compile(r"^(#{1,3})\s+(.*)$", re.MULTILINE)
@@ -226,7 +228,7 @@ def check_consistency(text: str) -> list[str]:
         + check_acronyms(text)
         + _check_numbering(text)
         + _check_formulas(text)
-        + _check_dice_scale(text)
+        + (_check_dice_scale(text) if is_mri() else [])
     )
 
 

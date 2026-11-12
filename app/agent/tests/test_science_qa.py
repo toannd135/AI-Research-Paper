@@ -1,5 +1,7 @@
 """Scientific Consistency QA: mỗi luật có một ca bắt lỗi và một ca hợp lệ (không báo nhầm)."""
 
+import pytest
+
 from app.agent.evidence.quant_check import ResultRecord
 from app.agent.evidence.science_qa import (
     check_absence_claims,
@@ -10,6 +12,9 @@ from app.agent.evidence.science_qa import (
     check_terminology,
     run_science_qa,
 )
+
+# Fixture BraTS/MRI: các kiểm tra ở đây thuộc chế độ MRI não (app/agent/domains.py)
+pytestmark = pytest.mark.usefixtures("mri_domain")
 
 
 def _r(variant=None, value=0.9, spread=None):
@@ -141,7 +146,10 @@ def test_scope_flags_abstract_range_shorter_than_reference_years():
 
 
 def test_terminology_flags_deepfake_variants():
+    from app.agent.domains import DEEPFAKE, set_domain
     from app.agent.evidence.science_qa import check_terminology
+
+    set_domain(DEEPFAKE)
 
     out = check_terminology("A deepfake detector. Many deep-fakes exist. multimodal and multi-modal cues; AUROC and ROC-AUC.")
     joined = " ".join(out)

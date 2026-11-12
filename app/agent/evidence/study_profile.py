@@ -36,6 +36,22 @@ ATTRIBUTES: dict[str, re.Pattern[str]] = {
         r"all (?:15|fifteen|possible) (?:modality )?(?:combinations|subsets)|every (?:possible )?(?:combination|subset) of (?:the )?(?:input |available )?modalit",
         re.I,
     ),
+    # chế độ deepfake: kiểm tra tổng quát hoá và độ bền
+    "cross_dataset_eval": re.compile(
+        r"cross[- ](?:dataset|domain|database|corpus) (?:evaluation|test\w*|setting|experiment\w*|generali[sz]ation|performance)"
+        r"|(?:trained|train) on [\w+-]+(?: \w+){0,4} (?:and )?test(?:ed)? on",
+        re.I,
+    ),
+    "unseen_generator": re.compile(
+        r"unseen (?:generators?|manipulations?|forgery (?:types|methods)|attacks?|gan\w*|diffusion models?)"
+        r"|cross[- ](?:generator|manipulation|forgery|method) (?:evaluation|test\w*|setting|generali[sz]ation)",
+        re.I,
+    ),
+    "compression_robustness": re.compile(
+        r"\bc23\b|\bc40\b|(?:robust\w*|resilien\w*) (?:to|against) (?:\w+ ){0,3}(?:compression|perturbation\w*|blur|noise|resiz\w*)"
+        r"|(?:compression|perturbation)[- ]robust\w*|adversarial (?:attack|perturbation)s?",
+        re.I,
+    ),
     "uncertainty": re.compile(
         r"uncertaint\w*|calibrat\w*|expected calibration error|\bECE\b|monte[- ]carlo dropout|out[- ]of[- ]distribution|\bOOD\b|failure detection",
         re.I,

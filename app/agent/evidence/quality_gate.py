@@ -161,9 +161,12 @@ def run_quality_gate(
     blocking += check_axis_count(text)
     titles = {n: str((catalog.get(c.paper_id) or {}).get("title", "")) for n, c in enumerate(citations, start=1)}
     blocking += [f"gán sai loại nguồn: {p}" for p in check_prior_survey_claims(text, titles)]
-    n_missing_groups = _missing_modality_groups(state)
-    blocking += [f"phủ nhận sai: sổ cái có {n_missing_groups} nhóm missing-modality nhưng bài nói chưa trích xuất: {p}" for p in check_limitation_denial(text, n_missing_groups)]
-    blocking += [f"bản ghi/ledger bị mô tả có cấu hình missing-modality nhưng sổ cái không có: {p}" for p in check_ledger_claims(text, n_missing_groups)]
+    from app.agent.domains import is_mri
+
+    if is_mri():  # kiểm tra missing-modality chỉ áp cho chế độ MRI não
+        n_missing_groups = _missing_modality_groups(state)
+        blocking += [f"phủ nhận sai: sổ cái có {n_missing_groups} nhóm missing-modality nhưng bài nói chưa trích xuất: {p}" for p in check_limitation_denial(text, n_missing_groups)]
+        blocking += [f"bản ghi/ledger bị mô tả có cấu hình missing-modality nhưng sổ cái không có: {p}" for p in check_ledger_claims(text, n_missing_groups)]
     distinct_papers = {getattr(c, "paper_id", None) for c in all_citations} - {None, ""}
     blocking += [f"số lượng nghiên cứu sai: {p}" for p in check_paper_counts(text, max(len(catalog), len(distinct_papers)))]
     if state.get("research_mode", "survey") != "novel_research" and not any(

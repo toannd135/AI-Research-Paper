@@ -78,9 +78,18 @@ def compare(a: ResultRecord, b: ResultRecord) -> tuple[str, list[str]]:
     if _norm(a.metric) != _norm(b.metric):
         verdicts.append((NOT_COMPARABLE, f"khác metric: {a.metric} ≠ {b.metric}"))
     strict("dataset", a.dataset, b.dataset)
-    strict("phiên bản dataset", a.dataset_version, b.dataset_version)
     strict("split", a.split, b.split)
-    strict("vùng/lớp", a.region, b.region)
+    from app.agent.domains import is_mri
+
+    if is_mri():  # BraTS: phiên bản (năm) và vùng WT/TC/ET bắt buộc
+        strict("phiên bản dataset", a.dataset_version, b.dataset_version)
+        strict("vùng/lớp", a.region, b.region)
+    else:  # chế độ khác: không có vùng; phiên bản chỉ chặn khi cả hai cùng ghi mà khác nhau
+        va, vb = _norm(a.dataset_version), _norm(b.dataset_version)
+        if va and vb and va != vb:
+            verdicts.append((NOT_COMPARABLE, f"khác phiên bản dataset: {a.dataset_version} ≠ {b.dataset_version}"))
+        elif (va is None) != (vb is None):
+            verdicts.append((CONDITIONALLY_COMPARABLE, "một nguồn không ghi phiên bản dataset"))
     if _norm(a.unit) != _norm(b.unit):
         verdicts.append((NOT_COMPARABLE, f"khác đơn vị gốc: {a.unit} ≠ {b.unit} (không tự chuyển đổi)"))
     if _norm(a.metric_definition) and _norm(b.metric_definition) and _norm(a.metric_definition) != _norm(b.metric_definition):
@@ -110,7 +119,10 @@ def group_comparable(records: list[ResultRecord]) -> dict:
             rejected.append((rec, problems))
             continue
         key = (_norm(rec.dataset), _norm(rec.dataset_version), _norm(rec.split), _norm(rec.region), _norm(rec.metric), _norm(rec.unit))
-        if None in key[:5]:
+        from app.agent.domains import is_mri
+
+        # MRI: dataset/phiên bản/split/vùng/metric đều bắt buộc; chế độ khác chỉ cần dataset/split/metric
+        if None in ((key[:5]) if is_mri() else (key[0], key[2], key[4])):
             unverified.append(rec)
             continue
         groups.setdefault(key, []).append(rec)
@@ -137,7 +149,10 @@ def check_chart_block(raw_json: str) -> list[str]:
     series = spec.get("series") if isinstance(spec.get("series"), list) else []
     names = " ".join(str(s.get("name", "")) for s in series if isinstance(s, dict))
     text = f"{spec.get('caption', '')} {names} {spec.get('y_label', '')}"
-    regions = {_REGION_CANON.get(m.lower(), m.upper()) for m in _REGION_RE.findall(text)}
+    from app.agent.domains import is_mri
+
+    # vùng u WT/TC/ET chỉ có nghĩa ở chế độ MRI não
+    regions = {_REGION_CANON.get(m.lower(), m.upper()) for m in _REGION_RE.findall(text)} if is_mri() else set()
     metrics = {m.lower() for m in _METRIC_RE.findall(f"{names} {spec.get('y_label', '')}")}
     problems: list[str] = []
     if len(regions) > 1:

@@ -19,6 +19,7 @@ import re
 from datetime import date
 from typing import Any
 
+from app.agent.domains import GENERAL, current_domain, domain_rules, domain_stage4, is_mri
 from app.agent.evidence.citation_cleaner import _local_catalog, clean_and_deduplicate_citations_ex
 from app.agent.evidence.claim_scan import find_leaked_claims, soften_leaked_claims
 from app.agent.evidence.coverage import coverage_target, full_coverage_applies
@@ -161,9 +162,9 @@ STRICT PEER-REVIEW PUBLICATION STANDARDS (MANDATORY ACROSS ALL SECTIONS):
    - Use exactly the title, acronym, notation, terminology and numbers fixed in the ESTABLISHED DESIGN PLAN. A number or symbol appearing in two sections must be identical.
    - Every mathematical symbol must be defined where it first appears. Only introduce formulas that are necessary and correct.
    - TAXONOMY AXES: state the number of taxonomy axes ONCE and identically in the Abstract, the Contributions and the taxonomy section, and list exactly those axes. An evaluation-coverage attribute that is not a method-classification axis is a separate 'evaluation dimension', not an extra axis.
-   - SCOPE OF EVIDENCE: a result reported by ONE study (e.g. one paper's all-subset table) supports a conclusion only for that study's setting; never present it as the best paradigm of the field. Do not draw a general conclusion about a method family from a value whose configuration is unknown/NR. State whether a table cell is NR because the source does not report it or because the retrieved passages did not contain it. When averaging Dice over the number of available modalities, also give the min/max or per-subset values.
-   - TAXONOMY ASSIGNMENT: classify only methods/models, not challenges, datasets or general-purpose backbones; keep segmentation, missing-modality-learning and synthesis-only methods in clearly separated groups; give an assignment rationale (or 'Unclear'/'NR' when the retrieved evidence does not decide) instead of forcing a label.
-   - LEDGER CLAIMS: describe the structured numeric records exactly as the EVIDENCE LIMITS state them (which settings they cover, which papers contributed). Never say the records carry a missing-modality configuration unless the EVIDENCE LIMITS report missing-modality groups; the Abstract, tables and Limitations must agree.
+   - SCOPE OF EVIDENCE: a result reported by ONE study (e.g. one paper's all-subset table) supports a conclusion only for that study's setting; never present it as the best paradigm of the field. Do not draw a general conclusion about a method family from a value whose configuration is unknown/NR. State whether a table cell is NR because the source does not report it or because the retrieved passages did not contain it.
+   - TAXONOMY ASSIGNMENT: classify only methods/models, not challenges, datasets or general-purpose backbones; keep different method families in clearly separated groups; give an assignment rationale (or 'Unclear'/'NR' when the retrieved evidence does not decide) instead of forcing a label.
+   - LEDGER CLAIMS: describe the structured numeric records exactly as the EVIDENCE LIMITS state them (which settings they cover, which papers contributed). the Abstract, tables and Limitations must agree.
 6. ACADEMIC MODESTY & HONESTY:
    - Avoid hype ('first', 'novel breakthrough', 'proves') unless supported by the evidence. Never claim 'the first comprehensive' survey/mapping; the corpus is a fixed PDF collection, so state the contribution with its exact scope (e.g. 'a corpus-based synthesis of N studies'). Name prior surveys in the Introduction only if they are in Available Citations and compare them in Related Work. Prefer 'we propose', 'we hypothesize', 'the evidence suggests'.
    - Acknowledge limitations, heterogeneity of the evidence and threats to validity candidly.
@@ -182,9 +183,10 @@ STRICT PEER-REVIEW PUBLICATION STANDARDS (MANDATORY ACROSS ALL SECTIONS):
             "   - Results of the proposed method that have not been run must be marked '*Not Exp.*'; never fill in assumed numbers for it.\n"
             "   - Baseline numbers may be reported only if they are published in the cited source [n].\n"
         )
-    if _JUDGE_TOPIC_RE.search(f"{state.get('question', '')} {state.get('draft', '')}"):
+    if current_domain() == GENERAL and _JUDGE_TOPIC_RE.search(f"{state.get('question', '')} {state.get('draft', '')}"):
         rules += f"9. BENCHMARK DATASET GROUNDING:\n{get_dataset_grounding_context()}\n"
     rules += adaptation_rules(state)
+    rules += domain_rules()
     figures = state.get("figures") or []
     if figures:
         listing = "\n".join(
@@ -429,11 +431,71 @@ def _stage_structure(state: ResearchState, mode: str, stage: str) -> tuple[str, 
     title, structure = _structure(mode, stage)
     if stage in ("stage3", "stage4") and contribution_guidance(state):
         structure += "\n" + contribution_guidance(state)
-    if stage == "stage4" and field_profile(state)["stage4"]:
-        structure += "\n" + field_profile(state)["stage4"]
+    if stage == "stage4" and field_profile(state)["stage4"] and not _heading_exists(structure, field_profile(state)["stage4"]):
+        structure += "\n" + _number_extra_headings(structure, field_profile(state)["stage4"])
+    structure = _domain_stage(structure)
+    if stage == "stage4" and domain_stage4():
+        structure += "\n" + _number_extra_headings(structure, domain_stage4())
     if stage == "stage5" and audience_profile(state)["end"]:
         structure += "\n\nAFTER THE CONCLUSION, add these unnumbered sections:\n" + audience_profile(state)["end"]
     return title, structure
+
+
+# Câu chữ MRI gốc trong _STAGE_STRUCTURES → câu chữ của chế độ hiện tại (MRI: giữ nguyên/bổ sung; chung/deepfake: bỏ MRI).
+_DOMAIN_STAGE_KEYS = (
+    ("sub-region/class (e.g. whole tumor, tumor core and enhancing tumor are three different quantities)", "comparability_example"),
+    ("architecture, dataset and version, input modalities, metrics, reported values, stated limitations", "extraction_fields"),
+    ("sub-region/class, metric, value", "table_group_col"),
+    (
+        "(e.g. one barh ranking of a single metric, one grouped bar across regions, one heatmap of methods x regions, "
+        "or a line over the number of available modalities when the sources report it), each restricted to ONE comparable setting "
+        "(same dataset version, same region, same metric)",
+        "chart_examples",
+    ),
+    (
+        "Split the evidence into separate charts, e.g. Dice for whole tumor, Dice for tumor core, Dice for enhancing tumor on the same dataset version, "
+        "or HD95 on its own; one chart per region/metric. Never plot values from incomparable settings on one axis, never mix Dice with HD95 or with parameter counts,",
+        "chart_split",
+    ),
+    ("### 6.2 Generalization, Robustness & Clinical/Deployment Concerns\n", "robustness_heading"),
+    (
+        "- Go beyond accuracy: treat clinical reliability as separate dimensions — external / multi-centre validation, scanner or protocol shift, uncertainty estimation and calibration, "
+        "failure / out-of-distribution detection, robustness to absent or corrupted inputs, computational cost, and reproducibility (code availability). ",
+        "robustness_body",
+    ),
+)
+
+
+def _number_extra_headings(structure: str, extra: str) -> str:
+    """Mục bổ sung '### Tên' → '### N.M Tên' tiếp nối số mục con cuối cùng của khung (vd. 5.5 → 5.6, 5.7)."""
+    nums = re.findall(r"^###\s*(\d+)\.(\d+)\b", structure, re.M)
+    if not nums:
+        return extra
+    top, sub = nums[-1][0], int(nums[-1][1])
+
+    def _num(m: re.Match) -> str:
+        nonlocal sub
+        sub += 1
+        return f"### {top}.{sub} {m.group(1)}"
+
+    return re.sub(r"^###\s+(?!\d)(.+)$", _num, extra, flags=re.M)
+
+
+def _heading_exists(structure: str, extra: str) -> bool:
+    """Mục bổ sung theo lĩnh vực trùng tên một mục đã có (vd. 'Qualitative Visual Comparison' = 5.3) → không thêm lần hai."""
+    m = re.search(r"^###\s*(?:\d+(?:\.\d+)*\s+)?(.+)$", extra, re.M)
+    if not m:
+        return False
+    title = m.group(1).strip().lower()
+    return any(h.strip().lower() == title for h in re.findall(r"^###\s*(?:\d+(?:\.\d+)*\s+)?(.+)$", structure, re.M))
+
+
+def _domain_stage(structure: str) -> str:
+    from app.agent.domains import stage_text
+
+    for original, key in _DOMAIN_STAGE_KEYS:
+        structure = structure.replace(original, stage_text(key))
+    return structure
 
 
 def _mode_label(mode: str) -> str:
@@ -1035,9 +1097,12 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
         raw_stitched = inject_quant_blocks(raw_stitched, build_quant_blocks(records, paper_to_n, attrs, tiers))
 
     # Kho nhỏ phải cite hết: liệt kê paper chưa cite bằng chỉ số [k] thô, TRƯỚC khi đánh số lại
-    from app.core.scope import get_allowed_paper_ids
+    from app.core.scope import get_allowed_paper_ids, is_local_only
 
-    citations = pad_corpus_citations(citations, get_allowed_paper_ids(), _local_catalog())
+    # chỉ phủ trọn kho khi task chạy TRONG một kho; không chọn kho (chế độ chung/OpenAlex) thì không kéo cả catalog trên đĩa
+    # vào bài (vd. bài chung/deepfake bị chèn danh sách bài BraTS)
+    if is_local_only():
+        citations = pad_corpus_citations(citations, get_allowed_paper_ids(), _local_catalog())
     try:
         raw_stitched, _ = add_uncited_corpus(raw_stitched, citations, _local_catalog())
     except (KeyError, ValueError, TypeError, AttributeError, OSError):
@@ -1071,14 +1136,16 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
         logger.warning("Chất lượng nguồn: %s", warning)
     # Repair tất định cho lỗi chặn mà gate chỉ báo: biểu đồ trộn vùng, câu ledger missing-modality khi sổ cái không có
     try:
-        updated_text, _ = repair_chart_regions(updated_text)
+        if is_mri():
+            updated_text, _ = repair_chart_regions(updated_text)
         updated_text, _ = drop_duplicate_charts(updated_text)
     except (KeyError, ValueError, TypeError, AttributeError):
         logger.exception("Sửa biểu đồ trộn vùng lỗi, giữ nguyên")
     try:
         from app.agent.evidence.quality_gate import _missing_modality_groups
 
-        updated_text, _ = repair_ledger_claims(updated_text, _missing_modality_groups(state))
+        if is_mri():
+            updated_text, _ = repair_ledger_claims(updated_text, _missing_modality_groups(state))
     except (KeyError, ValueError, TypeError, AttributeError):
         logger.exception("Sửa câu ledger missing-modality lỗi, giữ nguyên")
     updated_text, _ = soften_promotional_claims(updated_text)

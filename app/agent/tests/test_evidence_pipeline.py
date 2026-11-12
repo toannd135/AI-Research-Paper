@@ -3,6 +3,8 @@ import re
 from dataclasses import replace
 from types import SimpleNamespace
 
+import pytest
+
 from app.agent.evidence.consistency_check import check_consistency
 from app.agent.evidence.external_verify import external_verify
 from app.agent.evidence.extractor import BATCH_SIZE, extract_results, records_from_dicts, records_to_dicts
@@ -25,6 +27,9 @@ from app.agent.evidence.study_profile import study_attributes
 from app.agent.evidence.traceability import extract_numeric_claims
 from app.agent.report_postprocess import postprocess_report
 from app.pipeline.export import validation_gate
+
+# Fixture BraTS/MRI: các kiểm tra ở đây thuộc chế độ MRI não (app/agent/domains.py)
+pytestmark = pytest.mark.usefixtures("mri_domain")
 
 
 class _GW:
@@ -54,7 +59,10 @@ def _item(**kw):
 
 # ---- P1 (deepfake: AUC/EER, không có region)
 def test_extract_deepfake_metrics_without_region_and_eer_is_lower_better():
+    from app.agent.domains import DEEPFAKE, set_domain
     from app.agent.evidence.stats import lower_is_better
+
+    set_domain(DEEPFAKE)  # metric AUC/EER thuộc chế độ deepfake
 
     ev = [_chunk("pD", 6, "Table 3. Cross-dataset on Celeb-DF. Ours AUC 96.4 EER 8.7 acc 91.2")]
     items = [

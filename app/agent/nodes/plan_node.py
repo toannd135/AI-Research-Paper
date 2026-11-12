@@ -95,7 +95,10 @@ def plan_node(state: ResearchState, llm: LLMGateway | None = None) -> ResearchSt
         contribution = contribution_from_mode(mode)
     profile = CONTRIBUTION_TYPES[contribution]
 
-    field = normalize_field(state.get("field")) or detected_field or detect_field(question)
+    from app.agent.domains import domain_field
+
+    # người dùng chọn > lĩnh vực cố định của chế độ (MRI → y khoa, deepfake → thị giác máy) > LLM/từ khoá đoán
+    field = normalize_field(state.get("field")) or domain_field() or detected_field or detect_field(question)
     topic = parsed_dict.get("topic") if isinstance(parsed_dict.get("topic"), str) and parsed_dict["topic"].strip() else question
 
     return {

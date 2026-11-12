@@ -6,7 +6,7 @@ import math
 from typing import Any
 
 ALPHA = 0.05
-_LOWER_IS_BETTER = ("hd95", "hausdorff", "latency", "loss", "error", "time", "cost", "rmse", "mae", "mse", "fid", "lpips", "memory", "flops", "params", "overhead", "fpr", "eer", "assd", "asd")  # ASSD/ASD: khoảng cách bề mặt (mm)
+_LOWER_IS_BETTER = ("hd95", "hausdorff", "latency", "loss", "error", "time", "cost", "rmse", "mae", "mse", "fid", "lpips", "memory", "flops", "params", "overhead", "fpr", "eer", "hter", "frr", "apcer", "bpcer", "assd", "asd")  # ASSD/ASD: khoảng cách bề mặt (mm)
 
 
 def lower_is_better(metric: str | None) -> bool:

@@ -80,8 +80,10 @@ def search_node(state: ResearchState) -> ResearchState:
 
 
 def _results_query(state: ResearchState, topic: str) -> str:
-    """Truy vấn nhắm bảng kết quả định lượng: chủ đề + metric chuẩn của lĩnh vực (profiles.py)."""
-    return f"{topic} quantitative results table comparison {field_profile(state)['metrics']}"
+    """Truy vấn nhắm bảng kết quả định lượng: chủ đề + metric của chế độ (MRI/deepfake) hoặc của lĩnh vực (profiles.py)."""
+    from app.agent.domains import result_query_metrics
+
+    return f"{topic} quantitative results table comparison {result_query_metrics() or field_profile(state)['metrics']}"
 
 
 def _local_only_evidence(queries: list[str], max_per_paper: int) -> list:
