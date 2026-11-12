@@ -69,7 +69,7 @@ KNOWN_DATASETS: dict[str, dict[str, Any]] = {
 def get_dataset_grounding_context() -> str:
     """Trả về chuỗi context đặc tả quy mô dataset chuẩn để đưa vào System Prompt."""
     lines = ["GROUND-TRUTH BENCHMARK DATASET SPECIFICATIONS (DO NOT HALLUCINATE SIZES OR LABELS):"]
-    for key, info in KNOWN_DATASETS.items():
+    for info in KNOWN_DATASETS.values():
         subsets_str = f", subsets: {info['subsets']}" if "subsets" in info else ""
         lines.append(
             f"- {info['canonical_name']} ({info['primary_authors']}, {info['year']}): "

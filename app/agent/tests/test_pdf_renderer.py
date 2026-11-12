@@ -219,7 +219,7 @@ def test_front_matter_authors_on_separate_lines_and_status_note():
     doc = report_to_html(md)
     assert '<div class="authors"> A One, B Two</div>' in doc.replace("  ", " ") or 'class="authors"' in doc
     assert 'class="affil"' in doc and 'class="meta"' in doc and "Pre-registration" in doc
-    front, _, rest = doc.partition('<main class="paper-body')
+    front, _, _rest = doc.partition('<main class="paper-body')
     assert 'class="abstract"' in front  # abstract nằm ngoài phần 2 cột, dù có <hr> phía trước
 
 

@@ -235,3 +235,29 @@ def test_synthesize_uses_single_canonical_rq_set():
     secs = section_rqs(out["report"])
     assert len(secs) == 1 and all([b for _, b in v] == canon for v in secs.values()), "RQ chỉ được liệt kê một lần"
     assert check_rq_definitions(out["report"]) == []
+
+
+def test_pad_corpus_citations_adds_unretrieved_scope_papers():
+    """Paper trong phạm vi không có chunk được truy xuất vẫn được thêm (cuối danh sách) để có [k] và References."""
+    from app.agent.evidence.repair import add_uncited_corpus
+    from app.agent.nodes.synthesize_node import pad_corpus_citations
+    from app.core.schemas import Citation
+
+    cits = [Citation(paper_id="p1", chunk_id="c1", text_snippet="x"), Citation(paper_id="p2", chunk_id="c2", text_snippet="y")]
+    catalog = {"p1": {"title": "A"}, "p2": {"title": "B"}, "p3": {"title": "Unretrieved Study"}}
+    padded = pad_corpus_citations(cits, {"p1", "p2", "p3"}, catalog)
+    assert [c.paper_id for c in padded] == ["p1", "p2", "p3"] and padded[2].text_snippet == ""
+    assert padded[:2] == cits  # chỉ số [k] cũ giữ nguyên
+    assert [c.paper_id for c in pad_corpus_citations(cits, None, catalog)] == ["p1", "p2", "p3"]  # None -> khóa catalog
+    assert pad_corpus_citations(cits, {"p1", "p2"}, catalog) is cits
+    text, missing = add_uncited_corpus("## 1. Intro\n\nUses [1] and [2].\n\n## References\n", padded, catalog)
+    assert missing == ["p3"] and "*Unretrieved Study* [3]" in text
+
+
+def test_pad_corpus_citations_skips_large_corpus(monkeypatch):
+    from app.agent.evidence import coverage
+    from app.agent.nodes.synthesize_node import pad_corpus_citations
+
+    monkeypatch.setattr(coverage, "get_settings", lambda: type("S", (), {"full_corpus_coverage_limit": 2})())
+    cits = [{"paper_id": "p1"}]
+    assert pad_corpus_citations(cits, {"p1", "p2", "p3"}, {}) is cits

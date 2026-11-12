@@ -19,9 +19,7 @@ _MERMAID_BLOCK_RE = re.compile(r"```mermaid[ \t]*\n(.*?)```", re.DOTALL)
 def _clean_mermaid_label(raw: str) -> str:
     """Làm sạch nội dung label bên trong node Mermaid."""
     s = raw.strip()
-    if s.startswith('"') and s.endswith('"') and len(s) >= 2:
-        s = s[1:-1]
-    elif s.startswith("'") and s.endswith("'") and len(s) >= 2:
+    if (s.startswith('"') and s.endswith('"') and len(s) >= 2) or (s.startswith("'") and s.endswith("'") and len(s) >= 2):
         s = s[1:-1]
 
     # Preserve LaTeX groups and commands (including \nabla) inside math labels.
@@ -203,7 +201,8 @@ def sanitize_author_placeholders(text: str) -> str:
 
 _VISUAL_FENCE = r"```(?P<kind>image|chart|table|mermaid)[ \t]*\n(?P<body>.*?)\n```"
 _CAPTION_THEN_BLOCK_RE = re.compile(
-    r"^\*\*(?P<label>Figure|Fig\.|Table)\s*\d+\s*[:.]\s*(?P<cap>.+?)\*\*[ \t]*\n(?:[ \t]*\n)*" + _VISUAL_FENCE,
+    # caption chỉ trong MỘT dòng: với DOTALL, '.+?' từng nuốt từ "**Table N: …**" của bảng pipe tới khối fence ở mục sau (mất cả mục)
+    r"^\*\*(?P<label>Figure|Fig\.|Table)[ \t]*\d+[ \t]*[:.][ \t]*(?P<cap>[^\n]+?)\*\*[ \t]*\n(?:[ \t]*\n)*" + _VISUAL_FENCE,
     re.MULTILINE | re.DOTALL | re.IGNORECASE,
 )
 

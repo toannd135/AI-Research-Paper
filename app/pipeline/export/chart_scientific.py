@@ -39,7 +39,7 @@ def _floats(seq) -> list[float]:
 def _pairs(xs, ys, errs=None) -> list[tuple[float, float, float | None]]:
     """Ghép (x, y, err); bỏ điểm thiếu x hoặc y."""
     pts = []
-    for i, (x, y) in enumerate(zip(xs, ys)):
+    for i, (x, y) in enumerate(zip(xs, ys, strict=False)):
         fx, fy = _floats([x]), _floats([y])
         if not fx or not fy:
             continue
@@ -137,13 +137,13 @@ def _draw_heatmap(fig, ax, spec: dict) -> int:
     for yi, row in enumerate(matrix):
         for xi, v in enumerate(row):
             if math.isnan(v):
-                ax.text(xi, yi, "NR", ha="center", va="center", fontsize=6.5, color="#777")
+                ax.text(xi, yi, "NR", ha="center", va="center", fontsize=7, color="#777")
                 continue
             t = (v - vmin) / ((vmax - vmin) or 1.0)
             dark = (t < 0.2 or t > 0.8) if diverging else (t < 0.45 if hi <= 0 else t < 0.6)
             signed = diverging or hi <= 0
             v = 0.0 if abs(v) < 1e-9 else v  # tránh "-0"
-            ax.text(xi, yi, f"{v:+.3g}" if signed and v else f"{v:g}", ha="center", va="center", fontsize=6.5, color="white" if dark else "#222")
+            ax.text(xi, yi, f"{v:+.3g}" if signed and v else f"{v:g}", ha="center", va="center", fontsize=7, color="white" if dark else "#222")
     fig.colorbar(im, ax=ax, fraction=0.04, pad=0.02, label=spec.get("c_label", ""))
     return 1
 

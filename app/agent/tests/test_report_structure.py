@@ -137,7 +137,7 @@ def test_finalize_numbers_figures_by_block_and_drops_ghost_caption():
     assert "Ghost desc" not in out and "scatter plot" not in out
     assert "**Figure 1: A.**" in out and "Figure 1 shows A." in out
     assert "**Figure 3: B.**" in out  # khối thứ 2 (tự chèn, không chú thích) vẫn chiếm số 2
-    fixed, dangling, _ = finalize_structure_report(out + "\n\nSee Figure 2.")
+    _fixed, dangling, _ = finalize_structure_report(out + "\n\nSee Figure 2.")
     assert dangling == []
 
 
@@ -381,7 +381,7 @@ def test_corpus_flow_is_horizontal_with_short_labels():
     from app.agent.evidence.corpus_flow import corpus_flow_block, inject_corpus_flow
 
     block = corpus_flow_block(52, 52, 45, 12)
-    assert "flowchart LR" in block and "Cited in this review (n = 45)" in block
+    assert "flowchart TD" in block and "Cited in this review (n = 45)" in block
     legacy = "## 2. M\n**Figure 1: x**\n\n```mermaid\nflowchart TD\n  C[\"Papers cited in this review (n = 45)\"]\n```\n### 2.3 B\n"
     assert inject_corpus_flow(legacy, block) == legacy  # bài cũ đã có sơ đồ: không chèn lần hai
 
@@ -393,3 +393,25 @@ def test_render_meta_sentence_after_bold_figure_lead_is_removed():
     out, changes = fix_internal_draft_refs(text)
     assert "**Figure 2** presents the tree." in out and "rendered left-to-right" not in out
     assert "**Figure 2: Tree (graph LR).**" in out and changes
+
+
+def test_fix_dangling_section_refs_maps_by_keyword_or_drops():
+    from app.agent.evidence.report_structure import finalize_structure_report, fix_dangling_section_refs
+
+    text = (
+        "## 1. Introduction\n\nThe research questions are answered in Section 8 and Section 9. "
+        "These constraints are acknowledged in Section 9 as limitations. "
+        "We outline future directions in Section 8.3. Quantitative performance is compared in Section 5. Datasets are listed (see Section 12).\n\n"
+        "## 5. Comparative Evidence Synthesis\n\nText.\n\n## 6. Discussion\n\n### 6.1 Technical Barriers & Trade-offs\n\nT.\n\n"
+        "### 6.3 Limitations of this Review\n\nL.\n\n### 6.4 Open Research Directions\n\nD.\n\n"
+        "```mermaid\ngraph TD\nA[\"Section 9\"]\n```\n\n## References\n\n[1] Section 9 of a book.\n"
+    )
+    fixed, changes = fix_dangling_section_refs(text)
+    assert "answered in this review." in fixed
+    assert "acknowledged in Section 6.3 as limitations" in fixed
+    assert "future directions in Section 6.4." in fixed
+    assert "compared in Section 5." in fixed and "Datasets are listed." in fixed
+    assert 'A["Section 9"]' in fixed and "[1] Section 9 of a book." in fixed  # code fence & References giữ nguyên
+    assert len(changes) == 4
+    out, _, _ = finalize_structure_report(text)
+    assert "Section 8" not in out.split("## References")[0].replace('A["Section 9"]', "")

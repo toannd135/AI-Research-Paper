@@ -73,7 +73,7 @@ docker exec paperai-postgres-1 psql -U paperai -d paperai -tAc \
 Bình thường: `pending` → `processing` → `done`, độ dài report > 0. `failed` thì xem cột lỗi và log ở tab worker.
 
 Chuỗi dự phòng LLM khi gặp 429 (rate limit) hoặc 413 (request quá lớn):
-OpenRouter khóa 1 (`OPENROUTER_MODEL`) → Groq (`GROQ_MODEL`) → OpenRouter khóa 2 (`OPENROUTER_MODEL_2`, trống thì dùng `OPENROUTER_MODEL`).
+OpenRouter khóa 1 (`OPENROUTER_MODEL`) → (lỗi bất kỳ) OpenRouter khóa 2 (`OPENROUTER_MODEL_2`, trống thì dùng `OPENROUTER_MODEL`) → (429/413) Groq (`GROQ_MODEL`).
 
 ## Bước 9. Xuất PDF LaTeX và BibTeX
 ```bash

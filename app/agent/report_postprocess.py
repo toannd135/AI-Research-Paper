@@ -603,7 +603,7 @@ def _translate_table(block: str, target: str, gateway: LLMGateway, model_name: s
     if out:
         out = _strip_fence(out)
         a, b = block.strip().split("\n"), out.split("\n")
-        if len(a) == len(b) and all(x.count("|") == y.count("|") for x, y in zip(a, b)):
+        if len(a) == len(b) and all(x.count("|") == y.count("|") for x, y in zip(a, b, strict=True)):
             return out
     return block
 
@@ -672,7 +672,7 @@ def translate_foreign_paragraphs(text: str, target: str, gateway: LLMGateway | N
             fence = re.match(r"```(table|chart|mermaid)[ \t]*\n(.*?)\n?```$", part, re.DOTALL)
             if fence and _is_foreign_short(fence.group(2), target):
                 kind, inner = fence.groups()
-                new = (_translate_mermaid if kind == "mermaid" else lambda b, *a: _translate_json_block(kind, b, *a))(inner, target, gateway, model_name)
+                new = (_translate_mermaid if kind == "mermaid" else lambda b, *a, kind=kind: _translate_json_block(kind, b, *a))(inner, target, gateway, model_name)
                 parts[i] = f"```{kind}\n{new.strip()}\n```"
             continue
         for chunk in part.split("\n\n"):

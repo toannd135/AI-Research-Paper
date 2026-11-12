@@ -2,7 +2,14 @@
 
 import logging
 
-from app.ai.llm_gateway.base import LLMGateway, LLMRateLimitError, LLMRequestTooLargeError, LLMResponse, Message
+from app.ai.llm_gateway.base import (
+    LLMGateway,
+    LLMGatewayError,
+    LLMRateLimitError,
+    LLMRequestTooLargeError,
+    LLMResponse,
+    Message,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -10,21 +17,30 @@ logger = logging.getLogger(__name__)
 class FallbackGateway(LLMGateway):
     """Thử `primary`; khi gặp LLMRateLimitError/LLMRequestTooLargeError thì chuyển sang `fallback` với `fallback_model`.
 
-    Các lỗi khác (auth, timeout, response rỗng...) được raise nguyên trạng, không chuyển provider.
+    Mặc định các lỗi khác (auth, timeout, response rỗng...) được raise nguyên trạng, không chuyển provider.
+    `fallback_on` cho phép mở rộng tập lỗi kích hoạt dự phòng (vd. LLMGatewayError để chuyển khóa với mọi lỗi).
     """
 
-    def __init__(self, primary: LLMGateway, fallback: LLMGateway, fallback_model: str) -> None:
+    def __init__(
+        self,
+        primary: LLMGateway,
+        fallback: LLMGateway,
+        fallback_model: str,
+        fallback_on: tuple[type[LLMGatewayError], ...] = (LLMRateLimitError, LLMRequestTooLargeError),
+    ) -> None:
         self._primary = primary
         self._fallback = fallback
         self._fallback_model = fallback_model
+        self._fallback_on = fallback_on
 
     def generate(self, messages: list[Message], model_name: str) -> LLMResponse:
         try:
             return self._primary.generate(messages, model_name)
-        except (LLMRateLimitError, LLMRequestTooLargeError) as exc:
+        except self._fallback_on as exc:
             logger.warning(
-                "Provider chính lỗi (%s) với model %s, chuyển sang model dự phòng %s",
+                "Provider chính lỗi (%s: %s) với model %s, chuyển sang model dự phòng %s",
                 type(exc).__name__,
+                exc,
                 model_name,
                 self._fallback_model,
             )

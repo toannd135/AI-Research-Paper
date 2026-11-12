@@ -31,7 +31,8 @@ def corpus_flow_block(corpus_size: int | None, retrieved: int, cited: int, with_
         "no independent title/abstract screening or dual-reviewer selection was performed, so this is not a PRISMA flow diagram."
     )
     # vẽ ngang: 3–4 hộp thành một dải thấp trải cả trang thay vì một cột cao gần nửa trang
-    return caption + "\n\n```mermaid\nflowchart LR\n" + "\n".join(lines) + "\n```"
+    # dàn dọc (TD): 4 hộp dàn ngang rộng ~1100pt, thu vào trang chữ chỉ còn ~5.6pt; dọc thì vừa một cột, chữ ~8pt
+    return caption + "\n\n```mermaid\nflowchart TD\n" + "\n".join(lines) + "\n```"
 
 
 def inject_corpus_flow(report: str, block: str | None) -> str:

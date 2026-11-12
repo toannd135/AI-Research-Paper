@@ -130,3 +130,30 @@ def test_citations_inside_mermaid_and_chart_are_remapped():
     assert "Y1[2019]" in out  # cú pháp nút mermaid giữ nguyên
     assert "Sources: [1], [2]." in out
     assert '"values": [4]' in out  # mảng số trong chart giữ nguyên
+
+
+def test_local_catalog_falls_back_to_sibling_catalogs(tmp_path, monkeypatch):
+    """UPLOAD_DIR không có catalog -> gộp catalog.json của thư mục anh em, bỏ catalog.full.json."""
+    import json
+    from types import SimpleNamespace
+
+    from app.agent.evidence import citation_cleaner
+
+    (tmp_path / "papers").mkdir()
+    (tmp_path / "papers_brain").mkdir()
+    (tmp_path / "papers_brain" / "catalog.json").write_text(
+        json.dumps({"p1": {"title": "BraTS Fusion", "authors": "A, B", "year": "2023"}}), encoding="utf-8"
+    )
+    (tmp_path / "removed").mkdir()
+    (tmp_path / "removed" / "catalog.full.json").write_text(json.dumps({"p2": {"title": "X"}}), encoding="utf-8")
+    monkeypatch.setattr(citation_cleaner, "get_settings", lambda: SimpleNamespace(upload_dir=str(tmp_path / "papers")))
+    citation_cleaner._local_catalog.cache_clear()
+    try:
+        catalog = citation_cleaner._local_catalog()
+        assert set(catalog) == {"p1"}
+        # upload_dir có catalog riêng -> ưu tiên, không gộp thư mục anh em
+        (tmp_path / "papers" / "catalog.json").write_text(json.dumps({"p3": {"title": "Own"}}), encoding="utf-8")
+        citation_cleaner._local_catalog.cache_clear()
+        assert set(citation_cleaner._local_catalog()) == {"p3"}
+    finally:
+        citation_cleaner._local_catalog.cache_clear()

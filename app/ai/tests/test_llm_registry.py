@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from app.ai.llm_gateway.openrouter_adapter import OpenRouterAdapter
 from app.ai.llm_gateway.registry import (
     AVAILABLE_MODELS,
     DEFAULT_MODEL_ID,
@@ -10,7 +11,6 @@ from app.ai.llm_gateway.registry import (
     is_configured,
     resolve_model,
 )
-from app.ai.llm_gateway.openrouter_adapter import OpenRouterAdapter
 from app.core.config import Settings
 
 

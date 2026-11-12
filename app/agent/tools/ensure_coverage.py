@@ -13,20 +13,42 @@ from app.pipeline.vector_store.qdrant_client import list_paper_ids
 logger = logging.getLogger(__name__)
 
 
+def _scoped_corpus() -> set[str] | None:
+    """Paper trong Qdrant thuộc phạm vi người dùng; None khi không liệt kê được hoặc kho vượt `full_corpus_coverage_limit`."""
+    try:
+        corpus = list_paper_ids()
+    except (ResponseHandlingException, UnexpectedResponse, OSError):
+        logger.exception("Không liệt kê được paper trong Qdrant; bỏ qua bước bổ sung độ phủ kho")
+        return None
+    allowed = get_allowed_paper_ids()
+    if allowed is not None:
+        corpus &= allowed
+    return corpus if full_coverage_applies(len(corpus)) else None
+
+
+def collect_result_chunks(query: str, per_paper: int = 3) -> list[ScoredChunk]:
+    """Mỗi paper trong kho nhỏ: lấy `per_paper` chunk khớp nhất truy vấn bảng/kết quả định lượng.
+
+    Độc lập với evidence theo câu hỏi (vốn chỉ 1-2 chunk/paper, hiếm khi trúng bảng kết quả), chỉ dùng cho bước
+    trích số liệu (extractor) để ledger phủ được nhiều paper hơn.
+    """
+    corpus = _scoped_corpus()
+    if not corpus:
+        return []
+    out: list[ScoredChunk] = []
+    for pid in sorted(corpus):
+        out.extend(search_hybrid(query, top_k=per_paper, paper_id=pid))
+    logger.info("Chunk kết quả: %d chunk từ %d/%d paper", len(out), len({sc.chunk.paper_id for sc in out}), len(corpus))
+    return out
+
+
 def ensure_corpus_coverage(selected: list[ScoredChunk], query: str, per_paper: int = 1) -> list[ScoredChunk]:
     """Mỗi paper trong kho (theo phạm vi người dùng) có ≥1 chunk trong evidence; chunk bổ sung là chunk liên quan nhất tới `query`.
 
     Chỉ chạy khi kho ≤ `full_corpus_coverage_limit` paper; paper vector hóa chưa xong (không có trong Qdrant) thì không thể bổ sung.
     """
-    try:
-        corpus = list_paper_ids()
-    except (ResponseHandlingException, UnexpectedResponse, OSError):
-        logger.exception("Không liệt kê được paper trong Qdrant; bỏ qua bước bổ sung độ phủ kho")
-        return selected
-    allowed = get_allowed_paper_ids()
-    if allowed is not None:
-        corpus &= allowed
-    if not full_coverage_applies(len(corpus)):
+    corpus = _scoped_corpus()
+    if corpus is None:
         return selected
     have = {sc.chunk.paper_id for sc in selected}
     extra: list[ScoredChunk] = []

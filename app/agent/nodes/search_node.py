@@ -3,7 +3,7 @@ import time
 
 from app.agent.profiles import field_profile
 from app.agent.state import ResearchState
-from app.agent.tools.ensure_coverage import ensure_corpus_coverage
+from app.agent.tools.ensure_coverage import collect_result_chunks, ensure_corpus_coverage
 from app.core.config import get_settings
 from app.core.scope import external_search_allowed
 
@@ -39,8 +39,15 @@ def search_node(state: ResearchState) -> ResearchState:
     queries = state.get("search_queries") or [state["question"]]
     settings = get_settings()
 
+    # Chunk bảng/kết quả riêng cho từng paper (kho nhỏ) để bước trích số liệu không phụ thuộc evidence theo câu hỏi
+    result_evidence = collect_result_chunks(_results_query(state, queries[0]))
+
     if not external_search_allowed():
-        return {**state, "evidence": _local_only_evidence(queries, settings.local_max_chunks_per_paper)}
+        return {
+            **state,
+            "evidence": _local_only_evidence(queries, settings.local_max_chunks_per_paper),
+            "result_evidence": result_evidence,
+        }
 
     # 1. Tìm kiếm evidence trên CSDL nội bộ (Qdrant)
     internal_evidence = retrieve_evidence(queries)
@@ -69,7 +76,12 @@ def search_node(state: ResearchState) -> ResearchState:
             combined.append(sc)
 
     combined.sort(key=lambda s: s.score, reverse=True)
-    return {**state, "evidence": combined}
+    return {**state, "evidence": combined, "result_evidence": result_evidence}
+
+
+def _results_query(state: ResearchState, topic: str) -> str:
+    """Truy vấn nhắm bảng kết quả định lượng: chủ đề + metric chuẩn của lĩnh vực (profiles.py)."""
+    return f"{topic} quantitative results table comparison {field_profile(state)['metrics']}"
 
 
 def _local_only_evidence(queries: list[str], max_per_paper: int) -> list:

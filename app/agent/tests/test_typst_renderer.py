@@ -2,12 +2,14 @@
 
 import tempfile
 from pathlib import Path
+
 import pytest
+
 from app.pipeline.export.typst_renderer import (
     latex_to_typst_math,
+    markdown_to_typst,
     parse_markdown_table_to_typst,
     render_chart_spec_to_svg,
-    markdown_to_typst,
     render_report_to_pdf,
 )
 

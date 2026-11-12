@@ -24,17 +24,44 @@ from app.core.config import get_settings
 logger = logging.getLogger(__name__)
 
 
-@lru_cache(maxsize=1)
-def _local_catalog() -> dict[str, dict[str, str]]:
-    """Metadata của PDF nội bộ (`<upload_dir>/catalog.json`, khóa = paper_id); rỗng nếu không có."""
-    path = Path(get_settings().upload_dir) / "catalog.json"
-    if not path.is_file():
-        return {}
+def _read_catalog(path: Path) -> dict[str, dict[str, str]]:
+    """Đọc một tệp catalog.json; rỗng nếu lỗi hoặc sai định dạng."""
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         logger.exception("Không đọc được catalog %s", path)
         return {}
+    return data if isinstance(data, dict) else {}
+
+
+@lru_cache(maxsize=1)
+def _local_catalog() -> dict[str, dict[str, str]]:
+    """Metadata của PDF nội bộ (khóa = paper_id); rỗng nếu không có.
+
+    Ưu tiên `<upload_dir>/catalog.json`. Nếu không có (vd. UPLOAD_DIR mặc định `data/papers`
+    trong khi catalog thật ở `data/papers_brain/`), gộp mọi `catalog.json` trong các thư mục
+    con cấp 1 của thư mục cha upload_dir (không đọc catalog.full.json).
+    """
+    upload_dir = Path(get_settings().upload_dir)
+    path = upload_dir / "catalog.json"
+    if path.is_file():
+        return _read_catalog(path)
+    parent = upload_dir.parent
+    if not parent.is_dir():
+        return {}
+    merged: dict[str, dict[str, str]] = {}
+    found: list[str] = []
+    for candidate in sorted(parent.glob("*/catalog.json")):
+        if candidate.parent == upload_dir or not candidate.is_file():
+            continue
+        for pid, meta in _read_catalog(candidate).items():
+            merged.setdefault(pid, meta)
+        found.append(str(candidate))
+    if found:
+        logger.warning(
+            "Không có catalog tại %s; dùng catalog dự phòng: %s (%d paper)", path, ", ".join(found), len(merged)
+        )
+    return merged
 
 
 def _normalize_title(title: str) -> str:

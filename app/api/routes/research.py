@@ -7,8 +7,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-logger = logging.getLogger(__name__)
-
 from app.agent.clarify import clarify
 from app.ai.llm_gateway.base import LLMGatewayError
 from app.api.deps import can_access, get_current_user, get_current_user_or_query_token
@@ -20,13 +18,15 @@ from app.core.database import get_db
 from app.core.progress import read_progress
 from app.core.schemas import (
     Citation,
-    ResearchProgressEntry,
     ResearchClarificationResponse,
+    ResearchProgressEntry,
     ResearchRequest,
     ResearchStatus,
     ResearchTaskResponse,
 )
 from app.pipeline.tasks import run_research
+
+logger = logging.getLogger(__name__)
 
 # Không đặt get_current_user ở cấp router: route /pdf nhận token qua ?access_token= (mở tab mới, không có header).
 router = APIRouter(prefix="/research", tags=["research"])
@@ -205,8 +205,8 @@ def export_research_latex(
     try:
         bundle = export_latex_bundle(report, chart_format, survey_table, template)
     except Exception as e:
-        logger.exception("LaTeX export failed for task %s: %s", task_id, e)
-        raise HTTPException(status_code=500, detail=f"Lỗi khi xuất LaTeX: {e}")
+        logger.exception("LaTeX export failed for task %s", task_id)
+        raise HTTPException(status_code=500, detail=f"Lỗi khi xuất LaTeX: {e}") from e
     return Response(
         content=bundle,
         media_type="application/zip",
@@ -257,28 +257,28 @@ def export_research_pdf(
 
             pdf = render_report_to_pdf(clean_report, citations=citations_data)
         except Exception as e:
-            logger.exception("Typst rendering failed for task %s: %s", task_id, e)
+            logger.exception("Typst rendering failed for task %s", task_id)
             try:
                 from app.pipeline.export.pdf_renderer import report_to_pdf
 
                 pdf = report_to_pdf(clean_report, columns=columns)
             except Exception as fallback_err:
-                logger.exception("Fallback PDF rendering also failed: %s", fallback_err)
+                logger.exception("Fallback PDF rendering also failed")
                 raise HTTPException(
                     status_code=500,
                     detail=f"Lỗi khi biên dịch PDF Typst: {e}",
-                )
+                ) from fallback_err
     else:
         try:
             from app.pipeline.export.pdf_renderer import report_to_pdf
 
             pdf = report_to_pdf(clean_report, columns=columns)
         except Exception as e:
-            logger.exception("PDF rendering failed for task %s: %s", task_id, e)
+            logger.exception("PDF rendering failed for task %s", task_id)
             raise HTTPException(
                 status_code=500,
                 detail=f"Lỗi khi xuất PDF (Playwright/HTML): {e}. Vui lòng thử ?engine=typst.",
-            )
+            ) from e
 
     return Response(
         content=pdf,

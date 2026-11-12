@@ -483,3 +483,14 @@ def test_postprocess_drops_mixed_protocol_and_sparse_scatter_but_scrubs_panels()
     ]}
     kept = json.loads(scrub_chart_spec(json.dumps(panels), draft))
     assert [p["title"] for p in kept["panels"]] == ["ok"]
+
+
+def test_extract_accepts_synthesis_and_clinical_metrics_and_dedupes_chunks():
+    from app.agent.evidence.extractor import _paper_chunks
+
+    c = SimpleNamespace(id="c1", paper_id="pS", page=4, text="Table 5. BraTS 2021 synthesis: PSNR 27.4 dB, SSIM 0.912; sensitivity 0.88")
+    by_paper = _paper_chunks([SimpleNamespace(chunk=c), SimpleNamespace(chunk=c)])  # cùng chunk ở evidence lẫn result_evidence
+    assert len(by_paper["pS"]) == 1
+    items = [_item(paper_id="pS", dataset="BraTS", dataset_version="2021", split=None, region=None, metric="PSNR", value="27.4", unit="dB", table="Table 5")]
+    recs = extract_results([SimpleNamespace(chunk=c)], _GW(items))
+    assert [(r.metric, r.value, r.unit) for r in recs] == [("PSNR", 27.4, "dB")]

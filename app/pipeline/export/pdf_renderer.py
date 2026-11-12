@@ -78,7 +78,7 @@ def _render_chart_svg(spec: dict, fmt: str = "svg") -> str | bytes:
         for s in spec["series"]
         if len(s.get("values", [])) == len(raw_labels)
     ]
-    for s, src in zip(series, [x for x in spec["series"] if len(x.get("values", [])) == len(raw_labels)]):
+    for s, src in zip(series, [x for x in spec["series"] if len(x.get("values", [])) == len(raw_labels)], strict=False):
         errs = src.get("errors")  # độ lệch chuẩn / CI95 mỗi giá trị → error bar
         s["errors"] = [_num(e) for e in errs] if isinstance(errs, list) and len(errs) == len(raw_labels) else None
     keep_idx = [i for i in range(len(raw_labels)) if any(s["values"][i] is not None for s in series)]
@@ -115,7 +115,7 @@ def _render_chart_svg(spec: dict, fmt: str = "svg") -> str | bytes:
                 ax.errorbar(labels, ys, yerr=s["errors"], marker="o", linewidth=1.6, capsize=2.5, color=_PALETTE[i % len(_PALETTE)], label=s["name"])
             else:
                 ax.plot(labels, ys, marker="o", linewidth=1.6, color=_PALETTE[i % len(_PALETTE)], label=s["name"])
-            for x, y in zip(labels, ys):
+            for x, y in zip(labels, ys, strict=False):
                 if not math.isnan(y):
                     ax.annotate(f"{y:g}", (x, y), textcoords="offset points", xytext=(0, 5), ha="center", fontsize=7)
     elif stacked:
@@ -127,7 +127,7 @@ def _render_chart_svg(spec: dict, fmt: str = "svg") -> str | bytes:
             kw = {"left": left, "height": 0.6} if horizontal else {"bottom": left, "width": 0.6}
             bars = draw(pos, vals, color=color, label=s["name"], edgecolor="white", linewidth=0.6, **kw)
             ax.bar_label(bars, labels=[f"{v:g}" if v else "" for v in vals], label_type="center", fontsize=8)
-            left = [a + b for a, b in zip(left, vals)]
+            left = [a + b for a, b in zip(left, vals, strict=False)]
         ax.margins(x=0.0 if horizontal else 0.05, y=0.05 if horizontal else 0.0)
     else:
         width = 0.8 / n
@@ -311,7 +311,7 @@ def _extract_blocks(md: str) -> tuple[str, list[str]]:
             try:
                 spec = json.loads(body)
                 table = _render_table_html(spec)
-            except Exception as exc:  # noqa: BLE001 -- Keep source visible for any table rendering failure.
+            except Exception as exc:
                 logger.warning("Cannot render table: %s", exc)
                 return keep(f'<div class="render-warning">Không render được bảng; dữ liệu gốc:</div><pre class="render-error">{html.escape(body)}</pre>')
             caption = html.escape(spec.get("caption") or "")
@@ -319,7 +319,7 @@ def _extract_blocks(md: str) -> tuple[str, list[str]]:
         try:
             spec = json.loads(body)
             svg = _render_chart_svg(spec)
-        except Exception as exc:  # noqa: BLE001 -- Keep source visible for any chart rendering failure.
+        except Exception as exc:
             logger.warning("Cannot render chart: %s", exc)
             return keep(f'<div class="render-warning">Không render được biểu đồ; dữ liệu gốc:</div><pre class="render-error">{html.escape(body)}</pre>')
         caption = html.escape(spec.get("caption") or spec.get("title") or "")

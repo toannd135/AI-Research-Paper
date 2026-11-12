@@ -1,5 +1,6 @@
 """Test POST /research, GET /research/{id} — mock clarify() và Celery .delay(), DB SQLite in-memory."""
 
+from datetime import UTC
 from types import SimpleNamespace
 from unittest.mock import ANY, MagicMock, patch
 
@@ -10,8 +11,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.ai.llm_gateway.base import LLMGatewayError
-from app.core.database import Base, get_db
 from app.api.models.research_task import ResearchTask
+from app.core.database import Base, get_db
 from app.main import app
 
 
@@ -144,7 +145,7 @@ def test_get_research_returns_task_status(mock_clarify, mock_run_research, clien
 
 
 def test_research_history_paginates_filters_and_preserves_reports(client):
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     session = app.dependency_overrides[get_db]()
     db = next(session)
@@ -153,7 +154,7 @@ def test_research_history_paginates_filters_and_preserves_reports(client):
             db.add(ResearchTask(
                 id=f"history-{index}", question=f"Question {index}", refined_question=f"Refined {index}",
                 status=status, report="# Saved report" if status == "done" else None,
-                created_at=datetime(2026, 1, 1, tzinfo=timezone.utc) + timedelta(days=index),
+                created_at=datetime(2026, 1, 1, tzinfo=UTC) + timedelta(days=index),
             ))
         db.commit()
     finally:

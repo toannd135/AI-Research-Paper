@@ -5,6 +5,14 @@
 ## Nguyên tắc
 Thứ tự: schema/model -> logic thuần (có test) -> node/route -> tích hợp -> doc. Mỗi bước kết thúc bằng lệnh kiểm chứng xanh rồi mới sang bước sau.
 
+## Các bước (Ledger dày hơn — kết quả thực nghiệm từ nhiều paper hơn; bàn giao `handoff/ledger-ket-qua-thuc-nghiem.md`)
+| # | Việc | Tệp | Kiểm chứng |
+|---|---|---|---|
+| 1 | `collect_result_chunks`: mỗi paper trong phạm vi (kho nhỏ) lấy 3 chunk theo truy vấn "bảng kết quả + metric lĩnh vực"; search_node lưu `result_evidence` | `tools/ensure_coverage.py`, `nodes/search_node.py`, `state.py` | test: mỗi paper được gọi `search_hybrid(paper_id=)`; kho lớn/Qdrant lỗi → [] |
+| 2 | analyze_node trích từ `evidence + result_evidence`; cảnh báo log khi <50% paper có kết quả | `nodes/analyze_node.py` | test: chunk chỉ có trong `result_evidence` vẫn vào ledger |
+| 3 | Extractor: 6 chunk/paper, 3000 ký tự/chunk, ngân sách 2400s, `_KEY_RE` + prompt thêm sensitivity/specificity/precision/recall/PSNR/SSIM/Jaccard...; bỏ chunk trùng id | `evidence/extractor.py` | test `_paper_chunks` nhận PSNR/sensitivity, khử trùng |
+| 4 | Doc + `ruff check app tests` + `pytest app/agent -q` | `docs/architecture.md` | xanh |
+
 ## Các bước (Đánh giá Q1/Q2 lần 4 — kiểm chứng trên bản cuối, task hiện tại; chi tiết phát hiện ở `current-task.md`)
 Thứ tự bắt buộc (bước sau dùng kết quả bước trước). Mỗi bước: test mới + `ruff check` tệp đã sửa + `pytest <tệp test>` xanh.
 | # | Việc | Tệp | Kiểm chứng |

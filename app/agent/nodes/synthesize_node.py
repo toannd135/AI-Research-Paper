@@ -50,6 +50,7 @@ from app.agent.state import ResearchState
 from app.ai.llm_gateway.base import LLMGateway, Message
 from app.ai.llm_gateway.default import get_default_agent_gateway
 from app.core.config import get_settings
+from app.core.schemas import Citation
 from app.core.scope import external_search_allowed
 from app.pipeline.figures import load_figures
 
@@ -205,6 +206,17 @@ _FIG_STOP = frozenset(
     }
 )
 MIN_FIGURE_TOPIC_OVERLAP = 2  # caption phải chung ≥2 từ nội dung với câu hỏi (1 từ chung như 'segmentation' chưa đủ)
+# Từ chung của mọi bài ML/ảnh y khoa: trùng các từ này không chứng tỏ hình cùng miền với câu hỏi
+# (vd. hình survey diffusion có 'medical imaging', 'MR input' vẫn lạc đề trong bài về u não BraTS).
+_GENERIC_TOPIC_WORDS = frozenset(
+    {
+        "deep", "learning", "machine", "neural", "research", "medical", "clinical", "imaging", "image", "images", "data",
+        "dataset", "datasets", "input", "inputs", "output", "outputs", "modality", "modalities", "multimodal", "multi",
+        "mri", "scan", "scans", "perform", "single", "multiple", "scenario", "scenarios", "task", "tasks", "feature",
+        "features", "training", "accuracy", "quality", "error", "errors", "mapping", "consistency", "framework",
+        "taxonomy", "field", "fields", "sub", "techniques", "technique", "level", "information",
+    }
+)
 
 
 _SURVEY_WORDS = frozenset({"survey", "surveys", "review", "reviews", "overview", "tutorial", "comprehensive", "systematic"})
@@ -237,7 +249,8 @@ def _collect_figures(citations: list[Any], topic: str = "") -> list[dict]:
 
     Có `topic` (câu hỏi nghiên cứu) thì chỉ giữ hình có caption liên quan: tránh đưa hình của bài toán khác (vd. phân đoạn tế bào/gan
     trong survey u não) vào bài chỉ vì paper chứa nó được trích dẫn. Ngoài trùng ≥2 từ, hình kết quả/định tính còn phải chứa
-    ít nhất một từ đặc trưng miền của câu hỏi (hình kiến trúc/tổng quan được miễn).
+    ít nhất một từ đặc trưng miền của câu hỏi (hình kiến trúc/tổng quan được miễn). Mọi hình đều phải chứa ít nhất một từ
+    không thuộc `_GENERIC_TOPIC_WORDS` của câu hỏi (vd. brats/glioma/segmentation), không chỉ từ chung như MRI/medical.
     """
     topic_words = _topic_words(topic)
     first_cite: dict[str, int] = {}
@@ -247,6 +260,7 @@ def _collect_figures(citations: list[Any], topic: str = "") -> list[dict]:
             first_cite[pid] = i
     pool = [(pid, cite, fig) for pid, cite in first_cite.items() for fig in load_figures(pid)]
     anchors = _domain_anchors(topic_words, [str(f.get("caption", "")) for _, _, f in pool]) if topic_words else set()
+    specific = topic_words - _GENERIC_TOPIC_WORDS
     figures: list[dict] = []
     dropped = 0
     for _pid, cite, fig in pool:
@@ -259,6 +273,9 @@ def _collect_figures(citations: list[Any], topic: str = "") -> list[dict]:
             continue
         if anchors and not (words & anchors) and not _GENERIC_FIG_RE.search(caption):
             dropped += 1
+            continue
+        if specific and not (words & specific):
+            dropped += 1  # chỉ trùng từ chung (MR, medical, modality...) -> hình của miền khác
             continue
         figures.append({**fig, "id": f"F{len(figures) + 1}", "cite": cite})
     if dropped:
@@ -891,6 +908,21 @@ def _verify_final_report(
     return report, {**final_gate, "draft_gate": summary, "redacted_cells": redacted}
 
 
+def pad_corpus_citations(citations: list[Any], allowed: set[str] | None, catalog: dict[str, Any]) -> list[Any]:
+    """Thêm citation tối thiểu (snippet rỗng) cho paper trong phạm vi chưa từng được truy xuất, nối vào CUỐI danh sách.
+
+    Paper không có chunk nào được truy xuất không nằm trong `citations` nên add_uncited_corpus không thấy;
+    chỉ áp dụng khi kho đủ nhỏ để phải cite hết (full_coverage_applies). Không đổi chỉ số [k] của citation sẵn có.
+    """
+    scope = set(allowed) if allowed is not None else set(catalog)
+    present = {getattr(c, "paper_id", None) or (c.get("paper_id") if isinstance(c, dict) else None) for c in citations}
+    missing = sorted(scope - present - {None, ""})
+    if not missing or not full_coverage_applies(len(scope | (present - {None, ""}))):
+        return citations
+    logger.warning("Bổ sung %d paper trong phạm vi chưa được truy xuất vào danh sách trích dẫn", len(missing))
+    return [*citations, *(Citation(paper_id=pid, chunk_id=f"{pid}:corpus", text_snippet="") for pid in missing)]
+
+
 class InsufficientEvidenceError(ValueError):
     """Không có nguồn thật nào cho paper; chặn xuất bản thay vì để LLM tự gán [1]."""
 
@@ -967,7 +999,7 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
     if missing:
         logger.warning("Stage 5 bỏ sót mục theo đối tượng %s: %s — gọi bổ sung", state.get("audience"), missing)
         appendix = _generate_audience_appendix(state, raw_stitched, missing, references_prompt, mode, gateway, model_name)
-        if appendix and not missing_end_sections(state, raw_stitched + "\n\n" + appendix) == missing:
+        if appendix and missing_end_sections(state, raw_stitched + "\n\n" + appendix) != missing:
             raw_stitched += "\n\n" + appendix
         else:
             logger.warning("Lời gọi bổ sung không tạo được mục %s", missing)
@@ -1003,6 +1035,9 @@ def synthesize_node(state: ResearchState, llm: LLMGateway | None = None) -> Rese
         raw_stitched = inject_quant_blocks(raw_stitched, build_quant_blocks(records, paper_to_n, attrs, tiers))
 
     # Kho nhỏ phải cite hết: liệt kê paper chưa cite bằng chỉ số [k] thô, TRƯỚC khi đánh số lại
+    from app.core.scope import get_allowed_paper_ids
+
+    citations = pad_corpus_citations(citations, get_allowed_paper_ids(), _local_catalog())
     try:
         raw_stitched, _ = add_uncited_corpus(raw_stitched, citations, _local_catalog())
     except (KeyError, ValueError, TypeError, AttributeError, OSError):

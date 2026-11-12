@@ -9,6 +9,7 @@ class ResearchState(TypedDict, total=False):
     question: str
     search_queries: list[str]
     evidence: list[ScoredChunk]
+    result_evidence: list[ScoredChunk]  # chunk bảng/kết quả theo từng paper, chỉ cho bước trích số liệu (extractor)
     draft: str
     citations: list[Citation]
     critique_feedback: str | None

@@ -74,3 +74,16 @@ def test_request_too_large_is_not_retried():
     with pytest.raises(LLMRequestTooLargeError):
         call_with_retry(once)
     assert len(calls) == 1
+
+
+def test_fallback_on_any_gateway_error_switches_key():
+    primary = MagicMock()
+    primary.generate.side_effect = LLMGatewayError("OpenRouter API Key không hợp lệ")
+    fallback = MagicMock()
+    fallback.generate.return_value = LLMResponse(text="ok", model="m2")
+    gateway = FallbackGateway(primary, fallback, fallback_model="m2", fallback_on=(LLMGatewayError,))
+
+    result = gateway.generate([Message(role="user", content="hi")], "m1")
+
+    assert result.text == "ok"
+    fallback.generate.assert_called_once_with([Message(role="user", content="hi")], "m2")

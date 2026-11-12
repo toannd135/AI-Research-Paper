@@ -93,7 +93,8 @@ def test_openrouter_without_groq_key_returns_plain_adapter(mock_get_settings, mo
 @patch("app.ai.llm_gateway.default.GroqAdapter")
 @patch("app.ai.llm_gateway.default.OpenRouterAdapter")
 @patch("app.ai.llm_gateway.default.get_settings")
-def test_openrouter_key_2_is_last_fallback_after_groq(mock_get_settings, mock_openrouter, mock_groq):
+def test_openrouter_key_2_is_first_fallback_before_groq(mock_get_settings, mock_openrouter, mock_groq):
+    from app.ai.llm_gateway.base import LLMGatewayError
     from app.ai.llm_gateway.fallback import FallbackGateway
 
     mock_get_settings.return_value = _settings(
@@ -103,11 +104,12 @@ def test_openrouter_key_2_is_last_fallback_after_groq(mock_get_settings, mock_op
     gateway, model = default_mod.get_default_agent_gateway()
 
     assert isinstance(gateway, FallbackGateway)
-    assert gateway._fallback is mock_openrouter.return_value  # khóa 2 đứng cuối chuỗi
-    assert gateway._fallback_model == "or-model"
+    assert gateway._fallback is mock_groq.return_value  # Groq đứng cuối chuỗi
     inner = gateway._primary
     assert isinstance(inner, FallbackGateway)
-    assert inner._fallback is mock_groq.return_value
+    assert inner._fallback is mock_openrouter.return_value  # khóa 2 ngay sau khóa 1
+    assert inner._fallback_model == "or-model"
+    assert inner._fallback_on == (LLMGatewayError,)  # mọi lỗi của khóa 1 đều chuyển sang khóa 2
     mock_openrouter.assert_any_call(api_key="or-key-2")
     assert model == "or-model"
 

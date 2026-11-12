@@ -441,12 +441,113 @@ def fix_internal_draft_refs(text: str) -> tuple[str, list[str]]:
     return "".join(out), changes
 
 
+_SEC_NUM = r"\d+(?:\.\d+)?"
+_SEC_GROUP_RE = re.compile(
+    rf"\b(?:Sections?|Sec\.)\s+{_SEC_NUM}(?:\s*(?:,|and|or|&)\s*(?:(?:Sections?|Sec\.)\s+)?{_SEC_NUM})*\b"
+)
+# Từ khóa trong câu -> từ khóa của heading đích (thứ tự ưu tiên khi cùng khoảng cách).
+_SECTION_TOPIC_RULES = (
+    (re.compile(r"\blimitations?\b", re.I), re.compile(r"limitation", re.I)),
+    (re.compile(r"\bfuture\b|\bdirections?\b|\bopen\s+(?:problems?|questions?|challenges?)\b", re.I), re.compile(r"direction|future", re.I)),
+    (re.compile(r"\btrade-?offs?\b|\bbarriers?\b", re.I), re.compile(r"trade-?off|barrier", re.I)),
+    (re.compile(r"\bevidence\b|\bquantitative\b|\bperformance\b|\bcomparative\b|\bbenchmark", re.I), re.compile(r"evidence|comparative", re.I)),
+)
+
+
+def _section_headings(text: str) -> dict[str, str]:
+    """Số mục thật ('N' hoặc 'N.M') -> tiêu đề, ngoài khối ```."""
+    heads: dict[str, str] = {}
+    for is_code, chunk in _split_fences(text):
+        if is_code:
+            continue
+        for line in chunk.split("\n"):
+            if m2 := _H2_NUM_RE.match(line):
+                heads[str(int(m2.group(2)))] = m2.group(3).strip()
+            elif m3 := _H3_NUM_RE.match(line):
+                heads[f"{int(m3.group(2))}.{int(m3.group(3))}"] = m3.group(4).strip()
+    return heads
+
+
+def _section_target(sentence: str, pos: int, heads: dict[str, str]) -> str | None:
+    """Heading thật khớp từ khóa gần cụm tham chiếu nhất trong câu; None nếu không có."""
+    best: tuple[int, str] | None = None
+    for kw_re, head_re in _SECTION_TOPIC_RULES:
+        target = next((num for num, title in heads.items() if head_re.search(title)), None)
+        if target is None:
+            continue
+        for m in kw_re.finditer(sentence):
+            dist = abs(m.start() - pos)
+            if best is None or dist < best[0]:
+                best = (dist, target)
+    return best[1] if best else None
+
+
+def fix_dangling_section_refs(text: str) -> tuple[str, list[str]]:
+    """Sửa 'Section N'/'Section N.M' trỏ tới mục không có thật (LLM bịa 'Section 9' trong bài chỉ có 7 mục).
+
+    Ánh xạ theo từ khóa trong câu sang heading thật (limitation, future/direction, trade-off, evidence...);
+    không ánh xạ được thì thay cụm bằng 'this review' (bỏ hẳn nếu nằm trong ngoặc) để câu không bị cụt.
+    Trả về (văn bản, danh sách thay đổi).
+    """
+    heads = _section_headings(text)
+    if not heads:
+        return text, []
+    head, sep, refs = text.partition("\n## References")
+    changes: list[str] = []
+
+    def _fix_sentence(sentence: str) -> str:
+        def _group(m: re.Match) -> str:
+            nums = [".".join(str(int(x)) for x in n.split(".")) for n in re.findall(_SEC_NUM, m.group(0))]
+            if all(n in heads for n in nums):
+                return m.group(0)
+            target = _section_target(sentence, m.start(), heads)
+            kept: list[str] = []
+            for n in nums:
+                n = n if n in heads else target
+                if n and n not in kept:
+                    kept.append(n)
+            if not kept:
+                changes.append(f"{m.group(0)} -> (bỏ)")
+                return "\x00"
+            new = f"Section {kept[0]}" if len(kept) == 1 else "Sections " + ", ".join(kept[:-1]) + f" and {kept[-1]}"
+            changes.append(f"{m.group(0)} -> {new}")
+            return new
+
+        fixed = _SEC_GROUP_RE.sub(_group, sentence)
+        if "\x00" not in fixed:
+            return fixed
+        fixed = re.sub(r"\s*\((?:see|cf\.)?\s*\x00\)", "", fixed)
+        fixed = re.sub(r"\b(?:later|further)\s+in\s+\x00", "later in this review", fixed)
+        fixed = fixed.replace("\x00", "this review")
+        return fixed
+
+    out: list[str] = []
+    for is_code, chunk in _split_fences(head):
+        if is_code:
+            out.append(chunk)
+            continue
+        lines = []
+        for ln in chunk.split("\n"):
+            if ln.lstrip().startswith("#") or not _SEC_GROUP_RE.search(ln):
+                lines.append(ln)
+                continue
+            parts = _SENTENCE_RE.split(ln)
+            seps = _SENTENCE_RE.findall(ln)
+            fixed_parts = [_fix_sentence(p) for p in parts]
+            lines.append("".join(p + (seps[i] if i < len(seps) else "") for i, p in enumerate(fixed_parts)))
+        out.append("\n".join(lines))
+    return "".join(out) + sep + refs, changes
+
+
 def finalize_structure_report(text: str) -> tuple[str, list[str], list[str]]:
     """Đánh số lại mục, bảng, hình sau khi ghép. Trả về (văn bản, lỗi tham chiếu treo, tham chiếu gán theo vị trí).
 
     Có khối hình → số hình theo thứ tự khối (khớp renderer), bỏ chú thích hình ma; không có → đánh số theo chú thích như cũ.
     """
     text = renumber_sections(text)
+    text, section_fixes = fix_dangling_section_refs(text)
+    if section_fixes:
+        logger.warning("Sửa tham chiếu tới mục không tồn tại: %s", section_fixes)
     text, rebuilt = rebuild_paper_organization(text)
     if rebuilt:
         logger.warning("Viết lại đoạn 'Paper Organization' theo heading thật")

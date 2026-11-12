@@ -74,8 +74,23 @@ _CAPTION_STYLE = r"""\usepackage[compatibility=false,labelfont=bf,labelsep=perio
 \renewcommand{\thetable}{\arabic{table}}
 """
 
+# IEEEtran [conference] không in số trang: footer giữa trang qua fancyhdr, trang tiêu đề ép lại \thispagestyle{plain} vì IEEEtran đặt 'empty'
+_PAGE_NUMBERS = r"""\usepackage{fancyhdr}
+\fancyhf{}
+\fancyfoot[C]{\footnotesize\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\fancypagestyle{plain}{\fancyhf{}\fancyfoot[C]{\footnotesize\thepage}\renewcommand{\headrulewidth}{0pt}}
+\pagestyle{fancy}
+"""
+
+# Tiêu đề mục cấp 1 (I. INTRODUCTION...) in đậm: giữ nguyên định nghĩa \section của IEEEtran [conference], chỉ thêm \bfseries
+_BOLD_SECTIONS = r"""\makeatletter
+\def\section{\@startsection{section}{1}{\z@}{1.5ex plus 1.5ex minus 0.5ex}{0.7ex plus 1ex minus 0ex}{\normalfont\normalsize\centering\bfseries\scshape}}
+\makeatother
+"""
+
 _PREAMBLES = {
-    "ieee": "\\documentclass[conference]{IEEEtran}\n" + _COMMON_PACKAGES + _CAPTION_STYLE
+    "ieee": "\\documentclass[conference]{IEEEtran}\n" + _COMMON_PACKAGES + _CAPTION_STYLE + _PAGE_NUMBERS + _BOLD_SECTIONS
     + "\\usepackage{cite}\n\\usepackage[hidelinks]{hyperref}\n",
     # cvpr.sty (+ ieeenat_fullname.bst / ieee_fullname.bst) do hội nghị cung cấp, đặt cạnh paper.tex
     "cvpr": "\\documentclass[10pt,twocolumn,letterpaper]{article}\n\\usepackage[review]{cvpr}\n" + _COMMON_PACKAGES
@@ -250,12 +265,14 @@ def _tabular(columns: list[str], rows: list[list], groups=None, bold_rows=(), wi
     """Bảng booktabs; ô cột đầu rỗng = gộp dọc (multirow); header_groups = multicolumn."""
     n = len(columns)
     specs = _column_specs(columns, rows)
-    size = r"\scriptsize" if n >= 7 else r"\footnotesize"
+    # IEEE: chữ trong bảng tối thiểu 8pt (\footnotesize) — bảng nhiều cột thu khe cột thay vì thu chữ xuống \scriptsize (7pt)
+    size = r"\footnotesize"
+    colsep = "3pt" if n >= 7 else "4pt"
     width = r"\textwidth" if wide else r"\columnwidth"
     flexible = any("X" in s for s in specs)
     begin = (rf"\begin{{tabularx}}{{{width}}}{{@{{}}{''.join(specs)}@{{}}}}" if flexible
              else rf"\begin{{tabular}}{{@{{}}{''.join(specs)}@{{}}}}")
-    lines = [size, r"\setlength{\tabcolsep}{4pt}", begin, r"\toprule"]
+    lines = [size, rf"\setlength{{\tabcolsep}}{{{colsep}}}", begin, r"\toprule"]
     if groups and sum(int(g["span"]) for g in groups) == n:
         cells = [rf"\multicolumn{{{int(g['span'])}}}{{c}}{{{inline_to_tex(str(g.get('label', '')))}}}" for g in groups]
         lines.append(" & ".join(cells) + r" \\")
@@ -339,6 +356,15 @@ def _diagram_scale(pdf: bytes, wide: bool) -> float:
     return round(min(1.0, natural * _DIAGRAM_FONT_RATIO / (_TEXT_PT if wide else _COLUMN_PT)), 3)
 
 
+def _too_small_in_column(pdf: bytes, min_pt: float = 7.0) -> bool:
+    """Chữ Mermaid 12pt (16px) sau khi thu về bề rộng một cột có nhỏ hơn `min_pt` không."""
+    import pymupdf
+
+    with pymupdf.open(stream=pdf, filetype="pdf") as doc:
+        natural = doc[0].rect.width
+    return natural > 0 and 12.0 * min(1.0, _COLUMN_PT / natural) < min_pt
+
+
 _SECTION_REF_RE = re.compile(r"\b(Sections?)\s+(\d+(?:\.\d+)*)\b(?!\s+(?:of|in)\s+(?:\[|the\s+original))|§\s?(\d+(?:\.\d+)*)")
 
 
@@ -411,9 +437,11 @@ def report_to_latex(
         env = "figure*" if wide else "figure"
         width = (r"\textwidth" if wide else r"\columnwidth") if scale == 1.0 else (
             f"{scale}\\textwidth" if wide else f"{scale}\\columnwidth")
-        # giới hạn chiều cao để sơ đồ dọc rất cao không tràn trang
+        # giới hạn chiều cao để sơ đồ dọc rất cao không tràn trang; hình cả trang (figure*) cho cao hơn để
+        # biểu đồ nhiều panel không bị thu nhỏ chữ xuống dưới ~7pt
+        max_h = "0.65" if wide else "0.42"
         return (f"\\begin{{{env}}}[!t]\n\\centering\n"
-                f"\\includegraphics[width={width},height=0.42\\textheight,keepaspectratio]{{{file}}}\n"
+                f"\\includegraphics[width={width},height={max_h}\\textheight,keepaspectratio]{{{file}}}\n"
                 f"\\caption{{{_clean_caption(caption)}}}\n\\end{{{env}}}")
 
     def repl_chart(m):
@@ -456,7 +484,8 @@ def report_to_latex(
             try:
                 data = mermaid_to_pdf(code)
                 (fig_dir / f"{name}.pdf").write_bytes(data)
-                wide = mermaid_span(code) == WIDE
+                # sơ đồ quá rộng cho một cột (chữ sẽ < 7pt) → đặt cả trang
+                wide = mermaid_span(code) == WIDE or _too_small_in_column(data)
                 return keep(figure(f"figures/{name}", cap, wide, _diagram_scale(data, wide)))
             except Exception:  # thiếu Chromium/Mermaid: giữ mã .mmd và khung giữ chỗ
                 logger.exception("Không render được sơ đồ %s sang PDF", name)
@@ -579,9 +608,22 @@ def report_to_latex(
             f"\\IEEEauthorblockN{{{inline_to_tex(a)}}}" + (f"\n\\IEEEauthorblockA{{{inline_to_tex(affs[min(k, len(affs) - 1)])}}}" if affs else "")
             for k, a in enumerate(authors)
         )
-        kw_block = f"\\begin{{IEEEkeywords}}\n{kw_text}\n\\end{{IEEEkeywords}}\n" if keywords else ""
-        front = (f"\\title{{{title}}}\n\\author{{{author_blocks}}}\n\\maketitle\n\n"
-                 f"\\begin{{abstract}}\n{inline_to_tex(abstract)}\n\\end{{abstract}}\n{kw_block}")
+        # Abstract + Index Terms tràn hết bề ngang dưới khối tác giả (không chia cột). IEEEtran [conference] bỏ qua
+        # \IEEEaftertitletext nên nối vào cuối \@maketitle; macro \newcommand là \long nên abstract có \par vẫn hợp lệ.
+        kw_line = f"\\par\\vspace{{0.4em}}\\textbf{{\\textit{{Index Terms}}---}}{kw_text}" if keywords else ""
+        abstract_block = (
+            "\\newcommand{\\paperabstract}{\\par\\vspace{0.8em}\\noindent\\begin{minipage}{\\textwidth}"
+            "\\normalfont\\small\\setlength{\\parindent}{0pt}"
+            # đường kẻ ngang trên/dưới khối abstract
+            "\\rule{\\textwidth}{0.6pt}\\par\\vspace{0.4em}"
+            # tiêu đề 'Abstract' in đậm, đứng riêng một dòng phía trên đoạn tóm tắt
+            "{\\normalsize\\textbf{Abstract}}\\par\\vspace{0.3em}"
+            f"{inline_to_tex(abstract)}{kw_line}"
+            "\\par\\vspace{0.2em}\\rule{\\textwidth}{0.6pt}"
+            "\\end{minipage}\\par\\vspace{1em}}\n"
+            "\\makeatletter\\g@addto@macro\\@maketitle{\\paperabstract}\\makeatother\n"
+        )
+        front = (f"\\title{{{title}}}\n\\author{{{author_blocks}}}\n{abstract_block}\\maketitle\n\\thispagestyle{{plain}}\n\n")
         bib = "\\bibliographystyle{IEEEtran}\n\\bibliography{references}\n"
     back = back_matter(body_md)
     if back:  # mục cuối bài đứng trước phụ lục (nếu có)

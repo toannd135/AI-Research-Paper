@@ -1,9 +1,8 @@
-import pytest
 from app.agent.format_sanitizer import (
     sanitize_academic_markdown,
     sanitize_author_placeholders,
-    sanitize_display_captions,
     sanitize_code_and_algorithm_blocks,
+    sanitize_display_captions,
     sanitize_latex_math,
     sanitize_mermaid_block,
 )
@@ -159,3 +158,21 @@ def test_duplicate_references_are_merged_and_citations_remapped():
     assert "Intro [1] and [1]; also [1, 2] and [3]–[1]." in out
     assert '"x [1]"' in out and '"v": [4, 1]' in out  # số thường trong JSON không bị đụng
     assert dedupe_references("no refs") == "no refs"
+
+
+def test_sanitize_display_captions_keeps_pipe_table_and_following_sections():
+    # hồi quy task c7567a51: caption của bảng pipe không được nuốt sang khối fence ở mục sau
+    text = (
+        "### 4.5 Critical Comparative Analysis\n\n"
+        "**Table 4: Critical comparison of strategies**\n\n"
+        "| Strategy | Weakness |\n|---|---|\n| Early fusion | NR |\n\n"
+        "## 5. Comparative Evidence Synthesis\n\n### 5.1 Datasets\n\nBraTS 2019 [1].\n\n"
+        "### 5.3 Qualitative Visual Comparison\n\n"
+        "**Figure 3: Segmentation overlay**\n"
+        '```image\n{"ref": "F1", "caption": "Overlay from [1]"}\n```\n'
+    )
+    out = sanitize_display_captions(text)
+    assert "**Table 4: Critical comparison of strategies**" in out
+    assert "## 5. Comparative Evidence Synthesis" in out
+    assert "### 5.3 Qualitative Visual Comparison" in out
+    assert "**Figure 3: Segmentation overlay**" not in out  # caption trùng ngay trên khối vẫn bị bỏ

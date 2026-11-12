@@ -94,9 +94,24 @@ def analyze_node(state: ResearchState, llm: LLMGateway | None = None) -> Researc
     logger.info("Analyze: LLM phân tích xong sau %.0fs, bắt đầu trích xuất bản ghi", time.monotonic() - t0)
     clean_draft = sanitize_academic_markdown(response.text)
     # Số liệu định lượng chỉ lấy từ bản ghi đã kiểm chứng nguyên văn trong PDF, không dùng bảng LLM tự ghi.
-    records = extract_results(state.get("evidence", []), gateway, model_name)
+    # evidence theo câu hỏi + chunk bảng/kết quả lấy riêng cho từng paper (search_node) → ledger phủ nhiều paper hơn
+    records = extract_results([*state.get("evidence", []), *state.get("result_evidence", [])], gateway, model_name)
+    _warn_thin_ledger(records, citations)
     paper_to_n: dict[str, int] = {}
     for n, cit in enumerate(citations, start=1):
         paper_to_n.setdefault(cit.paper_id, n)
     clean_draft = replace_ledger(clean_draft, render_ledger(records, paper_to_n))
     return {**state, "draft": clean_draft, "citations": citations, "results": records_to_dicts(records)}
+
+
+MIN_RESULT_PAPER_RATIO = 0.5  # dưới tỷ lệ này paper có kết quả định lượng → cảnh báo ledger mỏng
+
+
+def _warn_thin_ledger(records: list, citations: list) -> None:
+    """Cảnh báo khi số paper có kết quả định lượng trong ledger quá ít so với số paper trong context."""
+    n_papers = len({c.paper_id for c in citations})
+    n_with = len({r.paper_id for r in records})
+    if n_papers and n_with < MIN_RESULT_PAPER_RATIO * n_papers:
+        logger.warning("Ledger mỏng: chỉ %d/%d paper có kết quả định lượng đã kiểm chứng", n_with, n_papers)
+    else:
+        logger.info("Ledger: %d/%d paper có kết quả định lượng đã kiểm chứng", n_with, n_papers)

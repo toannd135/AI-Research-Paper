@@ -301,3 +301,22 @@ def test_collect_figures_anchors_on_rare_domain_words(monkeypatch):
     question = "How do fusion methods handle missing MRI modalities for BraTS glioma segmentation?"
     figs = sn._collect_figures([{"paper_id": "pA"}], question)
     assert sorted(f["page"] for f in figs) == [20, 21]
+
+
+def test_collect_figures_requires_domain_specific_word(monkeypatch):
+    """Hình survey diffusion chỉ trùng từ chung (medical imaging, MR input) bị loại khỏi bài BraTS glioma."""
+    store = {
+        "pA": [
+            {"page": 1, "caption": "Figure 1: Taxonomy for diffusion-based medical imaging research spanning nine sub-fields of MRI data", "path": "/t.png"},
+            {"page": 2, "caption": "Figure 7: Surface error mapping comparison: DDPM-MR-PETCon (MR input, PET as data consistency) for multimodal MRI", "path": "/s.png"},
+            {"page": 3, "caption": "Figure 5: Qualitative segmentation results on BraTS 2018 for WT/TC/ET", "path": "/b.png"},
+        ]
+    }
+    monkeypatch.setattr(sn, "load_figures", lambda pid: store.get(pid, []))
+    question = (
+        "How do deep learning methods perform multimodal fusion of T1, T1ce, T2, and FLAIR MRI for BraTS glioma segmentation, "
+        "and how effectively do these methods maintain segmentation performance under single- and multiple-missing-modality "
+        "scenarios in medical imaging research data input?"
+    )
+    figs = sn._collect_figures([{"paper_id": "pA"}], question)
+    assert [f["page"] for f in figs] == [3]

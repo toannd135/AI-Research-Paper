@@ -55,3 +55,43 @@ def test_gate_blocks_papers_in_corpus_but_not_cited(limit):
     assert any("độ phủ kho: 1/3" in w and "Paper C title" in w for w in rep["blocking"])
     full = run_quality_gate({"citations": cits, "evidence": []}, "[1] [2] [3]", catalog=cat)
     assert not any("độ phủ kho" in w for w in full["blocking"])
+
+
+def test_collect_result_chunks_queries_every_scoped_paper(limit, monkeypatch):
+    monkeypatch.setattr(ensure_coverage, "full_coverage_applies", lambda n: True)
+    monkeypatch.setattr("app.agent.tools.ensure_coverage.list_paper_ids", lambda: {"a", "b", "c"})
+    monkeypatch.setattr(ensure_coverage, "get_allowed_paper_ids", lambda: {"a", "b"})
+    calls = []
+
+    def fake_hybrid(q, top_k, paper_id):
+        calls.append((q, top_k, paper_id))
+        return [_sc(paper_id, f"{paper_id}-{i}") for i in range(top_k)]
+
+    monkeypatch.setattr(ensure_coverage, "search_hybrid", fake_hybrid)
+    out = ensure_coverage.collect_result_chunks("results table Dice", per_paper=3)
+    assert [c[2] for c in calls] == ["a", "b"] and all(c[1] == 3 for c in calls)  # chỉ paper trong phạm vi, 3 chunk/paper
+    assert len(out) == 6
+    monkeypatch.setattr(ensure_coverage, "full_coverage_applies", lambda n: False)
+    assert ensure_coverage.collect_result_chunks("q") == []  # kho lớn: không lấy riêng
+
+
+def test_analyze_extracts_results_from_result_evidence(monkeypatch):
+    import importlib
+
+    mod = importlib.import_module("app.agent.nodes.analyze_node")  # package export trùng tên hàm
+
+    seen = {}
+
+    def fake_extract(evidence, gateway, model_name=None):
+        seen["ids"] = [sc.chunk.id for sc in evidence]
+        return []
+
+    monkeypatch.setattr(mod, "extract_results", fake_extract)
+
+    class _GW:
+        def generate(self, messages, model_name=None):
+            return SimpleNamespace(text="Analysis.", model="fake")
+
+    state = {"question": "q", "evidence": [_sc("a", "a1")], "result_evidence": [_sc("b", "b-table")]}
+    mod.analyze_node(state, llm=_GW())
+    assert seen["ids"] == ["a1", "b-table"]

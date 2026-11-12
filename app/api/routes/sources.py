@@ -2,11 +2,10 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.api.deps import get_current_user
-
 from app.ai.external.openalex_client import OpenAlexError, search_works
 from app.ai.external.openalex_mapper import build_source_search_response
 from app.ai.external.query_rewrite import to_english_search_query
+from app.api.deps import get_current_user
 from app.core.schemas import SourceSearchResponse
 
 router = APIRouter(prefix="/sources", tags=["sources"], dependencies=[Depends(get_current_user)])

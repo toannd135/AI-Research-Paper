@@ -405,7 +405,7 @@ def _figure_placement(num_cols: int) -> str:
 
 def parse_markdown_table_to_typst(tbl_str: str, caption: str = "") -> str:
     """Convert a Markdown table into a Typst Booktabs #figure(table(...)) block."""
-    lines = [l.strip() for l in tbl_str.strip().splitlines() if l.strip()]
+    lines = [ln.strip() for ln in tbl_str.strip().splitlines() if ln.strip()]
     if len(lines) < 2:
         return ""
 
@@ -572,7 +572,7 @@ def markdown_to_typst(
             svg_name = f"chart_{fig_counter[0]}.svg"
             svg_path = work_dir / svg_name
             render_chart_spec_to_svg(spec, svg_path)
-            raw_caption = spec.get("caption") or spec.get("title") or f"Evaluation Metric Plot"
+            raw_caption = spec.get("caption") or spec.get("title") or "Evaluation Metric Plot"
             clean_caption = re.sub(r"^(?:Figure|Fig\.|Biểu đồ)\s*\d+[:\.]?\s*", "", str(raw_caption).strip(), flags=re.IGNORECASE)
             clean_caption = _escape_typst_references(clean_caption)
             place = 'placement: auto, scope: "parent", ' if chart_span(spec) == WIDE else ""  # mặc định một cột

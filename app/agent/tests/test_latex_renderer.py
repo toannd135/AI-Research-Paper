@@ -283,3 +283,48 @@ def test_duplicate_research_questions_replaced_and_section_refs_use_labels():
     assert out.count("**RQ1.**") == 1 and "RQ1–RQ2 stated in Section 1.1" in out
     tex = _paper_tex("# T\n\n" + out)
     assert r"\label{sec:1.1}" in tex and tex.count(r"Section~\ref{sec:1.1}") == 2
+
+
+def test_ieee_template_has_page_numbers_on_every_page(tmp_path):
+    from app.pipeline.export.latex_renderer import report_to_latex
+
+    tex = report_to_latex("# T\n\n## Abstract\n\nA.\n\n## 1. Intro\n\nText.\n", tmp_path)
+    assert "\\fancyfoot[C]{\\footnotesize\\thepage}" in tex and "\\pagestyle{fancy}" in tex
+    # IEEEtran đặt trang tiêu đề 'empty' -> phải ép lại 'plain' ngay sau \maketitle
+    assert "\\maketitle\n\\thispagestyle{plain}" in tex
+
+
+def test_ieee_abstract_spans_full_width_above_columns(tmp_path):
+    from app.pipeline.export.latex_renderer import report_to_latex
+
+    md = "# T\n\n**Keywords:** glioma, fusion\n\n## Abstract\n\nShort abstract.\n\n## 1. Intro\n\nText.\n"
+    tex = report_to_latex(md, tmp_path)
+    # abstract nằm trong minipage \textwidth nối vào \@maketitle (vùng một cột), không dùng môi trường abstract chia cột
+    assert "\\begin{abstract}" not in tex
+    assert "\\begin{minipage}{\\textwidth}" in tex and "\\g@addto@macro\\@maketitle{\\paperabstract}" in tex
+    assert tex.index("\\paperabstract}") < tex.index("\\maketitle\n")
+    assert "Short abstract." in tex
+    # tiêu đề Abstract in đậm, đứng riêng dòng phía trên đoạn tóm tắt
+    assert "\\textbf{Abstract}}\\par" in tex
+    # đường kẻ ngang trên và dưới khối abstract
+    assert tex.count("\\rule{\\textwidth}{0.6pt}") == 2
+
+
+def test_ieee_section_headings_are_bold(tmp_path):
+    from app.pipeline.export.latex_renderer import report_to_latex
+
+    tex = report_to_latex("# T\n\n## Abstract\n\nA.\n\n## 1. Intro\n\nText.\n", tmp_path)
+    # tiêu đề mục cấp 1 (I. INTRODUCTION) in đậm, vẫn giữ small caps + căn giữa của IEEEtran
+    assert "\\centering\\bfseries\\scshape" in tex
+    assert tex.index("\\def\\section") < tex.index("\\begin{document}")
+
+
+def test_wide_tables_keep_ieee_minimum_8pt_font(tmp_path):
+    from app.pipeline.export.latex_renderer import report_to_latex
+
+    head = "| " + " | ".join(f"C{i}" for i in range(8)) + " |\n|" + "---|" * 8 + "\n"
+    row = "| " + " | ".join(str(i) for i in range(8)) + " |\n"
+    md = f"# T\n\n## Abstract\n\nA.\n\n## 1. Results\n\n**Table 1: Wide.**\n\n{head}{row}\nText.\n"
+    tex = report_to_latex(md, tmp_path)
+    # bảng 8 cột: vẫn \footnotesize (8pt), chỉ thu khe cột — không xuống \scriptsize (7pt)
+    assert "\\scriptsize" not in tex and "\\setlength{\\tabcolsep}{3pt}" in tex

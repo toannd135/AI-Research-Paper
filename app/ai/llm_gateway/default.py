@@ -26,18 +26,7 @@ def _build(provider: str, settings: Settings) -> tuple[LLMGateway, str]:
     if provider == "openrouter":
         primary_model = settings.openrouter_model or OPENROUTER_DEFAULT_MODEL
         gateway: LLMGateway = OpenRouterAdapter()
-        # Chuỗi dự phòng khi gặp 429/413: OpenRouter (khóa 1) -> Groq (nếu có key) -> OpenRouter (khóa 2, nếu có).
-        if settings.groq_api_key:
-            try:
-                groq = GroqAdapter()
-            except LLMGatewayError:
-                logger.exception("Không khởi tạo được Groq fallback, bỏ qua")
-            else:
-                gateway = FallbackGateway(
-                    primary=gateway,
-                    fallback=groq,
-                    fallback_model=settings.groq_model or GROQ_DEFAULT_MODEL,
-                )
+        # Chuỗi dự phòng: OpenRouter (khóa 1) -lỗi bất kỳ-> OpenRouter (khóa 2, nếu có) -429/413-> Groq (nếu có key).
         if settings.openrouter_api_key_2:
             try:
                 backup = OpenRouterAdapter(api_key=settings.openrouter_api_key_2)
@@ -48,6 +37,18 @@ def _build(provider: str, settings: Settings) -> tuple[LLMGateway, str]:
                     primary=gateway,
                     fallback=backup,
                     fallback_model=settings.openrouter_model_2 or primary_model,
+                    fallback_on=(LLMGatewayError,),
+                )
+        if settings.groq_api_key:
+            try:
+                groq = GroqAdapter()
+            except LLMGatewayError:
+                logger.exception("Không khởi tạo được Groq fallback, bỏ qua")
+            else:
+                gateway = FallbackGateway(
+                    primary=gateway,
+                    fallback=groq,
+                    fallback_model=settings.groq_model or GROQ_DEFAULT_MODEL,
                 )
         return gateway, primary_model
     if provider == "groq":
