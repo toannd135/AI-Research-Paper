@@ -207,3 +207,20 @@ def test_results_query_uses_domain_metrics():
     assert "EER" in q and "Dice" not in q
     set_domain(GENERAL)
     assert "Dice" not in sn._results_query({"field": "computing"}, "llm")
+
+
+def test_result_chunks_cover_corpus_above_full_coverage_limit(monkeypatch):
+    """Kho deepfake ~100 paper (> full_corpus_coverage_limit=80) vẫn lấy chunk kết quả cho từng paper để có số liệu thực nghiệm."""
+    from types import SimpleNamespace
+
+    from app.agent.tools import ensure_coverage as ec
+    from app.core.config import get_settings
+
+    ids = {f"p{i}" for i in range(102)}
+    monkeypatch.setattr(ec, "list_paper_ids", lambda: set(ids))
+    monkeypatch.setattr(ec, "get_allowed_paper_ids", lambda: ids)
+    monkeypatch.setattr(ec, "search_hybrid", lambda q, top_k, paper_id: [SimpleNamespace(chunk=SimpleNamespace(paper_id=paper_id))])
+    assert get_settings().full_corpus_coverage_limit < 102
+    out = ec.collect_result_chunks("deepfake AUC")
+    assert len({sc.chunk.paper_id for sc in out}) == 102
+    assert ec._scoped_corpus() is None  # giới hạn phủ trọn kho (cite hết) vẫn giữ nguyên

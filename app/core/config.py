@@ -95,6 +95,9 @@ class Settings(BaseSettings):
     local_max_chunks_per_paper: int = 2
     # Kho nội bộ có ≤ N paper thì BẮT BUỘC mọi paper có evidence và được bài cite (survey phủ trọn kho). 0 = tắt.
     full_corpus_coverage_limit: int = 80
+    # Kho ≤ N paper: lấy chunk bảng/kết quả riêng cho TỪNG paper để trích số liệu thực nghiệm (độc lập với giới hạn phủ
+    # trọn kho ở trên, vd. kho deepfake ~100 paper vẫn có ledger). 0 = tắt.
+    result_chunks_paper_limit: int = 200
 
     # --- PDF export ---
     mermaid_ink_enabled: bool = True

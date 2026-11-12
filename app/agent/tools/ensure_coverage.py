@@ -13,7 +13,7 @@ from app.pipeline.vector_store.qdrant_client import list_paper_ids
 logger = logging.getLogger(__name__)
 
 
-def _scoped_corpus() -> set[str] | None:
+def _scoped_corpus(limit: int | None = None) -> set[str] | None:
     """Paper trong Qdrant thuộc phạm vi người dùng; None khi không liệt kê được hoặc kho vượt `full_corpus_coverage_limit`."""
     try:
         corpus = list_paper_ids()
@@ -23,6 +23,8 @@ def _scoped_corpus() -> set[str] | None:
     allowed = get_allowed_paper_ids()
     if allowed is not None:
         corpus &= allowed
+    if limit is not None:  # giới hạn riêng (chunk kết quả), không theo full_corpus_coverage_limit
+        return corpus if 0 < len(corpus) <= limit else None
     return corpus if full_coverage_applies(len(corpus)) else None
 
 
@@ -32,7 +34,9 @@ def collect_result_chunks(query: str, per_paper: int = 3) -> list[ScoredChunk]:
     Độc lập với evidence theo câu hỏi (vốn chỉ 1-2 chunk/paper, hiếm khi trúng bảng kết quả), chỉ dùng cho bước
     trích số liệu (extractor) để ledger phủ được nhiều paper hơn.
     """
-    corpus = _scoped_corpus()
+    from app.core.config import get_settings
+
+    corpus = _scoped_corpus(get_settings().result_chunks_paper_limit)
     if not corpus:
         return []
     out: list[ScoredChunk] = []

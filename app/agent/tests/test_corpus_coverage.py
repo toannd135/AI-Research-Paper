@@ -72,7 +72,11 @@ def test_collect_result_chunks_queries_every_scoped_paper(limit, monkeypatch):
     assert [c[2] for c in calls] == ["a", "b"] and all(c[1] == 3 for c in calls)  # chỉ paper trong phạm vi, 3 chunk/paper
     assert len(out) == 6
     monkeypatch.setattr(ensure_coverage, "full_coverage_applies", lambda n: False)
-    assert ensure_coverage.collect_result_chunks("q") == []  # kho lớn: không lấy riêng
+    assert len(ensure_coverage.collect_result_chunks("q", per_paper=1)) == 2  # vượt giới hạn phủ trọn kho vẫn lấy chunk kết quả
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "result_chunks_paper_limit", 1)
+    assert ensure_coverage.collect_result_chunks("q") == []  # vượt result_chunks_paper_limit: không lấy riêng
 
 
 def test_analyze_extracts_results_from_result_evidence(monkeypatch):
